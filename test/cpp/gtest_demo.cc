@@ -49,7 +49,7 @@ TEST(GTestTest, Passing) {
 }
 
 // An example of a failing test.
-// Is is both marked as DISABLED and guarded by #if false to
+// It is both marked as DISABLED and guarded by #if false to
 // not pollute the output with the "YOU HAVE 1 DISABLED TEST" message.
 
 #if false
