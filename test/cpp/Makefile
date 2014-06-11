@@ -2,7 +2,6 @@ CPP=g++
 CPPFLAGS=-DTAILPRODUCE_TEST
 
 SRC=$(wildcard *.cc)
-#=$(SRC:%.cc=build/%.o)
 EXE=$(SRC:%.cc=build/%)
 
 .PHONY: all test clean
