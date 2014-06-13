@@ -1,5 +1,5 @@
 CPP=g++
-CPPFLAGS=-DTAILPRODUCE_TEST
+CPPFLAGS=-std=c++11 -DTAILPRODUCE_TEST
 
 SRC=$(wildcard *.cc)
 EXE=$(SRC:%.cc=build/%)
