@@ -1,14 +1,16 @@
 CPP=g++
 CPPFLAGS=-std=c++11 -DTAILPRODUCE_TEST
+LDFLAGS=-lpthread -lgflags
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=build/%.o)
+GTEST_OBJ=/usr/src/gtest/libgtest.a
 EXE=build/run_all_tests
 
 .PHONY: all test clean
 
 test: all
-	./${EXE} --gtest_death_test_style=threadsafe
+	./${EXE} --gtest_death_test_style=threadsafe --question="six by nine" --answer=42
 
 all: build ${EXE}
 
@@ -19,7 +21,7 @@ build/%.o: %.cc
 	${CPP} ${CPPFLAGS} -o $@ -c $<
 
 ${EXE}: ${OBJ}
-	${CPP} ${CPPFLAGS} -o $@ ${OBJ} /usr/src/gtest/libgtest.a /usr/src/gtest/libgtest_main.a -lpthread
+	${CPP} ${CPPFLAGS} -o $@ ${OBJ} ${GTEST_OBJ} ${LDFLAGS}
 
 clean:
 	rm -rf build
