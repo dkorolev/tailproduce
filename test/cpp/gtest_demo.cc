@@ -33,6 +33,7 @@
 //    Use sparingly and try to keep master clean from disabled tests.
 
 #include <gtest/gtest.h>
+#include <glog/logging.h>
 
 // Basic test syntax.
 TEST(GTestTest, Trivial) { 
@@ -54,10 +55,11 @@ TEST(GTestTest, Passing) {
 
 TEST(GTestTest, DeathTest) {
     auto die = []() {
-        std::cerr << "Error message: regex-supported example." << std::endl;
-        exit(1);
+        // More on google-glog: http://google-glog.googlecode.com/svn/trunk/doc/glog.html
+        const int tmp = 42;
+        LOG(FATAL) << "Example " << tmp << " error message.";
     };
-    ASSERT_DEATH(die(), "Error message: .* example\\.");
+    ASSERT_DEATH(die(), "Example .* message\\.");
 }
 
 // An example of a failing test.

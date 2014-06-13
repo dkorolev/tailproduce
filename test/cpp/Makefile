@@ -1,6 +1,6 @@
 CPP=g++
-CPPFLAGS=-std=c++11 -DTAILPRODUCE_TEST
-LDFLAGS=-lpthread -lgflags
+CPPFLAGS=-std=c++11
+LDFLAGS=-pthread -lgflags -lglog -static
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=build/%.o)
