@@ -25,7 +25,11 @@
 // 4) For {ASSERT,EXPECT}_{EQ,NE}, put the expected value as the first parameter.
 //    For cleaner error messages.
 //
-// 5) Prefix a test name with "DISABLED_" to exclude it from being run.
+// 5) ASSERT_DEATH(function(), "Expected regex for the last line of standard error.")
+//    can be used to ensure certain call fails. The convention is to use
+//    the "DeathTest" suffix for those tests and to not mix functional tests with death tests.
+//
+// 6) Prefix a test name with "DISABLED_" to exclude it from being run.
 //    Use sparingly and try to keep master clean from disabled tests.
 
 #include <gtest/gtest.h>
@@ -46,6 +50,14 @@ TEST(GTestTest, Passing) {
     EXPECT_NE(2 * 2, 0);
     EXPECT_TRUE(2 * 2 == 4);
     EXPECT_FALSE(2 * 2 != 4);
+}
+
+TEST(GTestTest, DeathTest) {
+    auto die = []() {
+        std::cerr << "Error message: regex-supported example." << std::endl;
+        exit(1);
+    };
+    ASSERT_DEATH(die(), "Error message: .* example\\.");
 }
 
 // An example of a failing test.
