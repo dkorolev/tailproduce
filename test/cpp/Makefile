@@ -8,7 +8,7 @@ EXE=build/run_all_tests
 .PHONY: all test clean
 
 test: all
-	./${EXE}
+	./${EXE} --gtest_death_test_style=threadsafe
 
 all: build ${EXE}
 
