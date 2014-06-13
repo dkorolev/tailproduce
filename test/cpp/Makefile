@@ -2,23 +2,24 @@ CPP=g++
 CPPFLAGS=-std=c++11 -DTAILPRODUCE_TEST
 
 SRC=$(wildcard *.cc)
-EXE=$(SRC:%.cc=build/%)
+OBJ=$(SRC:%.cc=build/%.o)
+EXE=build/run_all_tests
 
 .PHONY: all test clean
 
 test: all
-	for i in ${EXE} ; do ./$$i ; done
+	./${EXE}
 
-all: build ${EXE} 
+all: build ${EXE}
 
 build:
 	mkdir -p build
 
-build/%: build/%.o
-	${CPP} ${CPPFLAGS} -o $@ $< /usr/src/gtest/libgtest.a /usr/src/gtest/libgtest_main.a -lpthread
-
 build/%.o: %.cc
 	${CPP} ${CPPFLAGS} -o $@ -c $<
+
+${EXE}: ${OBJ}
+	${CPP} ${CPPFLAGS} -o $@ ${OBJ} /usr/src/gtest/libgtest.a /usr/src/gtest/libgtest_main.a -lpthread
 
 clean:
 	rm -rf build
