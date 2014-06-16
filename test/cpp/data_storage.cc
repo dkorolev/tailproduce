@@ -1,18 +1,9 @@
 #include <gtest/gtest.h>
 
+#include "test_helpers.h"
 #include "mocks/data_storage.h"
 
-template<typename T> std::vector<uint8_t> bytes(T x) {
-    return std::vector<uint8_t>(&x, (&x) + 1);
-}
-
-template<> std::vector<uint8_t> bytes(const char* s) {
-    return std::vector<uint8_t>(s, s + strlen(s));
-}
-
-template<> std::vector<uint8_t> bytes(const std::string& s) {
-    return std::vector<uint8_t>(s.begin(), s.end());
-}
+// TODO(dkorolev): Add tests for the newly added get and overwrite set methods.
 
 template<typename T> class DataStorageTest : public ::testing::Test {};
 

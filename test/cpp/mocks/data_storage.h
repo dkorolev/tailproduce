@@ -4,7 +4,6 @@
 #include <vector>
 #include <map>
 
-#include <gtest/gtest.h>
 #include <glog/logging.h>
 
 // TODO(dkorolev): Mock data storage implementation should inherit from its base class.
@@ -21,24 +20,56 @@ class MockDataStorage {
     typedef std::vector<uint8_t> KEY_TYPE;
     typedef std::vector<uint8_t> VALUE_TYPE;
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
-    void Set(const KEY_TYPE& key, const VALUE_TYPE& value) {
-        ASSERT_FALSE(key.empty());
-        ASSERT_FALSE(value.empty());
+
+    void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
+        if (key.empty()) {
+            LOG(FATAL) << "Attempted to Set() an entry with an empty key.";
+        }
+        if (value.empty()) {
+            LOG(FATAL) << "Attempted to Set() an entry with an empty value.";
+        }
         std::vector<uint8_t>& placeholder = data_[key];
-        if (!placeholder.empty()) {
-            LOG(FATAL)
-                << "'"
-                << std::string(key.begin(), key.end())
-                << "', that is attempted to be set to '"
-                << std::string(value.begin(), value.end())
-                << "', has already been set to '"
-                << std::string(placeholder.begin(), placeholder.end())
-                << "'.";
+        if (!allow_overwrite) {
+            if (!placeholder.empty()) {
+                LOG(FATAL)
+                    << "'"
+                    << std::string(key.begin(), key.end())
+                    << "', that is attempted to be set to '"
+                    << std::string(value.begin(), value.end())
+                    << "', has already been set to '"
+                    << std::string(placeholder.begin(), placeholder.end())
+                    << "'.";
+            }
         }
         placeholder = value;
     }
 
+    void SetAllowingOverwrite(const KEY_TYPE& key, const VALUE_TYPE& value) {
+        Set(key, value, true);
+    }
+
+    void Get(const KEY_TYPE& key, VALUE_TYPE& value) const {
+        if (key.empty()) {
+            LOG(FATAL) << "Attempted to Get() an entry with an empty key.";
+        }
+        const auto cit = data_.find(key);
+        if (cit != data_.end()) {
+            value = cit->second;
+        } else {
+            value.clear();
+        }
+    }
+
+    // TODO(dkorolev): Read more about the move semantics of C++.
+    VALUE_TYPE Get(const KEY_TYPE& key) const {
+        VALUE_TYPE value;
+        Get(key, value);
+        return value;
+    }
+
     struct Iterator {
+        // TODO(dkorolev): Read more about the move semantics of C++.
+        // Allow returning Iterators from Storage's member functions w/o copying them.
         Iterator(MockDataStorage& master, const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE())
             : data_(master.data_),
               current_(from),
