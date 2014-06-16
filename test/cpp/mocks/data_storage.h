@@ -64,7 +64,9 @@ class MockDataStorage {
             return (cit_ == data_.end()) || (!to_.empty() && cit_->first > to_);
         }
         void Next() {
-            ASSERT_FALSE(Done());
+            if (Done()) {
+                LOG(FATAL) << "Attempted to Next() an iterator for which Done() is true.";
+            }
             current_ = cit_->first;
             upper_bound_ = true;
             ++cit_;

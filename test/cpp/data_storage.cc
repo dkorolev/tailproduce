@@ -133,3 +133,54 @@ TYPED_TEST(DataStorageTest, UnboundedRangeDynamicIterator) {
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
 }
+
+TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBoundsDeathTest) {
+    TypeParam storage;
+    typename TypeParam::Iterator iterator(storage, bytes(2), bytes(3));
+    ASSERT_TRUE(iterator.Done());
+    storage.Set(bytes(1), bytes("one"));
+    storage.Set(bytes(2), bytes("two"));
+    storage.Set(bytes(3), bytes("three"));
+    storage.Set(bytes(4), bytes("four"));
+    storage.Set(bytes(5), bytes("five"));
+    ASSERT_FALSE(iterator.Done());
+    ASSERT_TRUE(iterator.Value() == bytes("two"));
+    ASSERT_TRUE(iterator.Key() == bytes(2));
+    iterator.Next();
+    ASSERT_FALSE(iterator.Done());
+    ASSERT_TRUE(iterator.Value() == bytes("three"));
+    ASSERT_TRUE(iterator.Key() == bytes(3));
+    iterator.Next();
+    ASSERT_TRUE(iterator.Done());
+    EXPECT_DEATH(
+        iterator.Next(),
+        "Attempted to Next\\(\\) an iterator for which Done\\(\\) is true\\.");
+}
+
+TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBoundsDeathTest) {
+    TypeParam storage;
+    typename TypeParam::Iterator iterator(storage, bytes(2));
+    ASSERT_TRUE(iterator.Done());
+    storage.Set(bytes(1), bytes("one"));
+    ASSERT_TRUE(iterator.Done());
+    storage.Set(bytes(2), bytes("two"));
+    ASSERT_FALSE(iterator.Done());
+    ASSERT_TRUE(iterator.Value() == bytes("two"));
+    ASSERT_TRUE(iterator.Key() == bytes(2));
+    iterator.Next();
+    ASSERT_TRUE(iterator.Done());
+    storage.Set(bytes(3), bytes("three"));
+    storage.Set(bytes(4), bytes("four"));
+    ASSERT_FALSE(iterator.Done());
+    ASSERT_TRUE(iterator.Value() == bytes("three"));
+    ASSERT_TRUE(iterator.Key() == bytes(3));
+    iterator.Next();
+    ASSERT_FALSE(iterator.Done());
+    ASSERT_TRUE(iterator.Value() == bytes("four"));
+    ASSERT_TRUE(iterator.Key() == bytes(4));
+    iterator.Next();
+    ASSERT_TRUE(iterator.Done());
+    EXPECT_DEATH(
+        iterator.Next(),
+        "Attempted to Next\\(\\) an iterator for which Done\\(\\) is true\\.");
+}
