@@ -68,15 +68,8 @@ class MockDataStorage {
     }
 
     struct Iterator {
-        // TODO(dkorolev): Read more about the move semantics of C++.
-        // Allow returning Iterators from Storage's member functions w/o copying them.
-        Iterator(MockDataStorage& master, const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE())
-            : data_(master.data_),
-              current_(from),
-              upper_bound_(false),
-              to_(to),
-              cit_(data_.end()) {
-        }
+        Iterator(Iterator&&) = default;
+
         bool Done() const {
             // Support dynamic iteration.
             // 1) Done() would check if new data has arrived and would adjust accordingly.
@@ -94,6 +87,7 @@ class MockDataStorage {
             }
             return (cit_ == data_.end()) || (!to_.empty() && cit_->first > to_);
         }
+
         void Next() {
             if (Done()) {
                 LOG(FATAL) << "Attempted to Next() an iterator for which Done() is true.";
@@ -102,14 +96,17 @@ class MockDataStorage {
             upper_bound_ = true;
             ++cit_;
         }
+
         const KEY_TYPE& Key() const {
             EXPECT_FALSE(Done());
             return cit_->first;
         }
+
         const KEY_TYPE& Value() const {
             EXPECT_FALSE(Done());
             return cit_->second;
         }
+
         const MAP_TYPE& data_;
         KEY_TYPE current_;
         bool upper_bound_;
@@ -117,10 +114,23 @@ class MockDataStorage {
         mutable typename MAP_TYPE::const_iterator cit_;
 
       private:
+        // Allow returning Iterators from Storage's member functions w/o copying them.
+        Iterator(MockDataStorage& master, const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE())
+            : data_(master.data_),
+              current_(from),
+              upper_bound_(false),
+              to_(to),
+              cit_(data_.end()) {
+        }
+        friend class MockDataStorage;
         Iterator() = delete;
         Iterator(const Iterator&) = delete;
         void operator=(const Iterator&) = delete;
     };
+
+    Iterator GetIterator(const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE()) {
+        return Iterator(*this, from, to);
+    }
 
   private:
     MAP_TYPE data_;

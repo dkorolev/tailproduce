@@ -39,7 +39,7 @@ TYPED_TEST(DataStorageTest, BoundedRangeIterator) {
     storage.Set(bytes("003"), bytes("three"));
     storage.Set(bytes("004"), bytes("four"));
     storage.Set(bytes("005"), bytes("five"));
-    typename TypeParam::Iterator iterator(storage, bytes("002"), bytes("004"));
+    typename TypeParam::Iterator iterator = storage.GetIterator(bytes("002"), bytes("004"));
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("two"));
     ASSERT_TRUE(iterator.Key() == bytes("002"));
@@ -59,7 +59,7 @@ TYPED_TEST(DataStorageTest, BoundedRangeDynamicIterator) {
     TypeParam storage;
     storage.Set(bytes("x1"), bytes("one"));
     storage.Set(bytes("x2"), bytes("two"));
-    typename TypeParam::Iterator iterator(storage, bytes("x2"), bytes("x4"));
+    typename TypeParam::Iterator iterator = storage.GetIterator(bytes("x2"), bytes("x4"));
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("two"));
     ASSERT_TRUE(iterator.Key() == bytes("x2"));
@@ -88,7 +88,7 @@ TYPED_TEST(DataStorageTest, SemiBoundedRangeIterator) {
     storage.Set(bytes(3), bytes("three"));
     storage.Set(bytes(4), bytes("four"));
     storage.Set(bytes(5), bytes("five"));
-    typename TypeParam::Iterator iterator(storage, bytes(3));
+    typename TypeParam::Iterator iterator = storage.GetIterator(bytes(3));
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("three"));
     ASSERT_TRUE(iterator.Key() == bytes(3));
@@ -106,7 +106,7 @@ TYPED_TEST(DataStorageTest, SemiBoundedRangeIterator) {
 
 TYPED_TEST(DataStorageTest, UnboundedRangeDynamicIterator) {
     TypeParam storage;
-    typename TypeParam::Iterator iterator(storage);
+    typename TypeParam::Iterator iterator = storage.GetIterator();
     ASSERT_TRUE(iterator.Done());
     storage.Set(bytes(101), bytes("this"));
     storage.Set(bytes(102), bytes("too"));
@@ -134,7 +134,7 @@ TYPED_TEST(DataStorageTest, UnboundedRangeDynamicIterator) {
 
 TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBoundsDeathTest) {
     TypeParam storage;
-    typename TypeParam::Iterator iterator(storage, bytes(2), bytes(3));
+    typename TypeParam::Iterator iterator = storage.GetIterator(bytes(2), bytes(3));
     ASSERT_TRUE(iterator.Done());
     storage.Set(bytes(1), bytes("one"));
     storage.Set(bytes(2), bytes("two"));
@@ -157,7 +157,7 @@ TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBoundsDeathTest) {
 
 TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBoundsDeathTest) {
     TypeParam storage;
-    typename TypeParam::Iterator iterator(storage, bytes(2));
+    typename TypeParam::Iterator iterator = storage.GetIterator(bytes(2));
     ASSERT_TRUE(iterator.Done());
     storage.Set(bytes(1), bytes("one"));
     ASSERT_TRUE(iterator.Done());
