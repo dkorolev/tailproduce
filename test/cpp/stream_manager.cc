@@ -1,6 +1,17 @@
 #include <gtest/gtest.h>
 
+// TODO(dkorolev): Complete this test. Remaining:
+//                 * iterating over data via the StreamManager, going around the Db.
+//                 * merging input streams.
+//                 * producing data.
+//                 * starting jobs.
+//                 * serialization.
+
+#include "mocks/stream_manager.h"
 #include "mocks/data_storage.h"
+
+// TODO(dkorolev): Entry implementations should inherit from their base class.
+// TODO(dkorolev): Current serialization is a prototype, move to a more robust version.
 
 // Test plan:
 // * One basic stream, that is being populated "externally".
@@ -71,6 +82,15 @@ template<typename T> class StreamManagerTest : public ::testing::Test {};
 typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
 TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
 
-TYPED_TEST(StreamManagerTest, Dummy) {
-    EXPECT_EQ(4, 2 + 2)
+TYPED_TEST(StreamManagerTest, CreatesStream) {
+    TypeParam stream_manager;
+    EXPECT_FALSE(stream_manager.HasStream("test")); 
+    stream_manager.CreateStream("test");
+    EXPECT_TRUE(stream_manager.HasStream("test")); 
+}
+
+TYPED_TEST(StreamManagerTest, NoDuplicateStreamsAllowedDeathTest) {
+    TypeParam stream_manager;
+    stream_manager.CreateStream("foo");
+    EXPECT_DEATH(stream_manager.CreateStream("foo"), "Attempted to create stream 'foo', that already exists\\.");
 }

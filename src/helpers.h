@@ -1,12 +1,14 @@
-#ifndef TAILPRODUCE_TEST_HELPERS_H
-#define TAILPRODUCE_TEST_HELPERS_H
+#ifndef TAILPRODUCE_HELPERS_H
+#define TAILPRODUCE_HELPERS_H
+
+// TODO(dkorolev): Perhaps factor out bytes() into a different header file,
+//                 have a single header file #include-ing all of the others
+//                 and call it other than helpers.h?
 
 #include <vector>
 #include <string>
 #include <cstring>  // strlen()
 #include <cstdint>  // uint8_t
-
-// TODO(dkorolev): Potentially move some of the code from this file outside test/.
 
 // Template magic: source-file-level template specialization is tricky
 // and would require extra struct/class name, and to have header-file-level
@@ -32,4 +34,4 @@ template<typename T> static std::vector<uint8_t> bytes(T x) {
     return bytes_impl<T>::run(x);
 }
 
-#endif  // TAILPRODUCE_TEST_HELPERS_H
+#endif  // TAILPRODUCE_HELPERS_H

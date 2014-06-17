@@ -5,10 +5,12 @@
 #include <map>
 
 #include <gtest/gtest.h>
+#include <glog/logging.h>
+
+#include "../../../src/helpers.h"
+#include "../../../src/key_schema.h"
 
 // TODO(dkorolev): Mock stream manager implementation should inherit from its base class.
-// TODO(dkorolev): Entry implementations should inherit from their base class.
-// TODO(dkorolev): Current serialization is a prototype, move to a more robust version.
 
 // MockStreamManager supports the following functionality:
 // 1) Integration with Entry classes and their respective order keys getters.
@@ -23,6 +25,20 @@
 template<typename T_DATA_STORAGE> class MockStreamManager {
   public:
     // TODO(dkorolev): Support the functionality of eight bullet points above.
+
+    void CreateStream(const std::string& stream_name) {
+        const std::vector<uint8_t> key(TailProduce::KeySchema::StreamMeta(stream_name));
+        if (!storage_.Get(key).empty()) {
+            LOG(FATAL)
+                << "Attempted to create stream '" << stream_name << "'"
+                << ", that already exists.";
+        }
+        storage_.Set(key, bytes(true));
+    }
+
+    bool HasStream(const std::string& stream_name) const {
+        return !storage_.Get(TailProduce::KeySchema::StreamMeta(stream_name)).empty();
+    }
 
   private:
     T_DATA_STORAGE storage_;

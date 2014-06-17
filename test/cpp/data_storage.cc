@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "test_helpers.h"
-#include "mocks/data_storage.h"
+#include "../../src/helpers.h"
 
-// TODO(dkorolev): Add tests for the newly added get and overwrite set methods.
+#include "mocks/data_storage.h"
 
 template<typename T> class DataStorageTest : public ::testing::Test {};
 
@@ -23,6 +22,14 @@ TYPED_TEST(DataStorageTest, DuplicateEntriesDeathTest) {
     EXPECT_DEATH(
         storage.Set(bytes("key"), bytes("new")),
         "'key', that is attempted to be set to 'new', has already been set to 'old'\\.");
+}
+
+TYPED_TEST(DataStorageTest, SetsOverwritesAndGets) {
+    TypeParam storage;
+    storage.Set(bytes("key"), bytes("first"));
+    EXPECT_EQ(bytes("first"), storage.Get(bytes("key")));
+    storage.SetAllowingOverwrite(bytes("key"), bytes("second"));
+    EXPECT_EQ(bytes("second"), storage.Get(bytes("key")));
 }
 
 TYPED_TEST(DataStorageTest, BoundedRangeIterator) {
