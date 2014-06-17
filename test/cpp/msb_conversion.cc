@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "../../src/helpers.h"
+
 #include "../../src/byte_order.h"
 
 TEST(MSBConversion, UInt16) { 
@@ -76,10 +78,6 @@ TEST(MSBConversion, Int64) {
     EXPECT_EQ(0x34, p[5]);
     EXPECT_EQ(0x56, p[6]);
     EXPECT_EQ(0x78, p[7]);
-}
-
-template<typename T> static std::vector<uint8_t> bytes(T x) {
-    return std::vector<uint8_t>(&x, (&x) + 1);
 }
 
 TEST(MSBConversion, OrdersUInt16) {
