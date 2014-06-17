@@ -116,7 +116,6 @@ class MockDataStorage {
         Iterator(MockDataStorage& master, const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE())
             : data_(master.data_),
               cursor_(from, false),
-              upper_bound_(false),
               to_(to),
               cit_(data_.end()) {
         }
