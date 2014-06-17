@@ -75,14 +75,14 @@ class MockDataStorage {
             // 1) Done() would check if new data has arrived and would adjust accordingly.
             // 2) Done() would be called in Key(), Value() and Next() to ensure this adjustment.
             if (cit_ == data_.end()) {
-                if (!upper_bound_) {
-                    // Point to the key that is current_ or above.
+                if (!cursor_.second) {
+                    // Point to the key that is cursor_.first or above.
                     // Only used before any advacement has taken place.
-                    cit_ = data_.lower_bound(current_);
+                    cit_ = data_.lower_bound(cursor_.first);
                 } else {
-                    // Point to the key right after the current_ one.
+                    // Point to the key right after the cursor_.first one.
                     // Used to resume if any advancement has taken place.
-                    cit_ = data_.upper_bound(current_);
+                    cit_ = data_.upper_bound(cursor_.first);
                 }
             }
             return (cit_ == data_.end()) || (!to_.empty() && cit_->first > to_);
@@ -92,8 +92,7 @@ class MockDataStorage {
             if (Done()) {
                 LOG(FATAL) << "Attempted to Next() an iterator for which Done() is true.";
             }
-            current_ = cit_->first;
-            upper_bound_ = true;
+            cursor_ = std::make_pair(cit_->first, true);
             ++cit_;
         }
 
@@ -108,8 +107,7 @@ class MockDataStorage {
         }
 
         const MAP_TYPE& data_;
-        KEY_TYPE current_;
-        bool upper_bound_;
+        std::pair<KEY_TYPE, bool> cursor_;  // { "cursor" key, flag: false="on it", true="right after it" }.
         KEY_TYPE to_;
         mutable typename MAP_TYPE::const_iterator cit_;
 
@@ -117,7 +115,7 @@ class MockDataStorage {
         // Allow returning Iterators from Storage's member functions w/o copying them.
         Iterator(MockDataStorage& master, const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE())
             : data_(master.data_),
-              current_(from),
+              cursor_(from, false),
               upper_bound_(false),
               to_(to),
               cit_(data_.end()) {
