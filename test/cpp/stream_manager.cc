@@ -123,7 +123,6 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
     class StreamManagerImpl : public TypeParam {
       private:
         ::TailProduce::StreamsRegistry registry_;
-
       public:
         const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
         typedef ::TailProduce::StreamInstance<SimpleIntegerEntry, SimpleIntegerOrderKey> STREAM_TYPE_test;
