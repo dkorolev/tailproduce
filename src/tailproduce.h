@@ -24,7 +24,13 @@ namespace TailProduce {
         void Add(TailProduce::Stream* impl,
                  const std::string& name,
                  const std::string& entry_type,
-                 const std::string& order_key_type);
+                 const std::string& order_key_type) {
+            if (names.find(name) != names.end()) {
+                LOG(FATAL) << "Attempted to register the '" << name << "' stream more than once.";
+            }
+            names.insert(name);
+            streams.push_back(StreamsRegistryEntry{impl, name, entry_type, order_key_type});
+        }
     };
 
     struct Stream {
@@ -53,17 +59,6 @@ namespace TailProduce {
                                   order_key_type_name) {
         }
     };
-
-    void StreamsRegistry::Add(TailProduce::Stream* impl,
-             const std::string& name,
-             const std::string& entry_type,
-             const std::string& order_key_type) {
-        if (names.find(name) != names.end()) {
-            LOG(FATAL) << "Attempted to register the '" << name << "' stream more than once.";
-        }
-        names.insert(name);
-        streams.push_back(StreamsRegistryEntry{impl, name, entry_type, order_key_type});
-    }
 };
 
 // TailProduce static framework macros.
@@ -74,14 +69,13 @@ namespace TailProduce {
       private: \
         ::TailProduce::StreamsRegistry registry_;  \
       public: \
-        const ::TailProduce::StreamsRegistry& registry() const { return registry_; }; \
-        struct DummySemicolonEater {}
+        const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
 
 #define TAILPRODUCE_STREAM(name, entry_type, order_key_type) \
         typedef ::TailProduce::StreamInstance<entry_type, order_key_type> STREAM_TYPE_##name; \
         STREAM_TYPE_##name name = STREAM_TYPE_##name(registry_, #name, #entry_type, #order_key_type)
 
 #define TAILPRODUCE_STATIC_FRAMEWORK_END() \
-        }
+    }
 
 #endif  // TAILPRODUCE_H

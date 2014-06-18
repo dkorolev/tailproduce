@@ -2,7 +2,6 @@
 
 #include <gtest/gtest.h>
 
-
 // TODO(dkorolev): Complete this test. Remaining:
 //                 * iterating over data via the StreamManager, going around the Db.
 //                 * merging input streams.
@@ -14,7 +13,6 @@
 
 #include "mocks/stream_manager.h"
 #include "mocks/data_storage.h"
-
 
 // TODO(dkorolev): Entry implementations should inherit from their base class.
 // TODO(dkorolev): Current serialization is a prototype, move to a more robust version.
@@ -99,7 +97,6 @@ template<typename T> class StreamManagerTest : public ::testing::Test {};
 
 // Unit test for TailProduce static framework.
 // TODO(dkorolev): Add more stream managers and data storages here.
-
 typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
 TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
 
