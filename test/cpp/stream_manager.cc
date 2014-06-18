@@ -49,7 +49,7 @@ template<> SimpleIntegerOrderKey SimpleIntegerEntry::OrderKey<SimpleIntegerOrder
     return SimpleIntegerOrderKey(key);
 }
 
-// EphemeralMarkerEntryType is "fired" every N=10 entries, so that TailProduce jobs don't have to keep their counters.
+// EphemeralMarkerEntryType is fired every N=10 entries, so that TailProduce jobs don't have to keep their counters.
 struct EphemeralMarkerEntryType {
 };
 
@@ -113,7 +113,8 @@ TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
     EXPECT_EQ("SimpleIntegerOrderKey", impl.registry().streams[0].order_key_type);
     EXPECT_TRUE(impl.registry().streams[0].impl == static_cast<TailProduce::Stream*>(&impl.test));
     EXPECT_TRUE((std::is_same<SimpleIntegerEntry, typename StreamManagerImpl::STREAM_TYPE_test::ENTRY_TYPE>::value));
-    EXPECT_TRUE((std::is_same<SimpleIntegerOrderKey, typename StreamManagerImpl::STREAM_TYPE_test::ORDER_KEY_TYPE>::value));
+    EXPECT_TRUE((std::is_same<SimpleIntegerOrderKey,
+                 typename StreamManagerImpl::STREAM_TYPE_test::ORDER_KEY_TYPE>::value));
 }
 
 // This test explicitly lists what stream definition macros expand into.
@@ -136,5 +137,6 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
     EXPECT_EQ("SimpleIntegerOrderKey", impl.registry().streams[0].order_key_type);
     EXPECT_TRUE(impl.registry().streams[0].impl == static_cast<TailProduce::Stream*>(&impl.test));
     EXPECT_TRUE((std::is_same<SimpleIntegerEntry, typename StreamManagerImpl::STREAM_TYPE_test::ENTRY_TYPE>::value));
-    EXPECT_TRUE((std::is_same<SimpleIntegerOrderKey, typename StreamManagerImpl::STREAM_TYPE_test::ORDER_KEY_TYPE>::value));
+    EXPECT_TRUE((std::is_same<SimpleIntegerOrderKey,
+                 typename StreamManagerImpl::STREAM_TYPE_test::ORDER_KEY_TYPE>::value));
 }
