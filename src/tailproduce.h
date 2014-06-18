@@ -74,7 +74,7 @@ namespace TailProduce {
       private: \
         ::TailProduce::StreamsRegistry registry_;  \
       public: \
-        const ::TailProduce::StreamsRegistry& registry() { return registry_; }; \
+        const ::TailProduce::StreamsRegistry& registry() const { return registry_; }; \
         struct DummySemicolonEater {}
 
 #define TAILPRODUCE_STREAM(name, entry_type, order_key_type) \

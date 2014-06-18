@@ -95,10 +95,11 @@ template<typename T_OUTPUT> struct PrimesAggregatorTailProduce {
     std::vector<std::string> intermediate_;
 };
 
+template<typename T> class StreamManagerTest : public ::testing::Test {};
+
 // Unit test for TailProduce static framework.
 // TODO(dkorolev): Add more stream managers and data storages here.
 
-template<typename T> class StreamManagerTest : public ::testing::Test {};
 typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
 TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
 
@@ -126,7 +127,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         ::TailProduce::StreamsRegistry registry_;
 
       public:
-        const ::TailProduce::StreamsRegistry& registry() { return registry_; }
+        const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
         typedef ::TailProduce::StreamInstance<SimpleIntegerEntry, SimpleIntegerOrderKey> STREAM_TYPE_test;
         STREAM_TYPE_test test = STREAM_TYPE_test(registry_, "test", "SimpleIntegerEntry", "SimpleIntegerOrderKey");
     };
