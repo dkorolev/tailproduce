@@ -2,10 +2,29 @@
 
 #include <gtest/gtest.h>
 
+
+// TODO(dkorolev): Complete this test. Remaining:
+//                 * iterating over data via the StreamManager, going around the Db.
+//                 * merging input streams.
+//                 * producing data.
+//                 * starting jobs.
+//                 * serialization.
+
 #include "../../src/tailproduce.h"
 
 #include "mocks/stream_manager.h"
 #include "mocks/data_storage.h"
+
+
+// TODO(dkorolev): Entry implementations should inherit from their base class.
+// TODO(dkorolev): Current serialization is a prototype, move to a more robust version.
+
+// Test plan:
+// * One basic stream, that is being populated "externally".
+//   In other words, mocked, since each entry will be added independently.
+// * A few derived streams:
+//    - The one that listens to an input stream and outputs only the prime numbers from it.
+//    - The one that listens to an input stream and outputs aggregates each N=10 entires.
 
 // Ordering key.
 struct SimpleIntegerOrderKey : TailProduce::OrderKey {
@@ -31,6 +50,50 @@ struct SimpleIntegerEntry {
 template<> SimpleIntegerOrderKey SimpleIntegerEntry::OrderKey<SimpleIntegerOrderKey>() const {
     return SimpleIntegerOrderKey(key);
 }
+
+// EphemeralMarkerEntryType is "fired" every N=10 entries, so that TailProduce jobs don't have to keep their counters.
+struct EphemeralMarkerEntryType {
+};
+
+// An example TailProduce job, effectively acting as a filter.
+// TODO(dkorolev): TailProduceFilter<T_PREDICATE> should probably be a part of the standard TailProduce library.
+// TODO(dkorolev): Standardize typing convention to be able to extract order key types from T_OUTPUT.
+template<typename T_OUTPUT> struct PrimeNumbersTailProduce {
+    void Consume(const SimpleIntegerEntry& entry, T_OUTPUT& output) {
+        if (is_prime(entry.key)) {
+            output.Produce(entry);
+        }
+    }
+
+  private:
+    static bool is_prime(const uint32_t& x) {
+        for (uint32_t i = 2; i * i <= x; ++i) {
+            if ((x % i) == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+// An example TailProduce job, effectively acting as an aggregator.
+// TODO(dkorolev): TailProduceAggregator<T_MARKER> should probably be a part of the standard TailProduce library.
+template<typename T_OUTPUT> struct PrimesAggregatorTailProduce {
+    void Consume(const SimpleIntegerEntry& entry, T_OUTPUT& output) {
+        intermediate_.push_back(entry.data);
+    }
+    void Consume(const EphemeralMarkerEntryType&) {
+        std::ostringstream os;
+        for (size_t i = 0; i < intermediate_.size(); ++i) {
+            if (i) {
+                os << ',';
+            }
+            os << intermediate_[i];
+        }
+        intermediate_.clear();
+    }
+    std::vector<std::string> intermediate_;
+};
 
 // Unit test for TailProduce static framework.
 // TODO(dkorolev): Add more stream managers and data storages here.
