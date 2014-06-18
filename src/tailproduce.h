@@ -13,7 +13,7 @@ namespace TailProduce {
     class StreamsRegistry {
       public:
         struct StreamsRegistryEntry {
-            // The pointer to an instance of the stream is owner by TailProduce framework.
+            // The pointer to an instance of the stream is owned by TailProduce framework.
             // * For static frameworks (streams list is fully available at compile time),
             //   these pointers point to existing, statically initialized, members
             //   of the instance of cover TailProduce class.
