@@ -13,7 +13,14 @@ namespace TailProduce {
     class StreamsRegistry {
       public:
         struct StreamsRegistryEntry {
-            Stream* impl;
+            // The pointer to an instance of the stream is owner by TailProduce framework.
+            // * For static frameworks (streams list is fully available at compile time),
+            //   these pointers point to existing, statically initialized, members
+            //   of the instance of cover TailProduce class.
+            // * For dynamic frameworks, they point to dynamically allocated instances
+            //   of per-stream implementations, which are also owned by the instance
+            //   of the cover TailProduce class.
+            const Stream* impl;
             std::string name;
             std::string entry_type;
             std::string order_key_type;
