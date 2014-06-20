@@ -4,20 +4,29 @@
 #include <string>
 #include <functional>
 #include <memory>
-#include "dbm_status.h"
 
 namespace TailProduce {
-    typedef std::function<void(std::string const &)> RangeCallback;
+    typedef std::string Key_Type;
+    typedef std::string Value_Type;
+
+    struct DbMStatus {
+        DbMStatus(int val, std::string const& description) : 
+            status_(static_cast<Status>(val)), description_(description) {}
+        std::string const& Description() { return description_; }
+        bool Ok() { return status_ == Status::OK; };
+
+        enum Status { OK, NotFound, Corruption, NotSupported, InvalidArgument, IOError, UnknownError} status_;
+        std::string description_;
+    };
+
+
 
     class DbModule {
     public:
 
-        virtual void GetRange(std::string const& startKey, 
-                              std::string const& endKey,
-                              RangeCallback cb) = 0;
-        virtual DbMStatus GetRecord(std::string const& key, std::string& value) = 0;
-        virtual DbMStatus PutRecord(std::string const& key, std::string const& value) = 0;
-        virtual DbMStatus DeleteRecord(std::string const& key) = 0;
+        virtual DbMStatus GetRecord(Key_Type const& key, Value_Type& value) = 0;
+        virtual DbMStatus PutRecord(Key_Type const& key, Value_Type const& value) = 0;
+        virtual DbMStatus DeleteRecord(Key_Type const& key) = 0;
     };
 };
 

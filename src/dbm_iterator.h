@@ -3,24 +3,25 @@
 
 // Iterator class that wraps around what ever Data Base Module Iterator we have
 
+#include "db_module.h"
 namespace TailProduce {
     template <typename dbmodule, typename moduletype>
     auto 
     CreateIterator(dbmodule dbm, 
-       std::string const& startKey, 
-       std::string const& endKey) -> decltype(std::declval<moduletype>().GetIterator(startKey,endKey)) {
+       Key_Type const& startKey, 
+       Value_Type const& endKey) -> decltype(std::declval<moduletype>().GetIterator(startKey,endKey)) {
         return dbm->GetIterator(startKey, endKey);
     }
 
     template <typename It>
     struct DbMIterator {
     public:
-        DbMIterator(DbMIterator&&) = default;  // how does a shared_ptr respond with move dynamics??
+        DbMIterator(DbMIterator&&) = default;  // TODO: understand how a shared_ptr responds with move dynamics??
         DbMIterator(It val) : it_(val) {}
         void Next() { it_->Next(); }
-        std::string const& Key() { return it_->Key(); }
-        std::string const& Value() { return it_->Value();}
-        bool Done() { return it_>Done();}
+        Key_Type Key() const { return it_->Key(); }
+        Value_Type Value() const { return it_->Value();}
+        bool Done() { return it_->Done(); }
     private:
         It it_;
         DbMIterator() = delete;

@@ -5,21 +5,24 @@
 #include <memory>
 #include "leveldb/db.h"
 
+#include "db_module.h"
+
 namespace TailProduce {
     class DbMLevelDbIterator {
     public:
         DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db, 
-                           std::string const& startKey,
-                           std::string const& endKey);
+                           Key_Type const& startKey,
+                           Key_Type const& endKey);
         void Next();
-        std::string Key();
-        std::string Value();
+        Key_Type Key() const;
+        Value_Type Value() const;
         bool Done();
     private:
-        std::string lastKey_;
-        std::string endKey_;
-        std::unique_ptr<leveldb::Iterator> it_;
+        Key_Type lastKey_;
+        Key_Type endKey_;
         std::shared_ptr<leveldb::DB> db_;
+        std::unique_ptr<leveldb::Iterator> it_;
+
         DbMLevelDbIterator() = delete;
         DbMLevelDbIterator(DbMLevelDbIterator const&) = delete;
         DbMLevelDbIterator& operator=(DbMLevelDbIterator const&) = delete;

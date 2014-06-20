@@ -12,15 +12,12 @@ namespace TailProduce {
         class Iterator;
     public:
         DbMLevelDb(std::string const& dbname = "/tmp/tailproducedb");
-        virtual void GetRange(std::string const& startKey,
-                              std::string const& endKey,
-                              RangeCallback cb);
-        virtual DbMStatus GetRecord(std::string const& key, std::string& value);
-        virtual DbMStatus PutRecord(std::string const& key, std::string const& value);
-        virtual DbMStatus DeleteRecord(std::string const& key);
+        virtual DbMStatus GetRecord(Key_Type const& key, Value_Type& value);
+        virtual DbMStatus PutRecord(Key_Type const& key, Value_Type const& value);
+        virtual DbMStatus DeleteRecord(Key_Type const& key);
 
         DbMIterator<std::shared_ptr<DbMLevelDbIterator>>
-        GetIterator(std::string const& startKey, std::string const &endKey) {
+        GetIterator(Key_Type const& startKey, Key_Type const &endKey) {
             std::shared_ptr<DbMLevelDbIterator> it(new DbMLevelDbIterator(db_, startKey, endKey));
             return DbMIterator<std::shared_ptr<DbMLevelDbIterator>>(it);
         }
