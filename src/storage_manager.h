@@ -4,7 +4,7 @@
 #include <memory>
 #include "db_module.h"
 #include "notifier.h"
-
+#include "dbm_iterator.h"
 
 namespace TailProduce {
     class StorageManager {
@@ -36,8 +36,10 @@ namespace TailProduce {
         void GetListener(std::string const& streamId, NotifierCallback cb);
         void PutListener(std::string const& streamId, NotifierCallback cb);
         void DeleteListener(std::string const& streamId, NotifierCallback cb);
+
+
     private:
-        std::unique_ptr<DbModule> dbm_;
+        std::shared_ptr<DbModule> dbm_;
         Notifier notifier_;
 
         std::string lastWriteKey_(std::string const& streamId);

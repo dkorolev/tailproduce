@@ -4,7 +4,15 @@
 // Iterator class that wraps around what ever Data Base Module Iterator we have
 
 namespace TailProduce {
-    template <typename It>  // type must be a (unique) ptr
+    template <typename dbmodule, typename moduletype>
+    auto 
+    CreateIterator(dbmodule dbm, 
+       std::string const& startKey, 
+       std::string const& endKey) -> decltype(std::declval<moduletype>().GetIterator(startKey,endKey)) {
+        return dbm->GetIterator(startKey, endKey);
+    }
+
+    template <typename It>
     struct DbMIterator {
     public:
         DbMIterator(DbMIterator&&) = default;  // how does a shared_ptr respond with move dynamics??

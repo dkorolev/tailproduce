@@ -19,10 +19,10 @@ namespace TailProduce {
         virtual DbMStatus PutRecord(std::string const& key, std::string const& value);
         virtual DbMStatus DeleteRecord(std::string const& key);
 
-        virtual DbMIterator<std::shared_ptr<DbMLevelDbIterator>>
+        DbMIterator<std::shared_ptr<DbMLevelDbIterator>>
         GetIterator(std::string const& startKey, std::string const &endKey) {
             std::shared_ptr<DbMLevelDbIterator> it(new DbMLevelDbIterator(db_, startKey, endKey));
-            return DbMIterator<std::shared_ptr<DbMLevelDbIterator> >(it);
+            return DbMIterator<std::shared_ptr<DbMLevelDbIterator>>(it);
         }
 
     private:

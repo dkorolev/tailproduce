@@ -4,12 +4,10 @@
 TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db, 
                                                     std::string const& startKey, 
                                                     std::string const& endKey) : db_(db) {
-//    if (endKey.empty()) {
-//        endKey_ = infinityKey(startKey);
-//    }
     it_.reset(db_->NewIterator(leveldb::ReadOptions()));
     it_->Seek(startKey);
-    lastKey_ = it_->key().ToString();
+    if (it_->Valid())
+        lastKey_ = it_->key().ToString();
 }
 
 void
@@ -31,7 +29,8 @@ TailProduce::DbMLevelDbIterator::Value() {
 
 bool
 TailProduce::DbMLevelDbIterator::Done() {
-    if (!it_->Valid() || it_->key().ToString() >= endKey_) {
+    if (!lastKey_.empty() && (!it_->Valid() || 
+                             it_->key().ToString() >= endKey_)) {
         // we have reached the end.  Create a new iterator iterating from the lastKey (+1)
         // to the end. 
         auto it = db_->NewIterator(leveldb::ReadOptions());

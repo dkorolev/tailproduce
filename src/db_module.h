@@ -3,6 +3,7 @@
 
 #include <string>
 #include <functional>
+#include <memory>
 #include "dbm_status.h"
 
 namespace TailProduce {
@@ -10,6 +11,7 @@ namespace TailProduce {
 
     class DbModule {
     public:
+
         virtual void GetRange(std::string const& startKey, 
                               std::string const& endKey,
                               RangeCallback cb) = 0;
@@ -20,3 +22,4 @@ namespace TailProduce {
 };
 
 #endif
+
