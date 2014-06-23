@@ -4,7 +4,7 @@
 
 TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db, 
                                                     Key_Type const& startKey, 
-                                                    Value_Type const& endKey) : db_(db), endKey_(endKey) {
+                                                    Key_Type const& endKey) : db_(db), endKey_(endKey) {
     it_.reset(db_->NewIterator(leveldb::ReadOptions()));
     it_->Seek(startKey);
     if (it_->Valid())
@@ -19,17 +19,20 @@ TailProduce::DbMLevelDbIterator::Next() {
     lastKey_ = it_->key().ToString();
 }
 
-std::string 
+TailProduce::Key_Type
 TailProduce::DbMLevelDbIterator::Key() const {
     if (it_->Valid())
         return it_->key().ToString();
     LOG(FATAL) << "Can not obtain a Key() from a non valid iterator.";
 }
 
-std::string 
+TailProduce::Value_Type
 TailProduce::DbMLevelDbIterator::Value() const {
-    if (it_->Valid())
-        return it_->value().ToString();
+    if (it_->Valid()) {
+        std::string value = it_->value().ToString();
+        TailProduce::Value_Type v_return(value.begin(), value.end());
+        return v_return;
+    }
     LOG(FATAL) << "Can not obtain a Value() from a non valid iterator.";
 }
 

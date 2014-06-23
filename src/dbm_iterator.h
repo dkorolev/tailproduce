@@ -5,14 +5,6 @@
 
 #include "db_module.h"
 namespace TailProduce {
-    template <typename dbmodule, typename moduletype>
-    auto 
-    CreateIterator(dbmodule dbm, 
-       Key_Type const& startKey, 
-       Value_Type const& endKey) -> decltype(std::declval<moduletype>().GetIterator(startKey,endKey)) {
-        return dbm->GetIterator(startKey, endKey);
-    }
-
     template <typename It>
     struct DbMIterator {
     public:

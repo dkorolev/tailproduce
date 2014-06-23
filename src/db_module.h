@@ -2,12 +2,19 @@
 #define _DB_MODULE_H
 
 #include <string>
-#include <functional>
-#include <memory>
+#include <vector>
 
 namespace TailProduce {
     typedef std::string Key_Type;
-    typedef std::string Value_Type;
+    typedef std::vector<uint8_t> Value_Type;
+
+    template <typename dbmodule, typename moduletype>
+    auto 
+    CreateIterator(dbmodule dbm, 
+                   Key_Type const& startKey, 
+                   Value_Type const& endKey) -> decltype(std::declval<moduletype>().GetIterator(startKey,endKey)) {
+        return dbm->GetIterator(startKey, endKey);
+    }
 
     struct DbMStatus {
         DbMStatus(int val, std::string const& description) : 
@@ -17,16 +24,6 @@ namespace TailProduce {
 
         enum Status { OK, NotFound, Corruption, NotSupported, InvalidArgument, IOError, UnknownError} status_;
         std::string description_;
-    };
-
-
-
-    class DbModule {
-    public:
-
-        virtual DbMStatus GetRecord(Key_Type const& key, Value_Type& value) = 0;
-        virtual DbMStatus PutRecord(Key_Type const& key, Value_Type const& value) = 0;
-        virtual DbMStatus DeleteRecord(Key_Type const& key) = 0;
     };
 };
 

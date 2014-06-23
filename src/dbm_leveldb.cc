@@ -29,15 +29,17 @@ TailProduce::DbMLevelDb::DbMLevelDb(std::string const& dbname) : dbname_(dbname)
 
 TailProduce::DbMStatus 
 TailProduce::DbMLevelDb::GetRecord(Key_Type const& key, Value_Type& value) {
-    std::string v2;
-    leveldb::Status s = db_->Get(leveldb::ReadOptions(), key, &v2);
+    std::string v_get;
+    leveldb::Status s = db_->Get(leveldb::ReadOptions(), key, &v_get);
+    Value_Type v2(v_get.begin(), v_get.end());
     value = v2;
     return DbMLevelDbStatus::StatusCreator(s);
 }
 
 TailProduce::DbMStatus 
 TailProduce::DbMLevelDb::PutRecord(Key_Type const& key, Value_Type const& value) {
-    leveldb::Status s = db_->Put(leveldb::WriteOptions(), key, value);
+    std::string v_put(value.begin(), value.end());
+    leveldb::Status s = db_->Put(leveldb::WriteOptions(), key, v_put);
     return DbMLevelDbStatus::StatusCreator(s);
 }
 

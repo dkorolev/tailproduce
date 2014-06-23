@@ -8,7 +8,7 @@
 #include "dbm_iterator.h"
 
 namespace TailProduce {
-    class DbMLevelDb : public DbModule {
+    class DbMLevelDb {
         class Iterator;
     public:
         DbMLevelDb(std::string const& dbname = "/tmp/tailproducedb");
