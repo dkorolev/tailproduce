@@ -12,7 +12,7 @@ namespace TailProduce {
         DbMIterator(It val) : it_(val) {}
         void Next() { it_->Next(); }
         Key_Type Key() const { return it_->Key(); }
-        Value_Type Value() const { return it_->Value();}
+        Value_Type Value() const { return it_->Value(); }
         bool Done() { return it_->Done(); }
     private:
         It it_;

@@ -1,29 +1,65 @@
+#include <exception>
 #include "leveldb/db.h"
-#include <glog/logging.h>
 #include "dbm_leveldb_iterator.h"
+#include <iostream>
+
+#if 0
+// A convenient function for debugging
+void showValid( leveldb::Iterator* it_) {
+    std::cout << "Valid " << it_->Valid() << std::endl;
+    if (it_->Valid()) {
+        std::cout << "Key = " << it_->key().ToString() << " Value = " << it_->value().ToString() << std::endl;
+    }
+}
+#endif
+
+void
+TailProduce::DbMLevelDbIterator::CreateIterator_(Key_Type const& key, bool advance) {
+    it_.reset(db_->NewIterator(leveldb::ReadOptions()));
+    it_->Seek(key);
+    if (it_->Valid() && advance) {
+        it_->Next();
+    }
+};
 
 TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db, 
+                                                    Key_Type const& keyPrefix, 
                                                     Key_Type const& startKey, 
-                                                    Key_Type const& endKey) : db_(db), endKey_(endKey) {
-    it_.reset(db_->NewIterator(leveldb::ReadOptions()));
-    it_->Seek(startKey);
-    if (it_->Valid())
-        lastKey_ = it_->key().ToString();
+                                                    Key_Type const& endKey) : 
+    db_(db), keyPrefix_(keyPrefix), endKey_(endKey) {
+
+    if (keyPrefix.empty()) throw std::invalid_argument("May not start a query with an empty keyPrefix.");
+    lastKey_ = keyPrefix + startKey;
+    CreateIterator_(lastKey_, false);
+    firstRead_ = it_->Valid();
 }
 
 void
 TailProduce::DbMLevelDbIterator::Next() {
-                
-    if (Done()) LOG(FATAL) << "Attempted to Next() an iterator for which Done() is true.";
-    it_->Next();
-    lastKey_ = it_->key().ToString();
+    if (Done()) throw std::logic_error("Attempting to Next() when at the end of iterator.");
+
+    if (!it_->Valid()) 
+        CreateIterator_(lastKey_, true);
+
+    if (it_->Valid()) {
+        lastKey_ = it_->key().ToString();
+        it_->Next();
+        firstRead_ = true;
+    }
+
+    if (it_->Valid()) {
+        lastKey_ = it_->key().ToString();
+        firstRead_ = true;
+    }
+    else
+        CreateIterator_(lastKey_, true);
 }
 
 TailProduce::Key_Type
 TailProduce::DbMLevelDbIterator::Key() const {
     if (it_->Valid())
         return it_->key().ToString();
-    LOG(FATAL) << "Can not obtain a Key() from a non valid iterator.";
+    throw std::out_of_range("Can not obtain a Key() from a non valid iterator.");
 }
 
 TailProduce::Value_Type
@@ -33,20 +69,24 @@ TailProduce::DbMLevelDbIterator::Value() const {
         TailProduce::Value_Type v_return(value.begin(), value.end());
         return v_return;
     }
-    LOG(FATAL) << "Can not obtain a Value() from a non valid iterator.";
+    throw std::out_of_range("Can not obtain a Value() from a non valid iterator.");
 }
 
 bool
 TailProduce::DbMLevelDbIterator::Done() {
-    if (!it_->Valid() || it_->key().ToString() >= endKey_) {
-        // we have reached the end.  Create a new iterator iterating from the lastKey (+1)
-        // to the end. 
-        if (!lastKey_.empty()) {
-            it_.reset(db_->NewIterator(leveldb::ReadOptions()));
-            it_->Seek(lastKey_);
-            it_->Next();
-        }
+
+    if (!it_->Valid()) {
+        // We have moved to the end of the iterator.  Recreate the iterator from the last 
+        // key (+1) to see if any new entries have arrived.
+        CreateIterator_(lastKey_, firstRead_);
     }
-    return (!it_->Valid() || it_->key().ToString() >= endKey_ );
+
+    
+    if (!it_->Valid()) return true;  // We are done if the iterator is not valid.
+
+    Key_Type key = it_->key().ToString();
+
+    return ((!endKey_.empty() && key >= endKey_ ) || // We are done if we have progressed beyond the last specified
+            (key.compare(0, keyPrefix_.length(), keyPrefix_) != 0));  // Or we are done if the keyPrefix is changing
 }
 

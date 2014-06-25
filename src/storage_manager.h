@@ -14,23 +14,22 @@ namespace TailProduce {
         StorageManager(dbmodule& dbm) : dbm_(dbm) {}
 
         auto 
-        GetIterator(Key_Type const& startKey, Key_Type const& endKey) -> 
+        GetIterator(Key_Type const& keyPrefix,
+                    Key_Type const& startKey = Key_Type(),
+                    Key_Type const& endKey = Key_Type()) -> 
             decltype(std::declval<dbmodule>().GetIterator(startKey,endKey)) 
         {
-            return dbm_.GetIterator(startKey, endKey);
+            return dbm_.GetIterator(keyPrefix, startKey, endKey);
         }
 
-        DbMStatus Set(Key_Type const& key, Value_Type const& value) {
-            DbMStatus s = dbm_.PutRecord(key, value);
-            return s;
+        void Set(Key_Type const& key, Value_Type const& value) {
+            dbm_.PutRecord(key, value);
         }
 
-        
-        DbMStatus Get(Key_Type const& key, Value_Type& v_return) {
+        Value_Type Get(Key_Type const& key) {
             Value_Type value;
             DbMStatus s = dbm_.GetRecord(key, value);
-            v_return = value;
-            return s;
+            return value;
         }
     };
 };
