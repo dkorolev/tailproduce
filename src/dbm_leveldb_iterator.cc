@@ -1,9 +1,10 @@
 #include <exception>
 #include "leveldb/db.h"
 #include "dbm_leveldb_iterator.h"
-#include <iostream>
 
 #if 0
+#include <iostream>
+
 // A convenient function for debugging
 void showValid( leveldb::Iterator* it_) {
     std::cout << "Valid " << it_->Valid() << std::endl;
@@ -11,6 +12,7 @@ void showValid( leveldb::Iterator* it_) {
         std::cout << "Key = " << it_->key().ToString() << " Value = " << it_->value().ToString() << std::endl;
     }
 }
+
 #endif
 
 void
