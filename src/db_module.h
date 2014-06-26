@@ -16,15 +16,6 @@ namespace TailProduce {
         return dbm->GetIterator(startKey, endKey);
     }
 
-    struct DbMStatus {
-        DbMStatus(int val, std::string const& description) : 
-            status_(static_cast<Status>(val)), description_(description) {}
-        std::string const& Description() { return description_; }
-        bool Ok() { return status_ == Status::OK; };
-
-        enum Status { OK, NotFound, Corruption, NotSupported, InvalidArgument, IOError, UnknownError} status_;
-        std::string description_;
-    };
 };
 
 #endif

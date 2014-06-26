@@ -30,7 +30,8 @@ TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB>
                                                     Key_Type const& endKey) : 
     db_(db), keyPrefix_(keyPrefix), endKey_(endKey) {
 
-    if (keyPrefix.empty()) throw std::invalid_argument("May not start a query with an empty keyPrefix.");
+    if (keyPrefix.empty()) 
+        throw std::invalid_argument("May not start a query with an empty keyPrefix.");
     lastKey_ = keyPrefix + startKey;
     CreateIterator_(lastKey_, false);
     firstRead_ = it_->Valid();
@@ -38,16 +39,12 @@ TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB>
 
 void
 TailProduce::DbMLevelDbIterator::Next() {
-    if (Done()) throw std::logic_error("Attempting to Next() when at the end of iterator.");
+    if (Done()) 
+        throw std::logic_error("Attempting to Next() when at the end of iterator.");
 
-    if (!it_->Valid()) 
-        CreateIterator_(lastKey_, true);
-
-    if (it_->Valid()) {
-        lastKey_ = it_->key().ToString();
-        it_->Next();
-        firstRead_ = true;
-    }
+    lastKey_ = it_->key().ToString();
+    it_->Next();
+    firstRead_ = true;
 
     if (it_->Valid()) {
         lastKey_ = it_->key().ToString();
@@ -67,9 +64,11 @@ TailProduce::DbMLevelDbIterator::Key() const {
 TailProduce::Value_Type
 TailProduce::DbMLevelDbIterator::Value() const {
     if (it_->Valid()) {
-        std::string value = it_->value().ToString();
-        TailProduce::Value_Type v_return(value.begin(), value.end());
-        return v_return;
+        Value_Type r_vec(it_->value().size());
+        auto data = it_->value().data();
+        for (int iter = 0; iter < it_->value().size(); ++iter)
+            r_vec[iter] = data[iter];
+        return r_vec;
     }
     throw std::out_of_range("Can not obtain a Value() from a non valid iterator.");
 }
@@ -78,8 +77,8 @@ bool
 TailProduce::DbMLevelDbIterator::Done() {
 
     if (!it_->Valid()) {
-        // We have moved to the end of the iterator.  Recreate the iterator from the last 
-        // key (+1) to see if any new entries have arrived.
+        // We have moved to the end of the iterator.  Recreate the iterator
+        // from the last key (+1) to see if any new entries have arrived.
         CreateIterator_(lastKey_, firstRead_);
     }
 

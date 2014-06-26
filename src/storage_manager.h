@@ -27,9 +27,7 @@ namespace TailProduce {
         }
 
         Value_Type Get(Key_Type const& key) {
-            Value_Type value;
-            DbMStatus s = dbm_.GetRecord(key, value);
-            return value;
+            return dbm_.GetRecord(key);
         }
     };
 };

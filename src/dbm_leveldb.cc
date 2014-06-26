@@ -1,22 +1,6 @@
 #include <cassert>
+#include <exception>
 #include "dbm_leveldb.h"
-
-namespace DbMLevelDbStatus {
-    TailProduce::DbMStatus
-    StatusCreator(leveldb::Status const& ldbstatus) {
-        using CODE = TailProduce::DbMStatus;
-        if (ldbstatus.ok()) 
-            return TailProduce::DbMStatus(CODE::OK, "");
-        else {
-            int code = CODE::UnknownError;
-            if (ldbstatus.IsNotFound()) code = CODE::NotFound;
-            if (ldbstatus.IsCorruption()) code = CODE::Corruption;
-            if (ldbstatus.IsIOError()) code = CODE::IOError;
-            if (ldbstatus.IsNotFound()) code = CODE::NotFound;
-            return TailProduce::DbMStatus(code, ldbstatus.ToString());
-        }
-    }
-};
 
 TailProduce::DbMLevelDb::DbMLevelDb(std::string const& dbname) : dbname_(dbname) {
     leveldb::Options options;
@@ -27,25 +11,26 @@ TailProduce::DbMLevelDb::DbMLevelDb(std::string const& dbname) : dbname_(dbname)
     db_.reset(db);
 };
 
-TailProduce::DbMStatus 
-TailProduce::DbMLevelDb::GetRecord(Key_Type const& key, Value_Type& value) {
+TailProduce::Value_Type
+TailProduce::DbMLevelDb::GetRecord(Key_Type const& key) {
     std::string v_get;
     leveldb::Status s = db_->Get(leveldb::ReadOptions(), key, &v_get);
-    Value_Type v2(v_get.begin(), v_get.end());
-    value = v2;
-    return DbMLevelDbStatus::StatusCreator(s);
+    if (!s.ok()) throw std::domain_error(s.ToString());
+    Value_Type v_ret(v_get.begin(), v_get.end());
+    return v_ret;
 }
 
-TailProduce::DbMStatus 
+void
 TailProduce::DbMLevelDb::PutRecord(Key_Type const& key, Value_Type const& value) {
     std::string v_put(value.begin(), value.end());
     leveldb::Status s = db_->Put(leveldb::WriteOptions(), key, v_put);
-    return DbMLevelDbStatus::StatusCreator(s);
+    if (!s.ok()) throw std::domain_error(s.ToString());
 }
 
-TailProduce::DbMStatus 
+void
 TailProduce::DbMLevelDb::DeleteRecord(Key_Type const& key) {
     leveldb::Status s = db_->Delete(leveldb::WriteOptions(), key);
-    return DbMLevelDbStatus::StatusCreator(s);
+    if (!s.ok()) throw std::domain_error(s.ToString());
 }
+
 
