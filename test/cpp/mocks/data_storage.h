@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <string>
 
 #include <glog/logging.h>
 
@@ -17,7 +18,7 @@
 
 class MockDataStorage {
   public:
-    typedef std::vector<uint8_t> KEY_TYPE;
+    typedef std::string KEY_TYPE;
     typedef std::vector<uint8_t> VALUE_TYPE;
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
@@ -101,7 +102,7 @@ class MockDataStorage {
             return cit_->first;
         }
 
-        const KEY_TYPE& Value() const {
+        const VALUE_TYPE& Value() const {
             EXPECT_FALSE(Done());
             return cit_->second;
         }
