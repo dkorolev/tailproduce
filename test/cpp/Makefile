@@ -1,5 +1,5 @@
 CPP=g++
-CPPFLAGS=-std=c++11
+CPPFLAGS=-std=c++11 -I ../../
 LDFLAGS=-pthread -lgflags -lglog -static
 
 SRC=$(wildcard *.cc)

@@ -1,11 +1,25 @@
+// TODO(dkorolev): Perhaps we should move StreamsRegistry to become the part of the StreamManager base class?
+
 #ifndef TAILPRODUCE_H
 #define TAILPRODUCE_H
 
 #include <vector>
 #include <set>
 #include <string>
+#include <type_traits>
+#include <mutex>
+#include <sstream>
 
 #include <glog/logging.h>
+
+#include "cereal/archives/binary.hpp"
+#include "cereal/archives/json.hpp"
+
+#include "cereal/types/string.hpp"
+#include "cereal/types/vector.hpp"
+#include "cereal/types/map.hpp"
+
+#include "cereal/types/polymorphic.hpp"
 
 namespace TailProduce {
     class Stream;
@@ -48,10 +62,37 @@ namespace TailProduce {
             registry.Add(this, stream_name, entry_type_name, order_key_type_name);
         }
     };
-    struct OrderKey {};
 
-    // TODO(dkorolev): Do ensure that user-defined objects inherit from the right base classes.
-    template<typename T_ENTRY, typename T_ORDER_KEY> class StreamInstance : public TailProduce::Stream {
+    // A serializable entry.
+    struct Entry {
+       // template<typename T_ORDER_KEY> T_ORDER_KEY GetOrderKey() const;
+       // template<typename T> static void SerializeEntry(std::ostream& os, const T& entry);
+       // template<typename T> static void DeSerializeEntry(std::istream& is, T& entry);
+    };
+
+    // An interface to extract order keys in certain types. With fixed-size serialization.
+    struct OrderKey {
+        // enum { size_in_bytes = 0 };
+        // bool operator<(const T& rhs) const;
+        // void SerializeOrderKey(uint8_t* ptr) const;
+        // void DeSerializeOrderKey(const uint8_t* ptr);
+    };
+    struct Storage {};   // Data storage proxy, originally LevelDB.
+    struct Producer {};  // Client-defined job.
+
+    // Cereal-based serialization.
+    template<typename T> struct CerealJSONSerializable {
+       static void SerializeEntry(std::ostream& os, const T& entry) {
+           (cereal::JSONOutputArchive(os))(entry);
+           os << std::endl;
+       }
+       static void DeSerializeEntry(std::istream& is, T& entry) {
+           cereal::JSONInputArchive ar(is);
+           ar(entry);
+       }
+    };
+
+    template<typename T_ENTRY, typename T_ORDER_KEY> class StreamInstance : public Stream {
       public:
         typedef T_ENTRY ENTRY_TYPE;
         typedef T_ORDER_KEY ORDER_KEY_TYPE;
@@ -64,10 +105,18 @@ namespace TailProduce {
                                   stream_name,
                                   entry_type_name,
                                   order_key_type_name) {
+            using TE = ::TailProduce::Entry;
+            static_assert(std::is_base_of<TE, T_ENTRY>::value, "StreamManager::T_ENTRY should be derived from Entry.");
+            using TOK = ::TailProduce::OrderKey;
+            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value, "StreamManager::T_ORDER_KEY should be derived from OrderKey.");
+            static_assert(T_ORDER_KEY::size_in_bytes > 0, "StreamManager::T_ORDER_KEY::size_in_bytes should be positive.");
         }
     };
+
+    struct StreamManager {};
 };
 
+/*
 // TailProduce static framework macros.
 // Static framework is the one that lists all the streams in the source file,
 // thus allowing all C++ template and static typing powers to come into play.
@@ -84,5 +133,6 @@ namespace TailProduce {
 
 #define TAILPRODUCE_STATIC_FRAMEWORK_END() \
     }
+*/
 
 #endif  // TAILPRODUCE_H

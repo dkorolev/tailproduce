@@ -6,16 +6,24 @@
 
 #include <glog/logging.h>
 
+#include "../../../src/tailproduce.h"
+
 // TODO(dkorolev): Mock data storage implementation should inherit from its base class.
 
 // MockDataStorage supports the following functionality:
-// 1) Store data as bianry key-value pairs.
+//
+// 1) Store data as binary key-value pairs.
+//    The design decision is to use std::string-s for keys and std::vector<uint8_t>-s for values.
 //    Both key and value should not be empty.
-// 2) Provide read access iterators. Given the range [from, to], or indefinitely from [from, ...].
-//    Read iterators are capable of resuming reading new data once it arrives.
+//
+// 2) Provide read access iterators.
+//    Given the range [from, to], or indefinitely from [from, ...].
+//    The value at key `from` should exist, the implementation would explicitly die if it does not.
+//    
 // 3) Die on attempting to overwrite the value for an already existing key.
+//    Unless explicitly instructed to.
 
-class MockDataStorage {
+class MockDataStorage : ::TailProduce::Storage {
   public:
     typedef std::vector<uint8_t> KEY_TYPE;
     typedef std::vector<uint8_t> VALUE_TYPE;
@@ -60,7 +68,7 @@ class MockDataStorage {
         }
     }
 
-    // TODO(dkorolev): Read more about the move semantics of C++.
+    // TODO(dkorolev): Read more about the move semantics of C++ and eliminate a potentially unoptimized copy.
     VALUE_TYPE Get(const KEY_TYPE& key) const {
         VALUE_TYPE value;
         Get(key, value);
@@ -70,29 +78,18 @@ class MockDataStorage {
     struct Iterator {
         Iterator(Iterator&&) = default;
 
+        bool Valid() const {
+            return cit_ != data_.end() && (end_.empty() || cit_->first < end_);
+        }
+
         bool Done() const {
-            // Support dynamic iteration.
-            // 1) Done() would check if new data has arrived and would adjust accordingly.
-            // 2) Done() would be called in Key(), Value() and Next() to ensure this adjustment.
-            if (cit_ == data_.end()) {
-                if (!cursor_.second) {
-                    // Point to the key that is cursor_.first or above.
-                    // Only used before any advacement has taken place.
-                    cit_ = data_.lower_bound(cursor_.first);
-                } else {
-                    // Point to the key right after the cursor_.first one.
-                    // Used to resume if any advancement has taken place.
-                    cit_ = data_.upper_bound(cursor_.first);
-                }
-            }
-            return (cit_ == data_.end()) || (!to_.empty() && cit_->first > to_);
+            return !Valid();
         }
 
         void Next() {
             if (Done()) {
                 LOG(FATAL) << "Attempted to Next() an iterator for which Done() is true.";
             }
-            cursor_ = std::make_pair(cit_->first, true);
             ++cit_;
         }
 
@@ -101,32 +98,31 @@ class MockDataStorage {
             return cit_->first;
         }
 
-        const KEY_TYPE& Value() const {
+        const VALUE_TYPE& Value() const {
             EXPECT_FALSE(Done());
             return cit_->second;
         }
 
-        const MAP_TYPE& data_;
-        std::pair<KEY_TYPE, bool> cursor_;  // { "cursor" key, flag: false="on it", true="right after it" }.
-        KEY_TYPE to_;
-        mutable typename MAP_TYPE::const_iterator cit_;
-
       private:
         // Allow returning Iterators from Storage's member functions w/o copying them.
-        Iterator(MockDataStorage& master, const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE())
+        Iterator(MockDataStorage& master, const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_),
-              cursor_(from, false),
-              to_(to),
-              cit_(data_.end()) {
+              end_(end),
+              cit_(data_.lower_bound(begin)) {
         }
         friend class MockDataStorage;
+
+        const MAP_TYPE& data_;
+        KEY_TYPE end_;
+        typename MAP_TYPE::const_iterator cit_;
+
         Iterator() = delete;
         Iterator(const Iterator&) = delete;
         void operator=(const Iterator&) = delete;
     };
 
-    Iterator GetIterator(const KEY_TYPE& from = KEY_TYPE(), const KEY_TYPE& to = KEY_TYPE()) {
-        return Iterator(*this, from, to);
+    Iterator GetIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
+        return Iterator(*this, begin, end);
     }
 
   private:
