@@ -1,4 +1,5 @@
 #include <exception>
+#include <cstring>
 #include "leveldb/db.h"
 #include "dbm_leveldb_iterator.h"
 
@@ -65,9 +66,8 @@ TailProduce::Value_Type
 TailProduce::DbMLevelDbIterator::Value() const {
     if (it_->Valid()) {
         Value_Type r_vec(it_->value().size());
-        auto data = it_->value().data();
-        for (int iter = 0; iter < it_->value().size(); ++iter)
-            r_vec[iter] = data[iter];
+        int elemSize = sizeof(decltype(*(it_->value().data())));
+        memcpy(r_vec.data(), it_->value().data(), elemSize * it_->value().size());
         return r_vec;
     }
     throw std::out_of_range("Can not obtain a Value() from a non valid iterator.");

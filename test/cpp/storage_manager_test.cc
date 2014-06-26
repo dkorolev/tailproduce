@@ -11,26 +11,6 @@
 #include "../../src/dbm_leveldb.h"
 #include "../../src/dbm_leveldb_iterator.h"
 
-#if 0
-class CreateTestDb {
-public:
-    CreateTestDb() {
-        auto dbm = TailProduce::DbMLevelDb("../leveldbTest");
-        storage_.reset(new TailProduce::StorageManager<TailProduce::DbMLevelDb>(dbm));
-    }
-    
-    std::shared_ptr<TailProduce::StorageManager<TailProduce::DbMLevelDb>> getStorage() {
-        return storage_;
-    }
-
-    ~CreateTestDb() {
-        boost::filesystem::remove_all("../leveldbTest");
-    }
-private:
-    std::shared_ptr<TailProduce::StorageManager<TailProduce::DbMLevelDb>> storage_;
-};
-#endif
-
 std::string
 makeKey(std::string const& streamId, std::string const& value = std::string()) {
     // We want to add a time element to the key so it will be unique per run.
