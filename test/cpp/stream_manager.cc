@@ -326,13 +326,11 @@ TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
 
 // Tests stream creation macros.
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
-    /*
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerImpl, TypeParam);
-    TAILPRODUCE_INPUT_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
     RUN_TESTS<StreamManagerImpl>();
-    */
 }
 
 // This test explicitly lists what stream definition macros expand into.

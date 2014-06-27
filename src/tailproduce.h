@@ -357,23 +357,50 @@ namespace TailProduce {
     };
 };
 
-/*
 // TailProduce static framework macros.
 // Static framework is the one that lists all the streams in the source file,
 // thus allowing all C++ template and static typing powers to come into play.
-#define TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(name, base) \
-    class name : public base { \
+#define TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(NAME, BASE) \
+    class NAME : public BASE { \
       private: \
+        using TSM = ::TailProduce::StreamManager; \
+        static_assert(std::is_base_of<TSM, TypeParam>::value, \
+                      "StreamManagerImpl: TypeParam should be derived from StreamManager."); \
+        using TS = ::TailProduce::Storage; \
+        static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value, \
+                      "StreamManagerImpl: TypeParam::storage_type should be derived from Storage."); \
         ::TailProduce::StreamsRegistry registry_;  \
       public: \
         const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
 
-#define TAILPRODUCE_STREAM(name, entry_type, order_key_type) \
-        typedef ::TailProduce::StreamInstance<entry_type, order_key_type> STREAM_TYPE_##name; \
-        STREAM_TYPE_##name name = STREAM_TYPE_##name(registry_, #name, #entry_type, #order_key_type)
+#define TAILPRODUCE_STREAM(NAME, ENTRY_TYPE, ORDER_KEY_TYPE) \
+        struct NAME##_type { \
+            typedef ENTRY_TYPE entry_type; \
+            typedef ORDER_KEY_TYPE order_key_type; \
+            typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type; \
+            typedef typename TypeParam::storage_type storage_type; \
+            typedef ::TailProduce::UnsafeListener<NAME##_type> unsafe_listener_type; \
+            typedef ::TailProduce::UnsafePublisher<NAME##_type> unsafe_publisher_type; \
+            typedef std::pair<order_key_type, uint32_t> head_pair_type; \
+            StreamManagerImpl* manager; \
+            stream_type stream; \
+            const std::string name; \
+            head_pair_type head; \
+            const std::vector<uint8_t> head_storage_key; \
+            NAME##_type( \
+                StreamManagerImpl* manager, \
+                const char* stream_name, \
+                const char* entry_type_name, \
+                const char* entry_order_key_name) \
+              : manager(manager), \
+                stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name), \
+              name(stream_name), \
+              head_storage_key(bytes("s:" + name)) { \
+            } \
+        }; \
+        NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE)
 
 #define TAILPRODUCE_STATIC_FRAMEWORK_END() \
     }
-*/
 
 #endif  // TAILPRODUCE_H
