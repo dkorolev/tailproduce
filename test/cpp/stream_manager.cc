@@ -308,121 +308,6 @@ TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
 
 // This test explicitly lists what stream definition macros expand into.
 // Used as a reference point, as well as to ensure the macros do what they are designed to.
-namespace TailProduce {
-    // UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
-    // presenting data in serialized format and keeping track of HEAD order keys.
-    template<typename T> struct UnsafeListener {
-        /*
-        template<typename T_MANAGER> explicit UnsafeListener(const T_MANAGER& manager) {
-            using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafeListener(x) requires `x` to be a StreamManager.");
-        }
-        template<typename T_MANAGER> UnsafeListener(const T_MANAGER& manager,
-                                                    const typename T::order_key_type& begin) {
-            using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafeListener(x) requires `x` to be a StreamManager.");
-        }
-        template<typename T_MANAGER> UnsafeListener(const T_MANAGER& manager,
-                                                    const typename T::order_key_type& begin,
-                                                    const typename T::order_key_type& end) {
-            using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafeListener(x) requires `x` to be a StreamManager.");
-        }
-        */
-        UnsafeListener() = delete;
-        explicit UnsafeListener(const T& stream) : stream(stream) {
-        }
-        UnsafeListener(UnsafeListener&&) = default;
-        
-        const typename T::head_pair_type& GetHead() const {
-            return stream.head;
-        }
-
-        // Returns true if more data is available.
-        // Can change from false to true if/when new data is available.
-        bool HasData() const {
-            return false;
-        }
-
-      private:
-        UnsafeListener(const UnsafeListener&) = delete;
-        void operator=(const UnsafeListener&) = delete;
-        const T& stream;
-    };
-
-    // UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
-    template<typename T> struct UnsafePublisher {
-        /*
-        template<typename T_MANAGER> explicit UnsafePublisher(const T_MANAGER& manager) {
-            using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafePublisher(x) requires `x` to be a StreamManager.");
-        }
-        */
-
-        UnsafePublisher() = delete;
-        explicit UnsafePublisher(T& stream) : stream(stream) {
-        }
-
-        UnsafePublisher(T& stream, const typename T::order_key_type& order_key) : stream(stream) {
-            PushHead(order_key);
-        }
-
-        void Push(const typename T::entry_type& entry) {
-            PushHead(entry.template GetOrderKey<typename T::order_key_type>());
-            // TODO(dkorolev): Add entry to the storage.
-        }
-
-        void PushHead(const typename T::order_key_type& order_key) {
-            typename T::head_pair_type new_head(order_key, 0);
-            if (new_head < stream.head) {
-                // Order keys should only be increasing.
-                throw ::TailProduce::OrderKeysGoBackwardsException();
-            }
-            if (!(stream.head < new_head)) {
-                // Increment the secondary key when pushing to the same primary key.
-                new_head.second = stream.head.second + 1;
-            }
-            // TODO(dkorolev): Perhaps more checks here?
-            stream.manager->storage.SetAllowingOverwrite(
-                stream.head_storage_key,
-                OrderKey::template StaticCreateStorageKey<typename T::order_key_type>(new_head.first,
-                                                                                      new_head.second));
-            stream.head = new_head;
-        }
-
-        // TODO: PushSecondaryKey for merge usecases.
-
-        const typename T::head_pair_type& GetHead() const {
-            return stream.head;
-        }
-
-        /*
-        template<typename T> UnsafePublisher(const T& manager,
-                                            const T_ORDER_KEY_TYPE& begin) {
-            using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T>::value, "UnsafePublisher(x) requires `x` to be a StreamManager.");
-        }
-        template<typename T> UnsafePublisher(const T& manager,
-                                            const T_ORDER_KEY_TYPE& begin,
-                                            const T_ORDER_KEY_TYPE& end) {
-            using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T>::value, "UnsafePublisher(x) requires `x` to be a StreamManager.");
-        }
-        // Returns true if more data is available.
-        // Can change from false to true if/when new data is available.
-        bool HasData() const {
-            return false;
-        }
-        */
-
-      private:
-        UnsafePublisher(const UnsafePublisher&) = delete;
-        void operator=(const UnsafePublisher&) = delete;
-        T& stream;
-    };
-
-};
-
 TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
     class StreamManagerImpl : public TypeParam {
       private:
@@ -442,6 +327,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             head_pair_type head;
             const std::vector<uint8_t> head_storage_key;
             /*
+            // To enable within the framework. So far on the Storage + Streams Manager level.
             std::unique_ptr<std::mutex> p_mutex;
             std::mutex& mutex() {
                 if (!p_mutex.get()) {
