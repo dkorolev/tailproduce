@@ -52,7 +52,10 @@ struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable
     SimpleEntry(uint32_t key, const std::string& data) : key(key), data(data) {
     }
 
-    template<typename T> T GetOrderKey() const;
+    SimpleOrderKey ExtractSimpleOrderKey() const {
+        return SimpleOrderKey(key);
+    }
+    
 
     // Used as order key, 1, 2, 3, etc.
     uint32_t key;
@@ -67,9 +70,14 @@ struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable
     // TOOD(dkorolev): Extracting the order key as uint32_t,
     //                 failing to extract it as any other type at compine time.
 };
-template<> SimpleOrderKey SimpleEntry::GetOrderKey<SimpleOrderKey>() const {
-    return SimpleOrderKey(key);
-}
+
+namespace TailProduce {
+    template<> struct OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry> {
+        static SimpleOrderKey ExtractOrderKey(const SimpleEntry& entry) {
+           return entry.ExtractSimpleOrderKey();
+        }
+    };
+};
 
 /*
 // An event type for a special stream type that is designed to have a special event

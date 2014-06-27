@@ -33,6 +33,8 @@
 #include "mocks/data_storage.h"
 #include "mocks/test_client.h"
 
+using ::TailProduce::bytes;
+
 // TODO(dkorolev): Entry implementations should inherit from their base class.
 // TODO(dkorolev): Current serialization is a prototype, move to a more robust version.
 
@@ -44,20 +46,23 @@
 // It is used to test both the hand-crafted objects structure
 // and the one created by a sequence of macros.
 template<typename STREAM_MANAGER> void RUN_TESTS() {
-    STREAM_MANAGER streams_manager;
-
-    // Test that the test stream exists.
-    ASSERT_EQ(1, streams_manager.registry().streams.size());
-    EXPECT_EQ("test", streams_manager.registry().streams[0].name);
-    EXPECT_EQ("SimpleEntry", streams_manager.registry().streams[0].entry_type);
-    EXPECT_EQ("SimpleOrderKey", streams_manager.registry().streams[0].order_key_type);
-    using Stream = ::TailProduce::Stream;
-    EXPECT_TRUE(streams_manager.registry().streams[0].impl == static_cast<Stream*>(&streams_manager.test.stream));
-    EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
-    EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
-
-    // Test that entries can be serialized and de-serialized into C++ streams.
     {
+        // Test stream manager setup.
+        STREAM_MANAGER streams_manager;
+
+        // Test that the test stream exists.
+        ASSERT_EQ(1, streams_manager.registry().streams.size());
+        EXPECT_EQ("test", streams_manager.registry().streams[0].name);
+        EXPECT_EQ("SimpleEntry", streams_manager.registry().streams[0].entry_type);
+        EXPECT_EQ("SimpleOrderKey", streams_manager.registry().streams[0].order_key_type);
+        using Stream = ::TailProduce::Stream;
+        EXPECT_TRUE(streams_manager.registry().streams[0].impl == static_cast<Stream*>(&streams_manager.test.stream));
+        EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
+        EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
+    }
+
+    {
+       // Test that entries can be serialized and de-serialized into C++ streams.
         SimpleEntry entry(1, "Test");
         std::ostringstream os;
         SimpleEntry::SerializeEntry(os, entry);
@@ -72,10 +77,10 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
         }
     }
 
-    // Test that the order key can be serialized and de-serialized to and from fixed size byte arrays.
     {
+        // Test that the order key can be serialized and de-serialized to and from fixed size byte arrays.
         SimpleEntry entry(42, "The Answer");
-        SimpleOrderKey order_key = entry.template GetOrderKey<SimpleOrderKey>();
+        SimpleOrderKey order_key = ::TailProduce::OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry>::ExtractOrderKey(entry);
         uint8_t serialized_key[SimpleOrderKey::size_in_bytes];
         order_key.SerializeOrderKey(serialized_key);
         EXPECT_EQ("0000000042", std::string(serialized_key, serialized_key + sizeof(serialized_key)));
@@ -88,6 +93,8 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     // Test HEAD updates.
     {
+        STREAM_MANAGER streams_manager;
+
         // Start from zero.
         typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test);
         typename STREAM_MANAGER::test_type::head_pair_type head;
@@ -174,12 +181,41 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
             ASSERT_THROW(publisher.PushHead(SimpleOrderKey(0)), ::TailProduce::OrderKeysGoBackwardsException);
         }
 
-        // Throws an exception attempting to start a published starting in the past.
+        // Throws an exception attempting to start a publisher starting on the order key before the most recent one.
         {
             typedef typename STREAM_MANAGER::test_type::unsafe_publisher_type T;
             std::unique_ptr<T> p;
             ASSERT_THROW(p.reset(new T(streams_manager.test, SimpleOrderKey(0))), ::TailProduce::OrderKeysGoBackwardsException);
         }
+    }
+
+    {
+        // Test storage schema.
+        STREAM_MANAGER streams_manager;
+
+        typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
+        publisher.Push(SimpleEntry(1, "one"));
+        publisher.Push(SimpleEntry(2, "two"));
+        publisher.Push(SimpleEntry(3, "three"));
+
+        EXPECT_EQ(bytes("0000000003:0000000000"), streams_manager.storage.Get(bytes("s:test")));
+        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"key\": 1,\n        \"data\": \"one\"\n    }\n}\n"), streams_manager.storage.Get(bytes("d:test:0000000001:0000000000")));
+        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"key\": 2,\n        \"data\": \"two\"\n    }\n}\n"), streams_manager.storage.Get(bytes("d:test:0000000002:0000000000")));
+        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"key\": 3,\n        \"data\": \"three\"\n    }\n}\n"), streams_manager.storage.Get(bytes("d:test:0000000003:0000000000")));
+    }
+
+    {
+        // Pre-initialized bounded iterator test.
+        STREAM_MANAGER streams_manager;
+
+        typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
+        publisher.Push(SimpleEntry(1, "one"));
+        publisher.Push(SimpleEntry(2, "two"));
+        publisher.Push(SimpleEntry(3, "three"));
+        publisher.Push(SimpleEntry(4, "four"));
+        publisher.Push(SimpleEntry(5, "five"));
+
+        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
     }
 
     // Test that the stream can be listened to.
@@ -198,12 +234,12 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     // Test that the stream can be appended to.
     {
-        // Explicit typing.
+        STREAM_MANAGER streams_manager;
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         SimpleEntry entry;
         entry.key = 42;
         entry.data = "The Answer";
-        SimpleOrderKey order_key = entry.template GetOrderKey<SimpleOrderKey>();
+        SimpleOrderKey order_key = ::TailProduce::OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry>::ExtractOrderKey(entry);
         publisher.Push(entry);
     }
 

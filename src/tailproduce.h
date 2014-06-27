@@ -21,6 +21,8 @@
 
 #include "cereal/types/polymorphic.hpp"
 
+#include "helpers.h"
+
 namespace TailProduce {
     class Stream;
 
@@ -64,10 +66,15 @@ namespace TailProduce {
     };
 
     // A serializable entry.
+    template<typename T1, typename T2> struct OrderKeyExtractorImpl {};
     struct Entry {
-       // template<typename T_ORDER_KEY> T_ORDER_KEY GetOrderKey() const;
-       // template<typename T> static void SerializeEntry(std::ostream& os, const T& entry);
-       // template<typename T> static void DeSerializeEntry(std::istream& is, T& entry);
+        // Need the following fully specialized template within namespace ::TailProduce:
+        //     template<> struct OrderKeyExtractorImpl<OrderKeyType, EntryType> {
+        //         static OrderKeyType ExtractOrderKey(const EntryType& entry) { ... }
+        //      };
+        // for each desired pair of { OrderKeyType, EntryType }.
+        // template<typename T> static void SerializeEntry(std::ostream& os, const T& entry);
+        // template<typename T> static void DeSerializeEntry(std::istream& is, T& entry);
     };
 
     // An interface to extract order keys in certain types. With fixed-size serialization.
@@ -76,9 +83,9 @@ namespace TailProduce {
         // bool operator<(const T& rhs) const;
         // void SerializeOrderKey(uint8_t* ptr) const;
         // void DeSerializeOrderKey(const uint8_t* ptr);
-        template<typename T_ORDER_KEY> static std::vector<uint8_t> StaticCreateStorageKey(const T_ORDER_KEY& primary_key,
-                                                                                          const uint32_t secondary_key) {
-            // TODO(dkorolev): 1) Change this logic, 2) Factor it out to a dedicated file.
+        template<typename T_ORDER_KEY> static void StaticAppendAsStorageKey(const T_ORDER_KEY& primary_key,
+                                                                            const uint32_t secondary_key,
+                                                                            std::vector<uint8_t>& output) {
             using TOK = ::TailProduce::OrderKey;
             static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value, "StreamManager::T_ORDER_KEY should be derived from OrderKey.");
             static_assert(T_ORDER_KEY::size_in_bytes > 0, "StreamManager::T_ORDER_KEY::size_in_bytes should be positive.");
@@ -86,7 +93,13 @@ namespace TailProduce {
             primary_key.SerializeOrderKey(result);
             result[T_ORDER_KEY::size_in_bytes] = ':';
             snprintf(reinterpret_cast<char*>(result + T_ORDER_KEY::size_in_bytes + 1), 11, "%010u", secondary_key);
-            return std::vector<uint8_t>(result, result + sizeof(result) - 1);
+            std::copy(result, result + sizeof(result) - 1, std::back_inserter(output));
+        }
+        template<typename T_ORDER_KEY> static std::vector<uint8_t> StaticSerializeAsStorageKey(const T_ORDER_KEY& primary_key,
+                                                                                               const uint32_t secondary_key) {
+            std::vector<uint8_t> output;
+            StaticAppendAsStorageKey<T_ORDER_KEY>(primary_key, secondary_key, output);
+            return output;
         }
     };
     struct Storage {};   // Data storage proxy, originally LevelDB.
@@ -134,7 +147,11 @@ namespace TailProduce {
     // presenting data in serialized format and keeping track of HEAD order keys.
     template<typename T> struct UnsafeListener {
         UnsafeListener() = delete;
+
         explicit UnsafeListener(const T& stream) : stream(stream) {
+        }
+        UnsafeListener(const T& stream, const typename T::order_key_type& begin, const typename T::order_key_type& end) : stream(stream) {
+            //qwerty
         }
         UnsafeListener(UnsafeListener&&) = default;
         
@@ -165,8 +182,12 @@ namespace TailProduce {
         }
 
         void Push(const typename T::entry_type& entry) {
-            PushHead(entry.template GetOrderKey<typename T::order_key_type>());
-            // TODO(dkorolev): Add entry to the storage.
+            PushHead(::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type>::ExtractOrderKey(entry));
+            std::vector<uint8_t> key = bytes("d:" + stream.name + ":");
+            OrderKey::template StaticAppendAsStorageKey<typename T::order_key_type>(stream.head.first, stream.head.second, key);
+            std::ostringstream value_output_stream;
+            T::entry_type::SerializeEntry(value_output_stream, entry);
+            stream.manager->storage.Set(key, bytes(value_output_stream.str()));
         }
 
         void PushHead(const typename T::order_key_type& order_key) {
@@ -176,14 +197,13 @@ namespace TailProduce {
                 throw ::TailProduce::OrderKeysGoBackwardsException();
             }
             if (!(stream.head < new_head)) {
-                // Increment the secondary key when pushing to the same primary key.
                 new_head.second = stream.head.second + 1;
             }
             // TODO(dkorolev): Perhaps more checks here?
             stream.manager->storage.SetAllowingOverwrite(
                 stream.head_storage_key,
-                OrderKey::template StaticCreateStorageKey<typename T::order_key_type>(new_head.first,
-                                                                                      new_head.second));
+                OrderKey::template StaticSerializeAsStorageKey<typename T::order_key_type>(new_head.first,
+                                                                                           new_head.second));
             stream.head = new_head;
         }
 

@@ -5,6 +5,8 @@
 
 #include "mocks/data_storage.h"
 
+using ::TailProduce::bytes;
+
 template<typename T> class DataStorageTest : public ::testing::Test {};
 
 // TODO(dkorolev): Add more data storages here, specifically the LevelDB one once it's ready.

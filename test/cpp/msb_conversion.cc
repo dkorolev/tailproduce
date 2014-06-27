@@ -10,6 +10,8 @@
 
 #include "../../src/byte_order.h"
 
+using ::TailProduce::bytes;
+
 TEST(MSBConversion, UInt16) { 
     uint16_t v = as_msb(static_cast<uint16_t>(0x1234));
     EXPECT_NE(0x1234, v);
