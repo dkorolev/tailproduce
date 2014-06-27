@@ -1,15 +1,14 @@
 // TODO(dkorolev): Save HEAD-s into storage and test cold starts!
 // TODO(dkorolev): Add --create_streams flags and ensure that the service can not start w/o them.
-// TODO(dkorolev): Add secondary keys as "A" .. "Z", "ZA", .. , "ZZ", "ZZA", ... "ZZZ", "ZZZA".
 
 // The test for STREAM MANAGER confirms that:
 //
 // 1. Stream manager binds to the data storage, be it the production one or the mock one.
 // 2. Stream manager can be used to instantiate a (statically defined) set of streams.
-// 3. The macros to define the set of streams to use do their job right.
-// 4. Serialization and de-serialization into respective types works.
-// 5. Listeners and publishers can be created and behave as expected.
-// 6. The storage schema is respected, all the way to requiring stream metadata to exist.
+// 3. The macros to define the set of streams do their job.
+// 4. Serialization and de-serialization of entries of their respective types works.
+// 5. Serialization and de-serialization of order keys of their respective types works.
+// 6. Listeners and publishers can be created and behave as expected.
 //
 // The test for stream manager does NOT test:
 //
@@ -35,16 +34,10 @@
 
 using ::TailProduce::bytes;
 
-// TODO(dkorolev): Entry implementations should inherit from their base class.
-// TODO(dkorolev): Current serialization is a prototype, move to a more robust version.
-
 // TODO(dkorolev): Add a death test for the case when the storage is not yet initalized.
-// TODO(dkorolev): Add a death test prohibiting creating multiple appenders for one stream.
-// TODO(dkorolev): Add a death test confirming that overwriting the past is not allowed.
 
 // The actual test is a templated RUN_TESTS() function.
-// It is used to test both the hand-crafted objects structure
-// and the one created by a sequence of macros.
+// It is used to test both the hand-crafted objects structure and the one created by a sequence of macros.
 template<typename STREAM_MANAGER> void RUN_TESTS() {
     {
         // Test stream manager setup.
@@ -91,8 +84,8 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
         }
     }
 
-    // Test HEAD updates.
     {
+        // Test HEAD updates.
         STREAM_MANAGER streams_manager;
 
         // Start from zero.
@@ -205,7 +198,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     }
 
     {
-        // Pre-initialized bounded iterator test.
+        // Pre-initialized with data bounded iterator test.
         STREAM_MANAGER streams_manager;
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
@@ -215,25 +208,103 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(4, "four"));
         publisher.Push(SimpleEntry(5, "five"));
 
-        {
-            SimpleEntry entry;
-            typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
-            ASSERT_TRUE(!listener.ReachedEnd());
-            ASSERT_TRUE(listener.HasData());
-            listener.ExportEntry(entry);
-            EXPECT_EQ(2, entry.key);
-            EXPECT_EQ("two", entry.data);
-            listener.AdvanceToNextEntry();
-            ASSERT_TRUE(!listener.ReachedEnd());
-            ASSERT_TRUE(listener.HasData());
-            listener.ExportEntry(entry);
-            EXPECT_EQ(3, entry.key);
-            EXPECT_EQ("three", entry.data);
-            listener.AdvanceToNextEntry();
-            EXPECT_TRUE(listener.ReachedEnd());
-            EXPECT_FALSE(listener.HasData());
-            ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
-        }
+        SimpleEntry entry;
+        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
+        ASSERT_TRUE(listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+        listener.ExportEntry(entry);
+        EXPECT_EQ(2, entry.key);
+        EXPECT_EQ("two", entry.data);
+        listener.AdvanceToNextEntry();
+        ASSERT_TRUE(listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+        listener.ExportEntry(entry);
+        EXPECT_EQ(3, entry.key);
+        EXPECT_EQ("three", entry.data);
+        listener.AdvanceToNextEntry();
+        EXPECT_FALSE(listener.HasData());
+        EXPECT_TRUE(listener.ReachedEnd());
+        ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
+    }
+
+    {
+        // Pre-initialized with data bounded iterator test involving secondary keys.
+        STREAM_MANAGER streams_manager;
+
+        typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
+        publisher.Push(SimpleEntry(42, "i0"));
+        publisher.Push(SimpleEntry(42, "i1"));
+        publisher.Push(SimpleEntry(42, "i2"));
+        publisher.Push(SimpleEntry(42, "i3"));
+        publisher.Push(SimpleEntry(42, "i4"));
+        publisher.Push(SimpleEntry(42, "i5"));
+        publisher.Push(SimpleEntry(42, "i6"));
+
+        SimpleEntry entry;
+        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
+            streams_manager.test,
+            std::make_pair(SimpleOrderKey(42), 2),
+            std::make_pair(SimpleOrderKey(42), 5));
+        ASSERT_TRUE(!listener.ReachedEnd());
+        ASSERT_TRUE(listener.HasData());
+        listener.ExportEntry(entry);
+        EXPECT_EQ(42, entry.key);
+        EXPECT_EQ("i2", entry.data);
+        listener.AdvanceToNextEntry();
+        ASSERT_TRUE(listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+        listener.ExportEntry(entry);
+        EXPECT_EQ(42, entry.key);
+        EXPECT_EQ("i3", entry.data);
+        listener.AdvanceToNextEntry();
+        ASSERT_TRUE(listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+        listener.ExportEntry(entry);
+        EXPECT_EQ(42, entry.key);
+        EXPECT_EQ("i4", entry.data);
+        listener.AdvanceToNextEntry();
+        EXPECT_FALSE(listener.HasData());
+        EXPECT_TRUE(listener.ReachedEnd());
+        ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
+    }
+
+    {
+        // Dynamic bounded iterator test.
+        STREAM_MANAGER streams_manager;
+
+        SimpleEntry entry;
+        typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
+        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test, SimpleOrderKey(10), SimpleOrderKey(20));
+
+        publisher.Push(SimpleEntry(5, "five: ignored as before the beginning of the range"));
+        ASSERT_TRUE(!listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+
+        publisher.Push(SimpleEntry(10, "ten"));
+        ASSERT_TRUE(listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+        listener.ExportEntry(entry);
+        EXPECT_EQ(10, entry.key);
+        EXPECT_EQ("ten", entry.data);
+        listener.AdvanceToNextEntry();
+        ASSERT_TRUE(!listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+
+        publisher.Push(SimpleEntry(15, "fifteen"));
+        ASSERT_TRUE(listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+        listener.ExportEntry(entry);
+        EXPECT_EQ(15, entry.key);
+        EXPECT_EQ("fifteen", entry.data);
+        listener.AdvanceToNextEntry();
+        ASSERT_TRUE(!listener.HasData());
+        ASSERT_TRUE(!listener.ReachedEnd());
+
+        publisher.Push(SimpleEntry(20, "twenty: ignored as part the non-included end the of range"));
+        ASSERT_TRUE(!listener.HasData());
+        ASSERT_TRUE(listener.ReachedEnd());
+        ASSERT_THROW(listener.ExportEntry(entry), ::TailProduce::ListenerHasNoDataToRead);
+        ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
     }
 
     // Test that the stream can be listened to.

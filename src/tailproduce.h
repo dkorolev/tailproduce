@@ -87,16 +87,19 @@ namespace TailProduce {
                                                                             const uint32_t secondary_key,
                                                                             std::vector<uint8_t>& output) {
             using TOK = ::TailProduce::OrderKey;
-            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value, "StreamManager::T_ORDER_KEY should be derived from OrderKey.");
-            static_assert(T_ORDER_KEY::size_in_bytes > 0, "StreamManager::T_ORDER_KEY::size_in_bytes should be positive.");
+            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value,
+                          "StreamManager::T_ORDER_KEY should be derived from OrderKey.");
+            static_assert(T_ORDER_KEY::size_in_bytes > 0,
+                          "StreamManager::T_ORDER_KEY::size_in_bytes should be positive.");
             uint8_t result[T_ORDER_KEY::size_in_bytes + 1 + 11];
             primary_key.SerializeOrderKey(result);
             result[T_ORDER_KEY::size_in_bytes] = ':';
             snprintf(reinterpret_cast<char*>(result + T_ORDER_KEY::size_in_bytes + 1), 11, "%010u", secondary_key);
             std::copy(result, result + sizeof(result) - 1, std::back_inserter(output));
         }
-        template<typename T_ORDER_KEY> static std::vector<uint8_t> StaticSerializeAsStorageKey(const T_ORDER_KEY& primary_key,
-                                                                                               const uint32_t secondary_key) {
+        template<typename T_ORDER_KEY> static std::vector<uint8_t> StaticSerializeAsStorageKey(
+                const T_ORDER_KEY& primary_key,
+                const uint32_t secondary_key) {
             std::vector<uint8_t> output;
             StaticAppendAsStorageKey<T_ORDER_KEY>(primary_key, secondary_key, output);
             return output;
@@ -131,10 +134,13 @@ namespace TailProduce {
                                   entry_type_name,
                                   order_key_type_name) {
             using TE = ::TailProduce::Entry;
-            static_assert(std::is_base_of<TE, T_ENTRY>::value, "StreamInstance::T_ENTRY should be derived from Entry.");
+            static_assert(std::is_base_of<TE, T_ENTRY>::value,
+                          "StreamInstance::T_ENTRY should be derived from Entry.");
             using TOK = ::TailProduce::OrderKey;
-            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value, "StreamInstance::T_ORDER_KEY should be derived from OrderKey.");
-            static_assert(T_ORDER_KEY::size_in_bytes > 0, "StreamInstance::T_ORDER_KEY::size_in_bytes should be positive.");
+            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value,
+                          "StreamInstance::T_ORDER_KEY should be derived from OrderKey.");
+            static_assert(T_ORDER_KEY::size_in_bytes > 0,
+                          "StreamInstance::T_ORDER_KEY::size_in_bytes should be positive.");
         }
     };
 
@@ -146,14 +152,19 @@ namespace TailProduce {
     struct ListenerHasNoDataToRead : Exception {};
     struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};
 
-    // StorageKeyBuilder implements the BuildStorageKey function to convert { stream name, typed order key, secondary key } into std::vector<uint8_t>-s.
+    // StorageKeyBuilder implements the BuildStorageKey function to convert
+    // { stream name, typed order key, secondary key } into std::vector<uint8_t>-s.
     template<typename T> struct StorageKeyBuilder {
-        explicit StorageKeyBuilder(const std::string& stream_name) : prefix(bytes("d:" + stream_name + ":")) {}
+        explicit StorageKeyBuilder(const std::string& stream_name)
+          : prefix(bytes("d:" + stream_name + ":")),
+            end_stream_key(bytes("d:" + stream_name + ":\xff")) {
+        }
         std::vector<uint8_t> BuildStorageKey(const typename T::head_pair_type& key) const {
             std::vector<uint8_t> storage_key = prefix;
             OrderKey::template StaticAppendAsStorageKey<typename T::order_key_type>(key.first, key.second, storage_key);
             return storage_key;
         }
+        const std::vector<uint8_t> end_stream_key;
         StorageKeyBuilder() = delete;
         StorageKeyBuilder(const StorageKeyBuilder&) = delete;
         StorageKeyBuilder(StorageKeyBuilder&&) = delete;
@@ -167,9 +178,6 @@ namespace TailProduce {
         typedef StorageKeyBuilder<T> key_builder;
         UnsafeListener() = delete;
 
-//        explicit UnsafeListener(const T& stream) : stream(stream), storage(stream.manager->storage) { //, iterator(storage.GetIterator()) {
-//        }
-
         // Unbounded.
         UnsafeListener(const T& stream, const typename T::head_pair_type& begin = typename T::head_pair_type())
           : key_builder(stream.name),
@@ -180,10 +188,14 @@ namespace TailProduce {
             has_end_key(true),
             reached_end(false) {
         }
-        UnsafeListener(const T& stream, const typename T::order_key_type& begin) : UnsafeListener(stream, std::make_pair(begin, 0)) {}
+        UnsafeListener(const T& stream, const typename T::order_key_type& begin)
+          : UnsafeListener(stream, std::make_pair(begin, 0)) {
+        }
 
         // Bounded.
-        UnsafeListener(const T& stream, const typename T::head_pair_type& begin, const typename T::head_pair_type& end)
+        UnsafeListener(const T& stream,
+                       const typename T::head_pair_type& begin,
+                       const typename T::head_pair_type& end)
           : key_builder(stream.name),
             stream(stream),
             storage(stream.manager->storage),
@@ -192,9 +204,14 @@ namespace TailProduce {
             has_end_key(true),
             end_key(key_builder::BuildStorageKey(end)),
             reached_end(false) {
-            //qwerty
         }
-        UnsafeListener(const T& stream, const typename T::order_key_type& begin, const typename T::order_key_type& end) : UnsafeListener(stream, std::make_pair(begin, 0), std::make_pair(end, 0)) {}
+        UnsafeListener(const T& stream,
+                       const typename T::order_key_type& begin,
+                       const typename T::order_key_type& end)
+          : UnsafeListener(stream, std::make_pair(begin, 0),
+            std::make_pair(end, 0)) {
+        }
+
         UnsafeListener(UnsafeListener&&) = default;
         
         const typename T::head_pair_type& GetHead() const {
@@ -212,15 +229,16 @@ namespace TailProduce {
                 return false;
             } else {
                 if (!iterator) {
-                    iterator.reset(new iterator_type(storage, cursor_key));
+                    iterator.reset(new iterator_type(storage, cursor_key, key_builder::end_stream_key));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }
-                    if (iterator->Done()) {
-                        iterator.reset(nullptr);
-                        return false;
-                    }
                 }
+                if (iterator->Done()) {
+                    iterator.reset(nullptr);
+                    return false;
+                }
+                assert(iterator && !iterator->Done());
                 if (has_end_key && iterator->Key() >= end_key) {
                     reached_end = true;
                     iterator.reset(nullptr);
@@ -277,61 +295,45 @@ namespace TailProduce {
         void operator=(const UnsafeListener&) = delete;
         const T& stream;
         storage_type& storage;
-        //typename T::order_key_type cursor_key;
         std::vector<uint8_t> cursor_key;
         bool need_to_increment_cursor;
         const bool has_end_key;
-        //typename T::order_key_type end_key;
         const std::vector<uint8_t> end_key;
         mutable bool reached_end;
         mutable std::unique_ptr<iterator_type> iterator;
-        //std::unique_ptr<iterator_type> iterator;
-//        iterator_type iterator;
-        /*
-    typename TypeParam::Iterator iterator = storage.GetIterator(bytes("002"), bytes("004"));
-    ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("two"));
-    ASSERT_TRUE(iterator.Key() == bytes("002"));
-    iterator.Next();
-    ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("three"));
-    ASSERT_TRUE(iterator.Key() == bytes("003"));
-    iterator.Next();
-    ASSERT_TRUE(iterator.Done());
-    */
     };
 
     // UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
     template<typename T> struct UnsafePublisher : StorageKeyBuilder<T> {
         typedef StorageKeyBuilder<T> key_builder;
         UnsafePublisher() = delete;
-        explicit UnsafePublisher(T& stream) : key_builder(stream.name), stream(stream) {
+        explicit UnsafePublisher(T& stream)
+          : key_builder(stream.name),
+            stream(stream) {
         }
 
-        UnsafePublisher(T& stream, const typename T::order_key_type& order_key) : key_builder(stream.name), stream(stream) {
+        UnsafePublisher(T& stream, const typename T::order_key_type& order_key)
+          : key_builder(stream.name),
+            stream(stream) {
             PushHead(order_key);
         }
 
         void Push(const typename T::entry_type& entry) {
-            PushHead(::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type>::ExtractOrderKey(entry));
-            /*
-            std::vector<uint8_t> key = bytes("d:" + stream.name + ":");
-            OrderKey::template StaticAppendAsStorageKey<typename T::order_key_type>(stream.head.first, stream.head.second, key);
-            */
+            typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type> impl;
+            PushHead(impl::ExtractOrderKey(entry));
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
-            //stream.manager->storage.Set(key, bytes(value_output_stream.str()));
             auto k = key_builder::BuildStorageKey(stream.head);
             stream.manager->storage.Set(key_builder::BuildStorageKey(stream.head), bytes(value_output_stream.str()));
         }
 
         void PushHead(const typename T::order_key_type& order_key) {
             typename T::head_pair_type new_head(order_key, 0);
-            if (new_head < stream.head) {
+            if (new_head.first < stream.head.first) {
                 // Order keys should only be increasing.
                 throw ::TailProduce::OrderKeysGoBackwardsException();
             }
-            if (!(stream.head < new_head)) {
+            if (!(stream.head.first < new_head.first)) {
                 new_head.second = stream.head.second + 1;
             }
             // TODO(dkorolev): Perhaps more checks here?
