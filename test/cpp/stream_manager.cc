@@ -111,6 +111,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
         // Secondary keys are incremented automatically.
         {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
+
             publisher.Push(SimpleEntry(1, "foo"));
             head = publisher.GetHead();
             EXPECT_EQ(1, head.first.key);
@@ -118,6 +119,8 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
             head = listener.GetHead();
             EXPECT_EQ(1, head.first.key);
             EXPECT_EQ(0, head.second);
+            EXPECT_EQ(bytes("0000000001:0000000000"), streams_manager.storage.Get(bytes("s:test")));
+
             publisher.Push(SimpleEntry(1, "bar"));
             head = publisher.GetHead();
             EXPECT_EQ(1, head.first.key);
@@ -125,6 +128,8 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
             head = listener.GetHead();
             EXPECT_EQ(1, head.first.key);
             EXPECT_EQ(1, head.second);
+            EXPECT_EQ(bytes("0000000001:0000000001"), streams_manager.storage.Get(bytes("s:test")));
+
             publisher.PushHead(SimpleOrderKey(2));
             head = publisher.GetHead();
             EXPECT_EQ(2, head.first.key);
@@ -132,6 +137,8 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
             head = listener.GetHead();
             EXPECT_EQ(2, head.first.key);
             EXPECT_EQ(0, head.second);
+            EXPECT_EQ(bytes("0000000002:0000000000"), streams_manager.storage.Get(bytes("s:test")));
+
             publisher.PushHead(SimpleOrderKey(2));
             head = publisher.GetHead();
             EXPECT_EQ(2, head.first.key);
@@ -139,6 +146,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
             head = listener.GetHead();
             EXPECT_EQ(2, head.first.key);
             EXPECT_EQ(1, head.second);
+            EXPECT_EQ(bytes("0000000002:0000000001"), streams_manager.storage.Get(bytes("s:test")));
         }
 
         // Instantiating a publisher starting from a fixed HEAD moves HEAD there.
@@ -151,6 +159,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
             head = listener.GetHead();
             EXPECT_EQ(10, head.first.key);
             EXPECT_EQ(0, head.second);
+            EXPECT_EQ(bytes("0000000010:0000000000"), streams_manager.storage.Get(bytes("s:test")));
         }
 
         // Throws an exception attempting to move the HEAD backwards when doing Push().
@@ -366,14 +375,15 @@ namespace TailProduce {
         void PushHead(const typename T::order_key_type& order_key) {
             typename T::head_pair_type new_head(order_key, 0);
             if (new_head < stream.head) {
-                // TODO(dkorolev): Proper exception type.
+                // Order keys should only be increasing.
                 throw ::TailProduce::OrderKeysGoBackwardsException();
             }
             if (!(stream.head < new_head)) {
                 // Increment the secondary key when pushing to the same primary key.
                 new_head.second = stream.head.second + 1;
             }
-            stream.manager->storage.Set(
+            // TODO(dkorolev): Perhaps more checks here?
+            stream.manager->storage.SetAllowingOverwrite(
                 stream.head_storage_key,
                 OrderKey::template StaticCreateStorageKey<typename T::order_key_type>(new_head.first,
                                                                                       new_head.second));

@@ -85,8 +85,8 @@ namespace TailProduce {
             uint8_t result[T_ORDER_KEY::size_in_bytes + 1 + 11];
             primary_key.SerializeOrderKey(result);
             result[T_ORDER_KEY::size_in_bytes] = ':';
-            snprintf(static_cast<char*>(result + T_ORDER_KEY::size_in_bytes + 1), 11, "%010u", secondary_key);
-            return std::vector<uint8_t>(result, result + sizeof(result));
+            snprintf(reinterpret_cast<char*>(result + T_ORDER_KEY::size_in_bytes + 1), 11, "%010u", secondary_key);
+            return std::vector<uint8_t>(result, result + sizeof(result) - 1);
         }
     };
     struct Storage {};   // Data storage proxy, originally LevelDB.
