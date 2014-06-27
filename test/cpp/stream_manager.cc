@@ -89,7 +89,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     // Test HEAD updates.
     {
         // Start from zero.
-        typename STREAM_MANAGER::test_type::listener_type listener(streams_manager.test);
+        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test);
         typename STREAM_MANAGER::test_type::head_pair_type head;
 
         head = listener.GetHead();
@@ -98,7 +98,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     
         // Instantiating a publisher does not change HEAD.
         {
-            typename STREAM_MANAGER::test_type::publisher_type publisher(streams_manager.test);
+            typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
             head = publisher.GetHead();
             EXPECT_EQ(0, head.first.key);
             EXPECT_EQ(0, head.second);
@@ -110,7 +110,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
         // Push() and PushHead() change HEAD.
         // Secondary keys are incremented automatically.
         {
-            typename STREAM_MANAGER::test_type::publisher_type publisher(streams_manager.test);
+            typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
             publisher.Push(SimpleEntry(1, "foo"));
             head = publisher.GetHead();
             EXPECT_EQ(1, head.first.key);
@@ -141,19 +141,44 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
             EXPECT_EQ(1, head.second);
         }
 
-        // TODO: Instantiating a publisher starting from a fixed HEAD moves HEAD there.
+        // Instantiating a publisher starting from a fixed HEAD moves HEAD there.
         {
+            typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test,
+                                                                                SimpleOrderKey(10));
+            head = publisher.GetHead();
+            EXPECT_EQ(10, head.first.key);
+            EXPECT_EQ(0, head.second);
+            head = listener.GetHead();
+            EXPECT_EQ(10, head.first.key);
+            EXPECT_EQ(0, head.second);
         }
 
-        // TODO: Death test on pushing head backwards.
+        // Throws an exception attempting to move the HEAD backwards when doing Push().
+        {
+            typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
+            ASSERT_THROW(publisher.Push(SimpleEntry(0, "boom")), ::TailProduce::OrderKeysGoBackwardsException);
+        }
+
+        // Throws an exception attempting to move the HEAD backwards when doing PushHead().
+        {
+            typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
+            ASSERT_THROW(publisher.PushHead(SimpleOrderKey(0)), ::TailProduce::OrderKeysGoBackwardsException);
+        }
+
+        // Throws an exception attempting to start a published starting in the past.
+        {
+            typedef typename STREAM_MANAGER::test_type::unsafe_publisher_type T;
+            std::unique_ptr<T> p;
+            ASSERT_THROW(p.reset(new T(streams_manager.test, SimpleOrderKey(0))), ::TailProduce::OrderKeysGoBackwardsException);
+        }
     }
 
     // Test that the stream can be listened to.
     // Test that multiple listeners can co-exist and that listeners support ranes.
     /*
-    typename STREAM_MANAGER::test_type::listener_type listener(streams_manager);
-    typename STREAM_MANAGER::test_type::listener_type second_listener(streams_manager, SimpleOrderKey(50));
-    typename STREAM_MANAGER::test_type::listener_type third_listener(streams_manager,
+    typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager);
+    typename STREAM_MANAGER::test_type::unsafe_listener_type second_listener(streams_manager, SimpleOrderKey(50));
+    typename STREAM_MANAGER::test_type::unsafe_listener_type third_listener(streams_manager,
                                                                      SimpleOrderKey(150),
                                                                      SimpleOrderKey(250));
 
@@ -163,10 +188,9 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     */
 
     // Test that the stream can be appended to.
-
     {
         // Explicit typing.
-        typename STREAM_MANAGER::test_type::publisher_type publisher(streams_manager.test);
+        typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         SimpleEntry entry;
         entry.key = 42;
         entry.data = "The Answer";
@@ -176,7 +200,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     /*
     {
-        // Implicit typing.
+        // Implicit typing, if we decide we need it.
         auto publisher = streams_manager.test.publisher();
         SimpleEntry entry;
         entry.key = 42;
@@ -186,7 +210,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     }
     */
     
-    // Test that the listeners get the updates.
+    // Test that the listeners get updates.
 
     // Test that the listeners don't get the data beyond the end of the range they have subscribed to.
 
@@ -276,30 +300,30 @@ TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
 // This test explicitly lists what stream definition macros expand into.
 // Used as a reference point, as well as to ensure the macros do what they are designed to.
 namespace TailProduce {
-    // StreamListener contains the logic of creating and re-creating storage-level read iterators,
+    // UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
     // presenting data in serialized format and keeping track of HEAD order keys.
-    template<typename T> struct StreamListener {
+    template<typename T> struct UnsafeListener {
         /*
-        template<typename T_MANAGER> explicit StreamListener(const T_MANAGER& manager) {
+        template<typename T_MANAGER> explicit UnsafeListener(const T_MANAGER& manager) {
             using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "StreamListener(x) requires `x` to be a StreamManager.");
+            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafeListener(x) requires `x` to be a StreamManager.");
         }
-        template<typename T_MANAGER> StreamListener(const T_MANAGER& manager,
+        template<typename T_MANAGER> UnsafeListener(const T_MANAGER& manager,
                                                     const typename T::order_key_type& begin) {
             using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "StreamListener(x) requires `x` to be a StreamManager.");
+            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafeListener(x) requires `x` to be a StreamManager.");
         }
-        template<typename T_MANAGER> StreamListener(const T_MANAGER& manager,
+        template<typename T_MANAGER> UnsafeListener(const T_MANAGER& manager,
                                                     const typename T::order_key_type& begin,
                                                     const typename T::order_key_type& end) {
             using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "StreamListener(x) requires `x` to be a StreamManager.");
+            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafeListener(x) requires `x` to be a StreamManager.");
         }
         */
-        StreamListener() = delete;
-        explicit StreamListener(const T& stream) : stream(stream) {
+        UnsafeListener() = delete;
+        explicit UnsafeListener(const T& stream) : stream(stream) {
         }
-        StreamListener(StreamListener&&) = default;
+        UnsafeListener(UnsafeListener&&) = default;
         
         const typename T::head_pair_type& GetHead() const {
             return stream.head;
@@ -312,22 +336,26 @@ namespace TailProduce {
         }
 
       private:
-        StreamListener(const StreamListener&) = delete;
-        void operator=(const StreamListener&) = delete;
+        UnsafeListener(const UnsafeListener&) = delete;
+        void operator=(const UnsafeListener&) = delete;
         const T& stream;
     };
 
-    // StreamPublisher contains the logic of appending data to the streams and updating their HEAD order keys.
-    template<typename T> struct StreamPublisher {
+    // UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
+    template<typename T> struct UnsafePublisher {
         /*
-        template<typename T_MANAGER> explicit StreamPublisher(const T_MANAGER& manager) {
+        template<typename T_MANAGER> explicit UnsafePublisher(const T_MANAGER& manager) {
             using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T_MANAGER>::value, "StreamPublisher(x) requires `x` to be a StreamManager.");
+            static_assert(std::is_base_of<TM, T_MANAGER>::value, "UnsafePublisher(x) requires `x` to be a StreamManager.");
         }
         */
 
-        StreamPublisher() = delete;
-        explicit StreamPublisher(T& stream) : stream(stream) {
+        UnsafePublisher() = delete;
+        explicit UnsafePublisher(T& stream) : stream(stream) {
+        }
+
+        UnsafePublisher(T& stream, const typename T::order_key_type& order_key) : stream(stream) {
+            PushHead(order_key);
         }
 
         void Push(const typename T::entry_type& entry) {
@@ -339,13 +367,15 @@ namespace TailProduce {
             typename T::head_pair_type new_head(order_key, 0);
             if (new_head < stream.head) {
                 // TODO(dkorolev): Proper exception type.
-                throw std::exception();
+                throw ::TailProduce::OrderKeysGoBackwardsException();
             }
             if (!(stream.head < new_head)) {
                 // Increment the secondary key when pushing to the same primary key.
                 new_head.second = stream.head.second + 1;
             }
             // TODO(dkorolev): Update the storage.
+            // DIMA
+            stream.manager->storage.Set(stream.head_storage_key, std::vector<uint8_t>());
             stream.head = new_head;
         }
 
@@ -356,16 +386,16 @@ namespace TailProduce {
         }
 
         /*
-        template<typename T> StreamPublisher(const T& manager,
+        template<typename T> UnsafePublisher(const T& manager,
                                             const T_ORDER_KEY_TYPE& begin) {
             using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T>::value, "StreamPublisher(x) requires `x` to be a StreamManager.");
+            static_assert(std::is_base_of<TM, T>::value, "UnsafePublisher(x) requires `x` to be a StreamManager.");
         }
-        template<typename T> StreamPublisher(const T& manager,
+        template<typename T> UnsafePublisher(const T& manager,
                                             const T_ORDER_KEY_TYPE& begin,
                                             const T_ORDER_KEY_TYPE& end) {
             using TM = ::TailProduce::StreamManager;
-            static_assert(std::is_base_of<TM, T>::value, "StreamPublisher(x) requires `x` to be a StreamManager.");
+            static_assert(std::is_base_of<TM, T>::value, "UnsafePublisher(x) requires `x` to be a StreamManager.");
         }
         // Returns true if more data is available.
         // Can change from false to true if/when new data is available.
@@ -375,8 +405,8 @@ namespace TailProduce {
         */
 
       private:
-        StreamPublisher(const StreamPublisher&) = delete;
-        void operator=(const StreamPublisher&) = delete;
+        UnsafePublisher(const UnsafePublisher&) = delete;
+        void operator=(const UnsafePublisher&) = delete;
         T& stream;
     };
 
@@ -392,13 +422,15 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             typedef SimpleEntry entry_type;
             typedef SimpleOrderKey order_key_type;
             typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type;
-            typedef ::TailProduce::StreamListener<test_type> listener_type;
-            typedef ::TailProduce::StreamPublisher<test_type> publisher_type;
+            typedef ::TailProduce::UnsafeListener<test_type> unsafe_listener_type;
+            typedef ::TailProduce::UnsafePublisher<test_type> unsafe_publisher_type;
             typedef std::pair<order_key_type, uint32_t> head_pair_type;
             StreamManagerImpl* manager;
             stream_type stream;
             const std::string name;
             head_pair_type head;
+            const std::vector<uint8_t> head_storage_key;
+            /*
             std::unique_ptr<std::mutex> p_mutex;
             std::mutex& mutex() {
                 if (!p_mutex.get()) {
@@ -406,17 +438,24 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                 }
                 return p_mutex.get();
             }
+            */
             /*
             // Gotta figure out move semantics -- D.K.
-            listener_type&& listener() const {
-                return listener_type(*this);
+            unsafe_listener_type&& listener() const {
+                return unsafe_listener_type(*this);
             }
-            publisher_type publisher() {
-                return publisher_type(*this);
+            unsafe_publisher_type publisher() {
+                return unsafe_publisher_type(*this);
             }
             */
+            test_type(StreamManagerImpl* manager, const char* stream_name, const char* entry_type_name, const char* entry_order_key_name)
+              : manager(manager),
+              stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name),
+              name(stream_name),
+              head_storage_key(bytes("s:" + name)) {
+            }
         };
-        test_type test = test_type({this, typename test_type::stream_type(registry_, "test", "SimpleEntry", "SimpleOrderKey"), "test"});
+        test_type test = test_type(this, "test", "SimpleEntry", "SimpleOrderKey");
     };
 
     RUN_TESTS<StreamManagerImpl>();

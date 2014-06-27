@@ -72,7 +72,7 @@ namespace TailProduce {
 
     // An interface to extract order keys in certain types. With fixed-size serialization.
     struct OrderKey {
-        // enum { size_in_bytes = 0 };
+        // enum { size_in_bytes = 0 };  // TO GO AWAY -- D.K.
         // bool operator<(const T& rhs) const;
         // void SerializeOrderKey(uint8_t* ptr) const;
         // void DeSerializeOrderKey(const uint8_t* ptr);
@@ -114,6 +114,9 @@ namespace TailProduce {
     };
 
     struct StreamManager {};
+
+    struct Exception : std::exception {};
+    struct OrderKeysGoBackwardsException : Exception {};
 };
 
 /*

@@ -27,7 +27,7 @@ struct SimpleOrderKey : ::TailProduce::OrderKey {
     }
     */
 
-    enum { size_in_bytes = 10 };
+    enum { size_in_bytes = 10 };  // TO GO AWAY -- D.K.
     bool operator<(const SimpleOrderKey& rhs) const {
         return key < rhs.key;
     }
