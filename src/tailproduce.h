@@ -275,7 +275,7 @@ namespace TailProduce {
         }
 
         // AdvanceToNextEntry() advances the listener to the next available entry.
-        // Will throw an exception if no data is available.
+        // Will throw an exception if no further data is (yet) available.
         void AdvanceToNextEntry() {
             if (!HasData()) {
                 throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();
