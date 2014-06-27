@@ -76,6 +76,18 @@ namespace TailProduce {
         // bool operator<(const T& rhs) const;
         // void SerializeOrderKey(uint8_t* ptr) const;
         // void DeSerializeOrderKey(const uint8_t* ptr);
+        template<typename T_ORDER_KEY> static std::vector<uint8_t> StaticCreateStorageKey(const T_ORDER_KEY& primary_key,
+                                                                                          const uint32_t secondary_key) {
+            // TODO(dkorolev): 1) Change this logic, 2) Factor it out to a dedicated file.
+            using TOK = ::TailProduce::OrderKey;
+            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value, "StreamManager::T_ORDER_KEY should be derived from OrderKey.");
+            static_assert(T_ORDER_KEY::size_in_bytes > 0, "StreamManager::T_ORDER_KEY::size_in_bytes should be positive.");
+            uint8_t result[T_ORDER_KEY::size_in_bytes + 1 + 11];
+            primary_key.SerializeOrderKey(result);
+            result[T_ORDER_KEY::size_in_bytes] = ':';
+            snprintf(static_cast<char*>(result + T_ORDER_KEY::size_in_bytes + 1), 11, "%010u", secondary_key);
+            return std::vector<uint8_t>(result, result + sizeof(result));
+        }
     };
     struct Storage {};   // Data storage proxy, originally LevelDB.
     struct Producer {};  // Client-defined job.

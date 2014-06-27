@@ -373,9 +373,10 @@ namespace TailProduce {
                 // Increment the secondary key when pushing to the same primary key.
                 new_head.second = stream.head.second + 1;
             }
-            // TODO(dkorolev): Update the storage.
-            // DIMA
-            stream.manager->storage.Set(stream.head_storage_key, std::vector<uint8_t>());
+            stream.manager->storage.Set(
+                stream.head_storage_key,
+                OrderKey::template StaticCreateStorageKey<typename T::order_key_type>(new_head.first,
+                                                                                      new_head.second));
             stream.head = new_head;
         }
 
