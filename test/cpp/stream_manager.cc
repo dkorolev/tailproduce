@@ -12,14 +12,16 @@
 // * The functionality of storage-level iterators.
 //
 //   They are handled at the lower level (data_storage.cc).
+//   Stream manager operates on the level of publishers and listeners.
 //
-// * Making sure only one append iterator can exist per stream and that it never overwrites data.
+// * Making sure only one publisher can exist per stream.
+//   Storage-level test that that a publisher would never overwrite data.
 //   Updating the "HEAD" order key per stream.
 //   Merging multiple streams maintaining strongly typed entries.
 //   Ephemeral entry types as markers.
 //   setTimeout()-style insertion of callbacks to be invoked by the framework later.
 //  
-//   The above is handled at the higher level (framework.cc).
+//   Framework is the level where the above is handler.
 
 #include <gtest/gtest.h>
 
@@ -197,7 +199,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     }
 
     {
-        // Iterator test: bounded, pre-initialized with data.
+        // Listener test: bounded, pre-initialized with data.
         STREAM_MANAGER streams_manager;
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
@@ -229,7 +231,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     }
 
     {
-        // Iterator test: bounded, pre-initialized with data, involving secondary keys.
+        // Listener test: bounded, pre-initialized with data, involving secondary keys.
         STREAM_MANAGER streams_manager;
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
@@ -270,7 +272,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     }
 
     {
-        // Iterator test: appended on-the-fly, bounded.
+        // Listener test: appended on-the-fly, bounded.
         STREAM_MANAGER streams_manager;
 
         SimpleEntry entry;
@@ -311,7 +313,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
     }
 
     {
-        // Iterator test: appended on-the-fly, bounded, test that PushHead() makes ReachedEnd() return true.
+        // Listener test: appended on-the-fly, bounded, test that PushHead() makes ReachedEnd() return true.
         // TODO(dkorolev): Code it.
     }
 }

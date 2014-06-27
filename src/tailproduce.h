@@ -364,13 +364,14 @@ namespace TailProduce {
     class NAME : public BASE { \
       private: \
         using TSM = ::TailProduce::StreamManager; \
-        static_assert(std::is_base_of<TSM, TypeParam>::value, \
-                      "StreamManagerImpl: TypeParam should be derived from StreamManager."); \
+        static_assert(std::is_base_of<TSM, BASE>::value, \
+                      "StreamManagerImpl: BASE should be derived from StreamManager."); \
         using TS = ::TailProduce::Storage; \
-        static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value, \
-                      "StreamManagerImpl: TypeParam::storage_type should be derived from Storage."); \
+        static_assert(std::is_base_of<TS, typename BASE::storage_type>::value, \
+                      "StreamManagerImpl: BASE::storage_type should be derived from Storage."); \
         ::TailProduce::StreamsRegistry registry_;  \
       public: \
+        typedef BASE captured_base; \
         const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
 
 #define TAILPRODUCE_STREAM(NAME, ENTRY_TYPE, ORDER_KEY_TYPE) \
@@ -378,7 +379,7 @@ namespace TailProduce {
             typedef ENTRY_TYPE entry_type; \
             typedef ORDER_KEY_TYPE order_key_type; \
             typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type; \
-            typedef typename TypeParam::storage_type storage_type; \
+            typedef typename captured_base::storage_type storage_type; \
             typedef ::TailProduce::UnsafeListener<NAME##_type> unsafe_listener_type; \
             typedef ::TailProduce::UnsafePublisher<NAME##_type> unsafe_publisher_type; \
             typedef std::pair<order_key_type, uint32_t> head_pair_type; \
