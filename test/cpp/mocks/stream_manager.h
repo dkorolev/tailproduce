@@ -18,6 +18,7 @@
 
 template<typename T_DATA_STORAGE> class MockStreamManager : public TailProduce::StreamManager {
   public:
+    typedef T_DATA_STORAGE storage_type;
     T_DATA_STORAGE storage;
 //  public:
     // TODO(dkorolev): Support the functionality of eight bullet points above.

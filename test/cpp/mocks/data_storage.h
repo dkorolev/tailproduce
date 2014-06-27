@@ -76,7 +76,11 @@ class MockDataStorage : ::TailProduce::Storage {
     }
 
     struct Iterator {
-        Iterator(Iterator&&) = default;
+        Iterator(MockDataStorage& master, const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE())
+            : data_(master.data_),
+              end_(end),
+              cit_(data_.lower_bound(begin)) {
+        }
 
         bool Valid() const {
             return cit_ != data_.end() && (end_.empty() || cit_->first < end_);
@@ -104,6 +108,7 @@ class MockDataStorage : ::TailProduce::Storage {
         }
 
       private:
+        /*
         // Allow returning Iterators from Storage's member functions w/o copying them.
         Iterator(MockDataStorage& master, const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_),
@@ -111,6 +116,7 @@ class MockDataStorage : ::TailProduce::Storage {
               cit_(data_.lower_bound(begin)) {
         }
         friend class MockDataStorage;
+        */
 
         const MAP_TYPE& data_;
         KEY_TYPE end_;
@@ -118,12 +124,15 @@ class MockDataStorage : ::TailProduce::Storage {
 
         Iterator() = delete;
         Iterator(const Iterator&) = delete;
+        Iterator(Iterator&&) = delete;
         void operator=(const Iterator&) = delete;
     };
-
+    
+    /*
     Iterator GetIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
         return Iterator(*this, begin, end);
     }
+    */
 
   private:
     MAP_TYPE data_;

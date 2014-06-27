@@ -141,53 +141,188 @@ namespace TailProduce {
     struct StreamManager {};
 
     struct Exception : std::exception {};
+    struct InternalError : Exception {};
     struct OrderKeysGoBackwardsException : Exception {};
+    struct ListenerHasNoDataToRead : Exception {};
+    struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};
+
+    // StorageKeyBuilder implements the BuildStorageKey function to convert { stream name, typed order key, secondary key } into std::vector<uint8_t>-s.
+    template<typename T> struct StorageKeyBuilder {
+        explicit StorageKeyBuilder(const std::string& stream_name) : prefix(bytes("d:" + stream_name + ":")) {}
+        std::vector<uint8_t> BuildStorageKey(const typename T::head_pair_type& key) const {
+            std::vector<uint8_t> storage_key = prefix;
+            OrderKey::template StaticAppendAsStorageKey<typename T::order_key_type>(key.first, key.second, storage_key);
+            return storage_key;
+        }
+        StorageKeyBuilder() = delete;
+        StorageKeyBuilder(const StorageKeyBuilder&) = delete;
+        StorageKeyBuilder(StorageKeyBuilder&&) = delete;
+        void operator=(const StorageKeyBuilder&) = delete;
+        const std::vector<uint8_t> prefix;
+    };
 
     // UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
     // presenting data in serialized format and keeping track of HEAD order keys.
-    template<typename T> struct UnsafeListener {
+    template<typename T> struct UnsafeListener : StorageKeyBuilder<T> {
+        typedef StorageKeyBuilder<T> key_builder;
         UnsafeListener() = delete;
 
-        explicit UnsafeListener(const T& stream) : stream(stream) {
+//        explicit UnsafeListener(const T& stream) : stream(stream), storage(stream.manager->storage) { //, iterator(storage.GetIterator()) {
+//        }
+
+        // Unbounded.
+        UnsafeListener(const T& stream, const typename T::head_pair_type& begin = typename T::head_pair_type())
+          : key_builder(stream.name),
+            stream(stream),
+            storage(stream.manager->storage),
+            cursor_key(key_builder::BuildStorageKey(begin)),
+            need_to_increment_cursor(false),
+            has_end_key(true),
+            reached_end(false) {
         }
-        UnsafeListener(const T& stream, const typename T::order_key_type& begin, const typename T::order_key_type& end) : stream(stream) {
+        UnsafeListener(const T& stream, const typename T::order_key_type& begin) : UnsafeListener(stream, std::make_pair(begin, 0)) {}
+
+        // Bounded.
+        UnsafeListener(const T& stream, const typename T::head_pair_type& begin, const typename T::head_pair_type& end)
+          : key_builder(stream.name),
+            stream(stream),
+            storage(stream.manager->storage),
+            cursor_key(key_builder::BuildStorageKey(begin)),
+            need_to_increment_cursor(false),
+            has_end_key(true),
+            end_key(key_builder::BuildStorageKey(end)),
+            reached_end(false) {
             //qwerty
         }
+        UnsafeListener(const T& stream, const typename T::order_key_type& begin, const typename T::order_key_type& end) : UnsafeListener(stream, std::make_pair(begin, 0), std::make_pair(end, 0)) {}
         UnsafeListener(UnsafeListener&&) = default;
         
         const typename T::head_pair_type& GetHead() const {
             return stream.head;
         }
 
-        // Returns true if more data is available.
+        // Note that listeners expose HasData() / ReachedEnd(), and not Done().
+        // This is because the listener, unlike the iterator, supports dynamically added data,
+        // and, therefore, the standard `for (auto i = Iterator(); !i.Done(); i.Next())` loop is meaningless.
+
+        // HasData() returns true if more data is available.
         // Can change from false to true if/when new data is available.
         bool HasData() const {
-            return false;
+            if (reached_end) {
+                return false;
+            } else {
+                if (!iterator) {
+                    iterator.reset(new iterator_type(storage, cursor_key));
+                    if (need_to_increment_cursor && !iterator->Done()) {
+                        iterator->Next();
+                    }
+                    if (iterator->Done()) {
+                        iterator.reset(nullptr);
+                        return false;
+                    }
+                }
+                if (has_end_key && iterator->Key() >= end_key) {
+                    reached_end = true;
+                    iterator.reset(nullptr);
+                    return false;
+                } else {
+                    // TODO(dkorolev): Handle HEAD going beyond end_key resulting in ReachedEnd().
+                    return true;
+                }
+            }
+        }
+
+        // ReachedEnd() returns true if the end has been reached and no data may even be read from this iterator.
+        // Can only happen if the iterator has a fixed `end`, it has been reached and the HEAD of this stream
+        // is beyond this end.
+        bool ReachedEnd() const {
+            HasData();
+            return reached_end;
+        }
+
+        // ExportEntry() populates the passed in entry object if data is available.
+        // Will throw an exception if no data is available.
+        void ExportEntry(typename T::entry_type& entry) {
+            if (!HasData()) {
+                throw ::TailProduce::ListenerHasNoDataToRead();
+            }
+            if (!iterator) {
+                throw ::TailProduce::InternalError();
+            }
+            // TODO(dkorolev): Make this proof-of-concept code efficient.
+            const std::vector<uint8_t> value = iterator->Value();
+            const std::string value_as_string(value.begin(), value.end());
+            std::istringstream is(value_as_string);
+            T::entry_type::DeSerializeEntry(is, entry);
+        }
+
+        // AdvanceToNextEntry() advances the listener to the next available entry.
+        // Will throw an exception if no data is available.
+        void AdvanceToNextEntry() {
+            if (!HasData()) {
+                throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();
+            }
+            if (!iterator) {
+                throw ::TailProduce::InternalError();
+            }
+            cursor_key = iterator->Key();
+            need_to_increment_cursor = true;
+            iterator->Next();
         }
 
       private:
+        typedef typename T::storage_type storage_type;
+        typedef typename T::storage_type::Iterator iterator_type;
         UnsafeListener(const UnsafeListener&) = delete;
         void operator=(const UnsafeListener&) = delete;
         const T& stream;
+        storage_type& storage;
+        //typename T::order_key_type cursor_key;
+        std::vector<uint8_t> cursor_key;
+        bool need_to_increment_cursor;
+        const bool has_end_key;
+        //typename T::order_key_type end_key;
+        const std::vector<uint8_t> end_key;
+        mutable bool reached_end;
+        mutable std::unique_ptr<iterator_type> iterator;
+        //std::unique_ptr<iterator_type> iterator;
+//        iterator_type iterator;
+        /*
+    typename TypeParam::Iterator iterator = storage.GetIterator(bytes("002"), bytes("004"));
+    ASSERT_FALSE(iterator.Done());
+    ASSERT_TRUE(iterator.Value() == bytes("two"));
+    ASSERT_TRUE(iterator.Key() == bytes("002"));
+    iterator.Next();
+    ASSERT_FALSE(iterator.Done());
+    ASSERT_TRUE(iterator.Value() == bytes("three"));
+    ASSERT_TRUE(iterator.Key() == bytes("003"));
+    iterator.Next();
+    ASSERT_TRUE(iterator.Done());
+    */
     };
 
     // UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
-    template<typename T> struct UnsafePublisher {
+    template<typename T> struct UnsafePublisher : StorageKeyBuilder<T> {
+        typedef StorageKeyBuilder<T> key_builder;
         UnsafePublisher() = delete;
-        explicit UnsafePublisher(T& stream) : stream(stream) {
+        explicit UnsafePublisher(T& stream) : key_builder(stream.name), stream(stream) {
         }
 
-        UnsafePublisher(T& stream, const typename T::order_key_type& order_key) : stream(stream) {
+        UnsafePublisher(T& stream, const typename T::order_key_type& order_key) : key_builder(stream.name), stream(stream) {
             PushHead(order_key);
         }
 
         void Push(const typename T::entry_type& entry) {
             PushHead(::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type>::ExtractOrderKey(entry));
+            /*
             std::vector<uint8_t> key = bytes("d:" + stream.name + ":");
             OrderKey::template StaticAppendAsStorageKey<typename T::order_key_type>(stream.head.first, stream.head.second, key);
+            */
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
-            stream.manager->storage.Set(key, bytes(value_output_stream.str()));
+            //stream.manager->storage.Set(key, bytes(value_output_stream.str()));
+            auto k = key_builder::BuildStorageKey(stream.head);
+            stream.manager->storage.Set(key_builder::BuildStorageKey(stream.head), bytes(value_output_stream.str()));
         }
 
         void PushHead(const typename T::order_key_type& order_key) {

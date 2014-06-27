@@ -215,7 +215,25 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(4, "four"));
         publisher.Push(SimpleEntry(5, "five"));
 
-        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
+        {
+            SimpleEntry entry;
+            typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
+            ASSERT_TRUE(!listener.ReachedEnd());
+            ASSERT_TRUE(listener.HasData());
+            listener.ExportEntry(entry);
+            EXPECT_EQ(2, entry.key);
+            EXPECT_EQ("two", entry.data);
+            listener.AdvanceToNextEntry();
+            ASSERT_TRUE(!listener.ReachedEnd());
+            ASSERT_TRUE(listener.HasData());
+            listener.ExportEntry(entry);
+            EXPECT_EQ(3, entry.key);
+            EXPECT_EQ("three", entry.data);
+            listener.AdvanceToNextEntry();
+            EXPECT_TRUE(listener.ReachedEnd());
+            EXPECT_FALSE(listener.HasData());
+            ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
+        }
     }
 
     // Test that the stream can be listened to.
@@ -347,6 +365,10 @@ TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
 TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
     class StreamManagerImpl : public TypeParam {
       private:
+        using TSM = ::TailProduce::StreamManager;
+        static_assert(std::is_base_of<TSM, TypeParam>::value, "StreamManagerImpl: TypeParam should be derived from StreamManager.");
+        using TS = ::TailProduce::Storage;
+        static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value, "StreamManagerImpl: TypeParam::storage_type should be derived from Storage.");
         ::TailProduce::StreamsRegistry registry_;
       public:
         const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
@@ -354,6 +376,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             typedef SimpleEntry entry_type;
             typedef SimpleOrderKey order_key_type;
             typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type;
+            typedef typename TypeParam::storage_type storage_type;
             typedef ::TailProduce::UnsafeListener<test_type> unsafe_listener_type;
             typedef ::TailProduce::UnsafePublisher<test_type> unsafe_publisher_type;
             typedef std::pair<order_key_type, uint32_t> head_pair_type;
@@ -390,6 +413,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         };
         test_type test = test_type(this, "test", "SimpleEntry", "SimpleOrderKey");
     };
+//    typedef typename StreamManagerImpl::storage_type TMP;
 
     RUN_TESTS<StreamManagerImpl>();
 }
