@@ -17,7 +17,7 @@
 //    Both key and value should not be empty.
 //
 // 2) Provide read access iterators.
-//    Given the range [from, to], or indefinitely from [from, ...].
+//    Given the range [from, to), or indefinitely from [from, ...).
 //    The value at key `from` should exist, the implementation would explicitly die if it does not.
 //    
 // 3) Die on attempting to overwrite the value for an already existing key.
