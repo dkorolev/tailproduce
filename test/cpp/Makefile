@@ -17,7 +17,7 @@ all: build ${EXE}
 build:
 	mkdir -p build
 
-build/%.o: %.cc ../../src/*.h
+build/%.o: %.cc
 	${CPP} ${CPPFLAGS} -o $@ -c $<
 
 ${EXE}: ${OBJ}

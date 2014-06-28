@@ -30,6 +30,12 @@ class MockDataStorage : ::TailProduce::Storage {
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
+        VLOG(3)
+            << "MockDataStorage::Set('"
+            << ::TailProduce::antibytes(key)
+            << "', '"
+            << ::TailProduce::antibytes(value)
+            << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
             LOG(FATAL) << "Attempted to Set() an entry with an empty key.";
         }
@@ -66,9 +72,14 @@ class MockDataStorage : ::TailProduce::Storage {
         } else {
             value.clear();
         }
+        VLOG(3)
+            << "MockDataStorage::Get('"
+            << ::TailProduce::antibytes(key)
+            << ") == '"
+            << ::TailProduce::antibytes(value);
     }
 
-    // TODO(dkorolev): Read more about the move semantics of C++ and eliminate a potentially unoptimized copy.
+    // TODO(dkorolev): Read more about move semantics of C++ and eliminate a potentially unoptimized copy.
     VALUE_TYPE Get(const KEY_TYPE& key) const {
         VALUE_TYPE value;
         Get(key, value);
