@@ -179,14 +179,21 @@ namespace TailProduce {
         UnsafeListener() = delete;
 
         // Unbounded.
+        ~UnsafeListener() {
+            VLOG(3) << this << ": UnsafeListener::~UnsafeListener();";
+        }
+
         UnsafeListener(const T& stream, const typename T::head_pair_type& begin = typename T::head_pair_type())
           : key_builder(stream.name),
             stream(stream),
             storage(stream.manager->storage),
             cursor_key(key_builder::BuildStorageKey(begin)),
             need_to_increment_cursor(false),
-            has_end_key(true),
+            has_end_key(false),
             reached_end(false) {
+            VLOG(3)
+                << this << ": UnsafeListener::UnsafeListener('" << stream.name << "', "
+                << "begin='" << antibytes(cursor_key) << "');";
         }
         UnsafeListener(const T& stream, const typename T::order_key_type& begin)
           : UnsafeListener(stream, std::make_pair(begin, 0)) {
@@ -226,6 +233,7 @@ namespace TailProduce {
         // Can change from false to true if/when new data is available.
         bool HasData() const {
             if (reached_end) {
+                VLOG(3) << this << " UnsafeListener::HasData() = false, due to reached_end = true.";
                 return false;
             } else {
                 if (!iterator) {
@@ -236,15 +244,18 @@ namespace TailProduce {
                 }
                 if (iterator->Done()) {
                     iterator.reset(nullptr);
+                    VLOG(3) << this << " UnsafeListener::HasData() = false, due to no data in the iterator.";
                     return false;
                 }
                 assert(iterator && !iterator->Done());
                 if (has_end_key && iterator->Key() >= end_key) {
+                    VLOG(3) << this << " UnsafeListener::HasData() = false, due to reaching the end.";
                     reached_end = true;
                     iterator.reset(nullptr);
                     return false;
                 } else {
                     // TODO(dkorolev): Handle HEAD going beyond end_key resulting in ReachedEnd().
+                    VLOG(3) << this << " UnsafeListener::HasData() = true.";
                     return true;
                 }
             }
@@ -396,7 +407,7 @@ namespace TailProduce {
               : manager(manager), \
                 stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name), \
               name(stream_name), \
-              head_storage_key(bytes("s:" + name)) { \
+              head_storage_key(::TailProduce::bytes("s:" + name)) { \
             } \
         }; \
         NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE)

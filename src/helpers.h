@@ -26,6 +26,10 @@ namespace TailProduce {
     template<typename T> static std::vector<uint8_t> bytes(T x) {
         return bytes_impl<T>::run(x);
     }
+
+    template<typename T> static std::string antibytes(const T& x) {
+        return std::string(x.begin(), x.end());
+    }
 };
 
 #endif  // TAILPRODUCE_HELPERS_H
