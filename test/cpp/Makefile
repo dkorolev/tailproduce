@@ -1,4 +1,4 @@
-CPP=g++
+CPP=clang++
 CPPFLAGS=-std=c++11 -I ../../
 LDFLAGS=-pthread -lgflags -lglog -static
 
