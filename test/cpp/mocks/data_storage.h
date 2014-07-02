@@ -1,5 +1,3 @@
-// TODO(dkorolev): Replace LOG(FATAL) by exceptions.
-
 #ifndef TAILPRODUCE_MOCKS_DATA_STORAGE_H
 #define TAILPRODUCE_MOCKS_DATA_STORAGE_H
 
@@ -36,15 +34,17 @@ class MockDataStorage : ::TailProduce::Storage {
             << ::TailProduce::antibytes(value)
             << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
-            LOG(FATAL) << "Attempted to Set() an entry with an empty key.";
+            VLOG(3) << "Attempted to Set() an entry with an empty key.";
+            throw ::TailProduce::StorageEmptyKeyException();
         }
         if (value.empty()) {
-            LOG(FATAL) << "Attempted to Set() an entry with an empty value.";
+            VLOG(3) << "Attempted to Set() an entry with an empty value.";
+            throw ::TailProduce::StorageEmptyValueException();
         }
         std::vector<uint8_t>& placeholder = data_[key];
         if (!allow_overwrite) {
             if (!placeholder.empty()) {
-                LOG(FATAL)
+                VLOG(3)
                     << "'"
                     << std::string(key.begin(), key.end())
                     << "', that is attempted to be set to '"
@@ -52,6 +52,7 @@ class MockDataStorage : ::TailProduce::Storage {
                     << "', has already been set to '"
                     << std::string(placeholder.begin(), placeholder.end())
                     << "'.";
+                throw ::TailProduce::StorageOverwriteNotAllowedException();
             }
         }
         placeholder = value;
@@ -61,21 +62,32 @@ class MockDataStorage : ::TailProduce::Storage {
         Set(key, value, true);
     }
 
+    bool Has(const KEY_TYPE& key) {
+        if (key.empty()) {
+            VLOG(3) << "Attempted to Has() with an empty key.";
+            throw ::TailProduce::StorageEmptyKeyException();
+        }
+        const auto cit = data_.find(key);
+        return cit != data_.end();
+    }
+
     void Get(const KEY_TYPE& key, VALUE_TYPE& value) const {
         if (key.empty()) {
-            LOG(FATAL) << "Attempted to Get() an entry with an empty key.";
+            VLOG(3) << "Attempted to Get() an entry with an empty key.";
+            throw ::TailProduce::StorageEmptyKeyException();
         }
         const auto cit = data_.find(key);
         if (cit != data_.end()) {
             value = cit->second;
         } else {
-            value.clear();
+            throw ::TailProduce::StorageNoDataException();
         }
         VLOG(3)
             << "MockDataStorage::Get('"
             << ::TailProduce::antibytes(key)
             << ") == '"
-            << ::TailProduce::antibytes(value);
+            << ::TailProduce::antibytes(value)
+            << "'.";
     }
 
     // TODO(dkorolev): Read more about move semantics of C++ and eliminate a potentially unoptimized copy.
@@ -102,7 +114,8 @@ class MockDataStorage : ::TailProduce::Storage {
 
         void Next() {
             if (Done()) {
-                LOG(FATAL) << "Attempted to Next() an iterator for which Done() is true.";
+                VLOG(3) << "Attempted to Next() an iterator for which Done() is true.";
+                throw ::TailProduce::StorageIteratorOutOfBoundsException();
             }
             ++cit_;
         }

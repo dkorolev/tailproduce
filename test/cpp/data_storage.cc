@@ -21,16 +21,20 @@ TYPED_TEST(DataStorageTest, HasRightBaseClass) {
 
 TYPED_TEST(DataStorageTest, AddsEntries) {
     TypeParam storage;
+    EXPECT_FALSE(storage.Has(bytes("foo")));
+    EXPECT_FALSE(storage.Has(bytes(1)));
     storage.Set(bytes("foo"), bytes("bar"));
+    EXPECT_TRUE(storage.Has(bytes("foo")));
+    EXPECT_FALSE(storage.Has(bytes(1)));
     storage.Set(bytes(1), bytes(42));
+    EXPECT_TRUE(storage.Has(bytes("foo")));
+    EXPECT_TRUE(storage.Has(bytes(1)));
 }
 
-TYPED_TEST(DataStorageTest, DuplicateEntriesDeathTest) {
+TYPED_TEST(DataStorageTest, DuplicateEntries) {
     TypeParam storage;
     storage.Set(bytes("key"), bytes("old"));
-    EXPECT_DEATH(
-        storage.Set(bytes("key"), bytes("new")),
-        "'key', that is attempted to be set to 'new', has already been set to 'old'\\.");
+    ASSERT_THROW(storage.Set(bytes("key"), bytes("new")), ::TailProduce::StorageOverwriteNotAllowedException);
 }
 
 TYPED_TEST(DataStorageTest, SetsOverwritesAndGets) {
@@ -39,6 +43,13 @@ TYPED_TEST(DataStorageTest, SetsOverwritesAndGets) {
     EXPECT_EQ(bytes("first"), storage.Get(bytes("key")));
     storage.SetAllowingOverwrite(bytes("key"), bytes("second"));
     EXPECT_EQ(bytes("second"), storage.Get(bytes("key")));
+}
+
+TYPED_TEST(DataStorageTest, BasicExceptions) {
+    TypeParam storage;
+    ASSERT_THROW(storage.Set(bytes(""), bytes("foo")), ::TailProduce::StorageEmptyKeyException);
+    ASSERT_THROW(storage.Set(bytes("bar"), bytes("")), ::TailProduce::StorageEmptyValueException);
+    ASSERT_THROW(storage.Get(bytes("baz")), ::TailProduce::StorageNoDataException);
 }
 
 TYPED_TEST(DataStorageTest, BoundedRangeIterator) {
@@ -83,7 +94,7 @@ TYPED_TEST(DataStorageTest, SemiBoundedRangeIterator) {
     ASSERT_TRUE(iterator.Done());
 }
 
-TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBoundsDeathTest) {
+TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBounds) {
     TypeParam storage;
     storage.Set(bytes(1), bytes("one"));
     storage.Set(bytes(2), bytes("two"));
@@ -100,12 +111,10 @@ TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBoundsDeathTest) {
     ASSERT_TRUE(iterator.Key() == bytes(3));
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
-    EXPECT_DEATH(
-        iterator.Next(),
-        "Attempted to Next\\(\\) an iterator for which Done\\(\\) is true\\.");
+    ASSERT_THROW(iterator.Next(), ::TailProduce::StorageIteratorOutOfBoundsException);
 }
 
-TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBoundsDeathTest) {
+TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBounds) {
     TypeParam storage;
     storage.Set(bytes(1), bytes("one"));
     storage.Set(bytes(2), bytes("two"));
@@ -115,7 +124,5 @@ TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBoundsDeathTest) {
     ASSERT_TRUE(iterator.Key() == bytes(2));
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
-    EXPECT_DEATH(
-        iterator.Next(),
-        "Attempted to Next\\(\\) an iterator for which Done\\(\\) is true\\.");
+    ASSERT_THROW(iterator.Next(), ::TailProduce::StorageIteratorOutOfBoundsException);
 }

@@ -13,8 +13,9 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerImpl, MockStreamManager<MockDataStorage>);
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
-
     MockDataStorage storage;
+    // TODO(dkorolev): Change this to use "proper" stream initialization.
+    storage.Set(::TailProduce::bytes("s:test"), ::TailProduce::bytes("0000000000:0000000000"));
     StreamManagerImpl streams_manager(storage);
     SimpleEntry entry;
     typename StreamManagerImpl::test_type::unsafe_publisher_type publisher(streams_manager.test);

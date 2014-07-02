@@ -26,6 +26,14 @@
 namespace TailProduce {
     class Stream;
 
+    class StreamManagerParams {
+      public:
+        // Using default StreamManagerParams requires non-header-only usecase,
+        // since command line flags must be defined in a single compile unit.
+        static StreamManagerParams FromCommandLineFlags();
+      private:
+    };
+
     class StreamsRegistry {
       public:
         struct StreamsRegistryEntry {
@@ -111,6 +119,7 @@ namespace TailProduce {
     struct Storage {
         typedef std::vector<uint8_t> KEY_TYPE;
         typedef std::vector<uint8_t> VALUE_TYPE;
+        // TODO(dkorolev): Document the expected interface.
     };
 
     //struct Producer {};  // Client-defined job.
@@ -152,11 +161,16 @@ namespace TailProduce {
     struct Exception : std::exception {};
     struct InternalError : Exception {};
     struct StorageException : Exception {};
+    struct StorageEmptyKeyException : StorageException {};
+    struct StorageEmptyValueException : StorageException {};
+    struct StorageNoDataException : StorageException {};
+    struct StorageOverwriteNotAllowedException : StorageException {};
+    struct StorageIteratorOutOfBoundsException : StorageException {};
     struct OrderKeysGoBackwardsException : Exception {};
     struct ListenerHasNoDataToRead : Exception {};
     struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};
     struct StreamDoesNotExistException : Exception {};
-    struct ParseStorageKeyException : Exception {};
+    struct MalformedStorageHeadException : Exception {};
 
     // StreamManager provides mid-level access to data in the streams.
     // It abstracts out:
@@ -204,16 +218,32 @@ namespace TailProduce {
         }
         static head_pair_type ParseStorageKey(const std::vector<uint8_t>& storage_key) {
             // TODO(dkorolev): This secondary key implementation as fixed 10 bytes is not final.
-            const size_t expected_size = order_key_type::size_in_bytes + 1 + 11;
+            const size_t expected_size = order_key_type::size_in_bytes + 1 + 10;
             if (storage_key.size() != expected_size) {
-                throw ParseStorageKeyException();
+                VLOG(2)
+                    << "Malformed key: input length " << storage_key.size()
+                    << ", expected length " << expected_size << ".";
+                throw MalformedStorageHeadException();
             }
             head_pair_type key;
             key.first.DeSerializeOrderKey(&storage_key[0]);
-            if (sscanf(reinterpret_cast<const char*>(&storage_key[order_key_type::size_in_bytes + 1]),
-                       "%u",
-                       &key.second) != 1) {
-                throw ParseStorageKeyException();
+            const char* p = reinterpret_cast<const char*>(&storage_key[order_key_type::size_in_bytes + 1]);
+            if (sscanf(p, "%u", &key.second) != 1) {
+                VLOG(2)
+                    << "Malformed key: cannot parse the secondary key '"
+                    << std::string(p, reinterpret_cast<const char*>(&storage_key[0]) + storage_key.size()) << "'"
+                    << " from '" << antibytes(storage_key) << ".'";
+                throw MalformedStorageHeadException();
+            }
+            const std::vector<uint8_t> golden = 
+                OrderKey::template StaticSerializeAsStorageKey<typename T::order_key_type>(key.first,
+                                                                                           key.second);
+            
+            if (storage_key != golden) {
+                VLOG(2)
+                    << "Malformed key: input '" << antibytes(storage_key) << "', "
+                    << "re-generated: '" << antibytes(golden) << "'.";
+                throw MalformedStorageHeadException();
             }
             return key;
         }
