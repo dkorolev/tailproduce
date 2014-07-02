@@ -179,6 +179,9 @@ namespace TailProduce {
         explicit StorageKeyBuilder(const std::string& stream_name)
           : prefix(bytes("d:" + stream_name + ":")),
             end_stream_key(bytes("d:" + stream_name + ":\xff")) {
+            using TOK = ::TailProduce::OrderKey;
+            static_assert(std::is_base_of<TOK, typename T::order_key_type>::value,
+                          "StorageKeyBuilder: T::order_key_type should be derived from Stream.");
         }
         std::vector<uint8_t> BuildStorageKey(const typename T::head_pair_type& key) const {
             std::vector<uint8_t> storage_key = prefix;
@@ -187,16 +190,15 @@ namespace TailProduce {
         }
         const std::vector<uint8_t> end_stream_key;
         StorageKeyBuilder() = delete;
-        StorageKeyBuilder(const StorageKeyBuilder&) = delete;
-        StorageKeyBuilder(StorageKeyBuilder&&) = delete;
-        void operator=(const StorageKeyBuilder&) = delete;
+        //StorageKeyBuilder(const StorageKeyBuilder&) = delete;  TODO(dkorolev): Uncomment this line.
+        //StorageKeyBuilder(StorageKeyBuilder&&) = delete;  TODO(dkorolev): Uncomment this line.
+        //void operator=(const StorageKeyBuilder&) = delete;  TODO(dkorolev): Uncomment this line.
         const std::vector<uint8_t> prefix;
     };
 
     // UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
     // presenting data in serialized format and keeping track of HEAD order keys.
-    template<typename T> struct UnsafeListener : StorageKeyBuilder<T> {
-        typedef StorageKeyBuilder<T> key_builder;
+    template<typename T> struct UnsafeListener {
         UnsafeListener() = delete;
 
         // Unbounded.
@@ -205,10 +207,9 @@ namespace TailProduce {
         }
 
         UnsafeListener(const T& stream, const typename T::head_pair_type& begin = typename T::head_pair_type())
-          : key_builder(stream.name),
-            stream(stream),
+          : stream(stream),
             storage(stream.manager->storage),
-            cursor_key(key_builder::BuildStorageKey(begin)),
+            cursor_key(stream.key_builder.BuildStorageKey(begin)),
             need_to_increment_cursor(false),
             has_end_key(false),
             reached_end(false) {
@@ -224,13 +225,12 @@ namespace TailProduce {
         UnsafeListener(const T& stream,
                        const typename T::head_pair_type& begin,
                        const typename T::head_pair_type& end)
-          : key_builder(stream.name),
-            stream(stream),
+          : stream(stream),
             storage(stream.manager->storage),
-            cursor_key(key_builder::BuildStorageKey(begin)),
+            cursor_key(stream.key_builder.BuildStorageKey(begin)),
             need_to_increment_cursor(false),
             has_end_key(true),
-            end_key(key_builder::BuildStorageKey(end)),
+            end_key(stream.key_builder.BuildStorageKey(end)),
             reached_end(false) {
         }
         UnsafeListener(const T& stream,
@@ -258,7 +258,7 @@ namespace TailProduce {
                 return false;
             } else {
                 if (!iterator) {
-                    iterator.reset(new iterator_type(storage, cursor_key, key_builder::end_stream_key));
+                    iterator.reset(new iterator_type(storage, cursor_key, stream.key_builder.end_stream_key));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }
@@ -336,17 +336,12 @@ namespace TailProduce {
     };
 
     // UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
-    template<typename T> struct UnsafePublisher : StorageKeyBuilder<T> {
-        typedef StorageKeyBuilder<T> key_builder;
+    template<typename T> struct UnsafePublisher {
         UnsafePublisher() = delete;
-        explicit UnsafePublisher(T& stream)
-          : key_builder(stream.name),
-            stream(stream) {
+        explicit UnsafePublisher(T& stream) : stream(stream) {
         }
 
-        UnsafePublisher(T& stream, const typename T::order_key_type& order_key)
-          : key_builder(stream.name),
-            stream(stream) {
+        UnsafePublisher(T& stream, const typename T::order_key_type& order_key) : stream(stream) {
             PushHead(order_key);
         }
 
@@ -355,8 +350,8 @@ namespace TailProduce {
             PushHead(impl::ExtractOrderKey(entry));
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
-            auto k = key_builder::BuildStorageKey(stream.head);
-            stream.manager->storage.Set(key_builder::BuildStorageKey(stream.head), bytes(value_output_stream.str()));
+            auto k = stream.key_builder.BuildStorageKey(stream.head);
+            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head), bytes(value_output_stream.str()));
         }
 
         void PushHead(const typename T::order_key_type& order_key) {
@@ -415,9 +410,11 @@ namespace TailProduce {
             typedef ::TailProduce::UnsafeListener<NAME##_type> unsafe_listener_type; \
             typedef ::TailProduce::UnsafePublisher<NAME##_type> unsafe_publisher_type; \
             typedef std::pair<order_key_type, uint32_t> head_pair_type; \
+            typedef ::TailProduce::StorageKeyBuilder<NAME##_type> key_builder_type; \
             StreamManagerImpl* manager; \
             stream_type stream; \
             const std::string name; \
+            key_builder_type key_builder; \
             const std::vector<uint8_t> head_storage_key; \
             head_pair_type head; \
             NAME##_type( \
@@ -428,6 +425,7 @@ namespace TailProduce {
               : manager(manager), \
                 stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name), \
                 name(stream_name), \
+                key_builder(name), \
                 head_storage_key(::TailProduce::bytes("s:" + name)), \
                 head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, storage_type>(name, manager->storage)) { \
             } \
