@@ -177,7 +177,8 @@ namespace TailProduce {
     // { stream name, typed order key, secondary key } into std::vector<uint8_t>-s.
     template<typename T> struct StorageKeyBuilder {
         explicit StorageKeyBuilder(const std::string& stream_name)
-          : prefix(bytes("d:" + stream_name + ":")),
+          : head_storage_key(::TailProduce::bytes("s:" + stream_name)),
+            prefix(bytes("d:" + stream_name + ":")),
             end_stream_key(bytes("d:" + stream_name + ":\xff")) {
             using TOK = ::TailProduce::OrderKey;
             static_assert(std::is_base_of<TOK, typename T::order_key_type>::value,
@@ -188,12 +189,13 @@ namespace TailProduce {
             OrderKey::template StaticAppendAsStorageKey<typename T::order_key_type>(key.first, key.second, storage_key);
             return storage_key;
         }
-        const std::vector<uint8_t> end_stream_key;
         StorageKeyBuilder() = delete;
         //StorageKeyBuilder(const StorageKeyBuilder&) = delete;  TODO(dkorolev): Uncomment this line.
         //StorageKeyBuilder(StorageKeyBuilder&&) = delete;  TODO(dkorolev): Uncomment this line.
         //void operator=(const StorageKeyBuilder&) = delete;  TODO(dkorolev): Uncomment this line.
+        const std::vector<uint8_t> head_storage_key;
         const std::vector<uint8_t> prefix;
+        const std::vector<uint8_t> end_stream_key;
     };
 
     // UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
@@ -365,7 +367,7 @@ namespace TailProduce {
             }
             // TODO(dkorolev): Perhaps more checks here?
             stream.manager->storage.SetAllowingOverwrite(
-                stream.head_storage_key,
+                stream.key_builder.head_storage_key,
                 OrderKey::template StaticSerializeAsStorageKey<typename T::order_key_type>(new_head.first,
                                                                                            new_head.second));
             stream.head = new_head;
@@ -415,7 +417,6 @@ namespace TailProduce {
             stream_type stream; \
             const std::string name; \
             key_builder_type key_builder; \
-            const std::vector<uint8_t> head_storage_key; \
             head_pair_type head; \
             NAME##_type( \
                 StreamManagerImpl* manager, \
@@ -426,7 +427,6 @@ namespace TailProduce {
                 stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name), \
                 name(stream_name), \
                 key_builder(name), \
-                head_storage_key(::TailProduce::bytes("s:" + name)), \
                 head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, storage_type>(name, manager->storage)) { \
             } \
         }; \
