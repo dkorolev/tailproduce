@@ -136,10 +136,7 @@ namespace TailProduce {
             const std::string& stream_name,
             const std::string& entry_type_name,
             const std::string& order_key_type_name)
-            : TailProduce::Stream(registry,
-                                  stream_name,
-                                  entry_type_name,
-                                  order_key_type_name) {
+            : Stream(registry, stream_name, entry_type_name, order_key_type_name) {
             using TE = ::TailProduce::Entry;
             static_assert(std::is_base_of<TE, T_ENTRY>::value,
                           "StreamInstance::T_ENTRY should be derived from Entry.");
