@@ -1,3 +1,5 @@
+// TODO(dkorolev): Replace LOG(FATAL) by exceptions.
+
 #ifndef TAILPRODUCE_MOCKS_DATA_STORAGE_H
 #define TAILPRODUCE_MOCKS_DATA_STORAGE_H
 

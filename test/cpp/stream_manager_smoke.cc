@@ -14,7 +14,8 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    StreamManagerImpl streams_manager;
+    MockDataStorage storage;
+    StreamManagerImpl streams_manager(storage);
     SimpleEntry entry;
     typename StreamManagerImpl::test_type::unsafe_publisher_type publisher(streams_manager.test);
     typename StreamManagerImpl::test_type::unsafe_listener_type listener_all(streams_manager.test);

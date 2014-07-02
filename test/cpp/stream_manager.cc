@@ -35,10 +35,11 @@ using ::TailProduce::bytes;
 
 // The actual test is a templated RUN_TESTS() function.
 // It is used to test both the hand-crafted objects structure and the one created by a sequence of macros.
-template<typename STREAM_MANAGER> void RUN_TESTS() {
+template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
+    STORAGE storage;
     {
         // Test stream manager setup. The `test` stream should exist and be statically typed.
-        STREAM_MANAGER streams_manager;
+        STREAM_MANAGER streams_manager(storage);
 
         ASSERT_EQ(1, streams_manager.registry().streams.size());
         EXPECT_EQ("test", streams_manager.registry().streams[0].name);
@@ -83,7 +84,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Test HEAD updates.
-        STREAM_MANAGER streams_manager;
+        STREAM_MANAGER streams_manager(storage);
 
         // Start from zero.
         typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test);
@@ -182,7 +183,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Test storage schema.
-        STREAM_MANAGER streams_manager;
+        STREAM_MANAGER streams_manager(storage);
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         publisher.Push(SimpleEntry(1, "one"));
@@ -200,7 +201,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Listener test: bounded, pre-initialized with data.
-        STREAM_MANAGER streams_manager;
+        STREAM_MANAGER streams_manager(storage);
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         publisher.Push(SimpleEntry(1, "one"));
@@ -232,7 +233,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Listener test: bounded, pre-initialized with data, involving secondary keys.
-        STREAM_MANAGER streams_manager;
+        STREAM_MANAGER streams_manager(storage);
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         publisher.Push(SimpleEntry(42, "i0"));
@@ -273,7 +274,7 @@ template<typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Listener test: appended on-the-fly, bounded.
-        STREAM_MANAGER streams_manager;
+        STREAM_MANAGER streams_manager(storage);
 
         SimpleEntry entry;
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
@@ -332,13 +333,20 @@ TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    RUN_TESTS<StreamManagerImpl>();
+    RUN_TESTS<typename StreamManagerImpl::storage_type, StreamManagerImpl>();
 }
 
 // This test explicitly lists what stream definition macros expand into.
 // Used as a reference point, as well as to ensure the macros do what they are designed to.
 TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
-    class StreamManagerImpl : public TypeParam {
+    class StreamManagerImpl {
+      public:
+        typedef typename TypeParam::storage_type storage_type;
+        storage_type& storage;
+        explicit StreamManagerImpl(storage_type& storage) : storage(storage) {}
+        StreamManagerImpl(const StreamManagerImpl&) = delete;
+        StreamManagerImpl(StreamManagerImpl&&) = delete;
+        void operator=(const StreamManagerImpl&) = delete;
       private:
         using TSM = ::TailProduce::StreamManager;
         static_assert(std::is_base_of<TSM, TypeParam>::value,
@@ -362,7 +370,6 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             stream_type stream;
             const std::string name;
             key_builder_type key_builder;
-//            const std::vector<uint8_t> head_storage_key;
             head_pair_type head;
             test_type(StreamManagerImpl* manager,
                       const char* stream_name,
@@ -372,12 +379,11 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                 stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name),
               name(stream_name),
               key_builder(name),
-//              head_storage_key(bytes("s:" + name)),
-              head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, storage_type>(name, manager->storage)) {
+              head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) {
             }
         };
         test_type test = test_type(this, "test", "SimpleEntry", "SimpleOrderKey");
     };
 
-    RUN_TESTS<StreamManagerImpl>();
+    RUN_TESTS<typename StreamManagerImpl::storage_type, StreamManagerImpl>();
 }

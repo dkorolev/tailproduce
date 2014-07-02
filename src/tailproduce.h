@@ -79,7 +79,7 @@ namespace TailProduce {
 
     // An interface to extract order keys in certain types. With fixed-size serialization.
     struct OrderKey {
-        // enum { size_in_bytes = 0 };  // TO GO AWAY -- D.K.
+        // Needs enum { size_in_bytes = 0 };  // TO GO AWAY -- D.K.
         // Needs bool operator<(const T& rhs) const;
         // Needs void SerializeOrderKey(uint8_t* ptr) const;
         // Needs void DeSerializeOrderKey(const uint8_t* ptr);
@@ -148,6 +148,16 @@ namespace TailProduce {
         }
     };
 
+    // Exception types.
+    struct Exception : std::exception {};
+    struct InternalError : Exception {};
+    struct StorageException : Exception {};
+    struct OrderKeysGoBackwardsException : Exception {};
+    struct ListenerHasNoDataToRead : Exception {};
+    struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};
+    struct StreamDoesNotExistException : Exception {};
+    struct ParseStorageKeyException : Exception {};
+
     // StreamManager provides mid-level access to data in the streams.
     // It abstracts out:
     // 1) Low-level storage:
@@ -159,35 +169,53 @@ namespace TailProduce {
     //      Instead of storage-level Iterators that may hit the end and have to be re-created,
     //      StreamManager works on the scale of append-only Producers and stream-only Listeners.
     struct StreamManager {
-        template<typename T_ORDER_KEY, typename T_STORAGE>
-        static std::pair<T_ORDER_KEY, uint32_t> FetchHeadOrDie(const std::string& name, T_STORAGE& storage) {
-            std::pair<T_ORDER_KEY, uint32_t> result;
-            return result;
+        template<typename T_ORDER_KEY, typename T_STORAGE_KEY_BUILDER, typename T_STORAGE>
+        static std::pair<T_ORDER_KEY, uint32_t> FetchHeadOrDie(
+                const std::string& name,
+                const T_STORAGE_KEY_BUILDER& key_builder,
+                T_STORAGE& storage) {
+            std::vector<uint8_t> storage_key;
+            try {
+                storage.Get(key_builder.head_storage_key, storage_key);
+            } catch(const StorageException&) {
+                throw StreamDoesNotExistException();
+            }
+            return T_STORAGE_KEY_BUILDER::ParseStorageKey(storage_key);
         }
     };
-
-    // Exception types.
-    struct Exception : std::exception {};
-    struct InternalError : Exception {};
-    struct OrderKeysGoBackwardsException : Exception {};
-    struct ListenerHasNoDataToRead : Exception {};
-    struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};
 
     // StorageKeyBuilder implements the BuildStorageKey function to convert
     // { stream name, typed order key, secondary key } into std::vector<uint8_t>-s.
     template<typename T> struct StorageKeyBuilder {
+        typedef typename T::order_key_type order_key_type;
+        typedef typename T::head_pair_type head_pair_type;
         explicit StorageKeyBuilder(const std::string& stream_name)
           : head_storage_key(::TailProduce::bytes("s:" + stream_name)),
             prefix(bytes("d:" + stream_name + ":")),
             end_stream_key(bytes("d:" + stream_name + ":\xff")) {
             using TOK = ::TailProduce::OrderKey;
-            static_assert(std::is_base_of<TOK, typename T::order_key_type>::value,
+            static_assert(std::is_base_of<TOK, order_key_type>::value,
                           "StorageKeyBuilder: T::order_key_type should be derived from Stream.");
         }
-        std::vector<uint8_t> BuildStorageKey(const typename T::head_pair_type& key) const {
+        std::vector<uint8_t> BuildStorageKey(const head_pair_type& key) const {
             std::vector<uint8_t> storage_key = prefix;
-            OrderKey::template StaticAppendAsStorageKey<typename T::order_key_type>(key.first, key.second, storage_key);
+            OrderKey::template StaticAppendAsStorageKey<order_key_type>(key.first, key.second, storage_key);
             return storage_key;
+        }
+        static head_pair_type ParseStorageKey(const std::vector<uint8_t>& storage_key) {
+            // TODO(dkorolev): This secondary key implementation as fixed 10 bytes is not final.
+            const size_t expected_size = order_key_type::size_in_bytes + 1 + 11;
+            if (storage_key.size() != expected_size) {
+                throw ParseStorageKeyException();
+            }
+            head_pair_type key;
+            key.first.DeSerializeOrderKey(&storage_key[0]);
+            if (sscanf(reinterpret_cast<const char*>(&storage_key[order_key_type::size_in_bytes + 1]),
+                       "%u",
+                       &key.second) != 1) {
+                throw ParseStorageKeyException();
+            }
+            return key;
         }
         StorageKeyBuilder() = delete;
         //StorageKeyBuilder(const StorageKeyBuilder&) = delete;  TODO(dkorolev): Uncomment this line.
@@ -390,14 +418,21 @@ namespace TailProduce {
 // Static framework is the one that lists all the streams in the source file,
 // thus allowing all C++ template and static typing powers to come into play.
 #define TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(NAME, BASE) \
-    class NAME : public BASE { \
+    class NAME { \
+      public: \
+        typedef typename BASE::storage_type storage_type; \
+        storage_type& storage; \
+        explicit NAME(storage_type& storage) : storage(storage) {} \
+        NAME(const NAME&) = delete; \
+        NAME(NAME&&) = delete; \
+        void operator=(const NAME&) = delete; \
       private: \
         using TSM = ::TailProduce::StreamManager; \
         static_assert(std::is_base_of<TSM, BASE>::value, \
-                      "StreamManagerImpl: BASE should be derived from StreamManager."); \
+                      "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE should be derived from StreamManager."); \
         using TS = ::TailProduce::Storage; \
-        static_assert(std::is_base_of<TS, typename BASE::storage_type>::value, \
-                      "StreamManagerImpl: BASE::storage_type should be derived from Storage."); \
+        static_assert(std::is_base_of<TS, storage_type>::value, \
+                      "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE::storage_type should be derived from Storage."); \
         ::TailProduce::StreamsRegistry registry_;  \
       public: \
         typedef BASE captured_base; \
@@ -427,7 +462,7 @@ namespace TailProduce {
                 stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name), \
                 name(stream_name), \
                 key_builder(name), \
-                head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, storage_type>(name, manager->storage)) { \
+                head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) { \
             } \
         }; \
         NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE)
