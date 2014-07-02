@@ -360,8 +360,8 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             StreamManagerImpl* manager;
             stream_type stream;
             const std::string name;
-            head_pair_type head;
             const std::vector<uint8_t> head_storage_key;
+            head_pair_type head;
             test_type(StreamManagerImpl* manager,
                       const char* stream_name,
                       const char* entry_type_name,
@@ -369,7 +369,8 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
               : manager(manager),
                 stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name),
               name(stream_name),
-              head_storage_key(bytes("s:" + name)) {
+              head_storage_key(bytes("s:" + name)),
+              head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, storage_type>(name, manager->storage)) {
             }
         };
         test_type test = test_type(this, "test", "SimpleEntry", "SimpleOrderKey");

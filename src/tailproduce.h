@@ -68,29 +68,30 @@ namespace TailProduce {
     // A serializable entry.
     template<typename T1, typename T2> struct OrderKeyExtractorImpl {};
     struct Entry {
-        // Need the following fully specialized template within namespace ::TailProduce:
-        //     template<> struct OrderKeyExtractorImpl<OrderKeyType, EntryType> {
-        //         static OrderKeyType ExtractOrderKey(const EntryType& entry) { ... }
-        //      };
-        // for each desired pair of { OrderKeyType, EntryType }.
-        // template<typename T> static void SerializeEntry(std::ostream& os, const T& entry);
-        // template<typename T> static void DeSerializeEntry(std::istream& is, T& entry);
+        // 1) Need the following fully specialized template within namespace ::TailProduce:
+        //       template<> struct OrderKeyExtractorImpl<OrderKeyType, EntryType> {
+        //           static OrderKeyType ExtractOrderKey(const EntryType& entry) { ... }
+        //        };
+        //    for each desired pair of { OrderKeyType, EntryType }.
+        // 2) Needs template<typename T> static void SerializeEntry(std::ostream& os, const T& entry);
+        // 3) Needs template<typename T> static void DeSerializeEntry(std::istream& is, T& entry);
     };
 
     // An interface to extract order keys in certain types. With fixed-size serialization.
     struct OrderKey {
         // enum { size_in_bytes = 0 };  // TO GO AWAY -- D.K.
-        // bool operator<(const T& rhs) const;
-        // void SerializeOrderKey(uint8_t* ptr) const;
-        // void DeSerializeOrderKey(const uint8_t* ptr);
+        // Needs bool operator<(const T& rhs) const;
+        // Needs void SerializeOrderKey(uint8_t* ptr) const;
+        // Needs void DeSerializeOrderKey(const uint8_t* ptr);
         template<typename T_ORDER_KEY> static void StaticAppendAsStorageKey(const T_ORDER_KEY& primary_key,
                                                                             const uint32_t secondary_key,
                                                                             std::vector<uint8_t>& output) {
             using TOK = ::TailProduce::OrderKey;
             static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value,
-                          "StreamManager::T_ORDER_KEY should be derived from OrderKey.");
+                          "OrderKey::StaticAppendAsStorageKey::T_ORDER_KEY should be derived from OrderKey.");
             static_assert(T_ORDER_KEY::size_in_bytes > 0,
-                          "StreamManager::T_ORDER_KEY::size_in_bytes should be positive.");
+                          "OrderKey::StaticAppendAsStorageKey::T_ORDER_KEY::size_in_bytes should be positive.");
+            // TODO(dkorolev): This secondary key implementation as fixed 10 bytes is not final.
             uint8_t result[T_ORDER_KEY::size_in_bytes + 1 + 11];
             primary_key.SerializeOrderKey(result);
             result[T_ORDER_KEY::size_in_bytes] = ':';
@@ -105,8 +106,14 @@ namespace TailProduce {
             return output;
         }
     };
-    struct Storage {};   // Data storage proxy, originally LevelDB.
-    struct Producer {};  // Client-defined job.
+
+    // Data storage proxy, originally LevelDB.
+    struct Storage {
+        typedef std::vector<uint8_t> KEY_TYPE;
+        typedef std::vector<uint8_t> VALUE_TYPE;
+    };
+
+    //struct Producer {};  // Client-defined job.
 
     // Cereal-based serialization.
     template<typename T> struct CerealJSONSerializable {
@@ -144,8 +151,25 @@ namespace TailProduce {
         }
     };
 
-    struct StreamManager {};
+    // StreamManager provides mid-level access to data in the streams.
+    // It abstracts out:
+    // 1) Low-level storage:
+    //      Instead of raw string keys and raw byte array values,
+    //      instances of StreamManager-s operates on serialized objects.
+    // 2) Order keys management:
+    //      StreamManager respects order keys, as well as their serialization to the storage.
+    // 3) Producers and Listeners:
+    //      Instead of storage-level Iterators that may hit the end and have to be re-created,
+    //      StreamManager works on the scale of append-only Producers and stream-only Listeners.
+    struct StreamManager {
+        template<typename T_ORDER_KEY, typename T_STORAGE>
+        static std::pair<T_ORDER_KEY, uint32_t> FetchHeadOrDie(const std::string& name, T_STORAGE& storage) {
+            std::pair<T_ORDER_KEY, uint32_t> result;
+            return result;
+        }
+    };
 
+    // Exception types.
     struct Exception : std::exception {};
     struct InternalError : Exception {};
     struct OrderKeysGoBackwardsException : Exception {};
@@ -397,8 +421,8 @@ namespace TailProduce {
             StreamManagerImpl* manager; \
             stream_type stream; \
             const std::string name; \
-            head_pair_type head; \
             const std::vector<uint8_t> head_storage_key; \
+            head_pair_type head; \
             NAME##_type( \
                 StreamManagerImpl* manager, \
                 const char* stream_name, \
@@ -406,8 +430,9 @@ namespace TailProduce {
                 const char* entry_order_key_name) \
               : manager(manager), \
                 stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name), \
-              name(stream_name), \
-              head_storage_key(::TailProduce::bytes("s:" + name)) { \
+                name(stream_name), \
+                head_storage_key(::TailProduce::bytes("s:" + name)), \
+                head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, storage_type>(name, manager->storage)) { \
             } \
         }; \
         NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE)

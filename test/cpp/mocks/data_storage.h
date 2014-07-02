@@ -8,25 +8,22 @@
 
 #include "../../../src/tailproduce.h"
 
-// TODO(dkorolev): Mock data storage implementation should inherit from its base class.
-
 // MockDataStorage supports the following functionality:
 //
 // 1) Store data as binary key-value pairs.
 //    The design decision is to use std::string-s for keys and std::vector<uint8_t>-s for values.
+//    They are available as ::TailProduce::Storage::{KEY,VALUE}_TYPE respectively.
 //    Both key and value should not be empty.
 //
 // 2) Provide read access iterators.
 //    Given the range [from, to), or indefinitely from [from, ...).
-//    The value at key `from` should exist, the implementation would explicitly die if it does not.
+//    Allows providing a non-existing key as `from`, uses std::map::lower_bound().
 //    
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
 class MockDataStorage : ::TailProduce::Storage {
   public:
-    typedef std::vector<uint8_t> KEY_TYPE;
-    typedef std::vector<uint8_t> VALUE_TYPE;
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
@@ -119,16 +116,6 @@ class MockDataStorage : ::TailProduce::Storage {
         }
 
       private:
-        /*
-        // Allow returning Iterators from Storage's member functions w/o copying them.
-        Iterator(MockDataStorage& master, const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE())
-            : data_(master.data_),
-              end_(end),
-              cit_(data_.lower_bound(begin)) {
-        }
-        friend class MockDataStorage;
-        */
-
         const MAP_TYPE& data_;
         KEY_TYPE end_;
         typename MAP_TYPE::const_iterator cit_;
@@ -139,12 +126,6 @@ class MockDataStorage : ::TailProduce::Storage {
         void operator=(const Iterator&) = delete;
     };
     
-    /*
-    Iterator GetIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
-        return Iterator(*this, begin, end);
-    }
-    */
-
   private:
     MAP_TYPE data_;
 };
