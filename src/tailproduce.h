@@ -24,15 +24,24 @@
 #include "helpers.h"
 
 namespace TailProduce {
-    class Stream;
+    // Exception types.
+    struct Exception : std::exception {};
+    struct InternalError : Exception {};
+    struct StorageException : Exception {};
+    struct StorageEmptyKeyException : StorageException {};
+    struct StorageEmptyValueException : StorageException {};
+    struct StorageNoDataException : StorageException {};
+    struct StorageOverwriteNotAllowedException : StorageException {};
+    struct StorageIteratorOutOfBoundsException : StorageException {};
+    struct OrderKeysGoBackwardsException : Exception {};
+    struct ListenerHasNoDataToRead : Exception {};
+    struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};
+    struct StreamDoesNotExistException : Exception {};
+    struct MalformedStorageHeadException : Exception {};
+    struct StreamAlreadyListedForCreationException : Exception {};
+    struct StreamAlreadyExistsException : Exception {};
 
-    class StreamManagerParams {
-      public:
-        // Using default StreamManagerParams requires non-header-only usecase,
-        // since command line flags must be defined in a single compile unit.
-        static StreamManagerParams FromCommandLineFlags();
-      private:
-    };
+    class Stream;
 
     class StreamsRegistry {
       public:
@@ -157,21 +166,6 @@ namespace TailProduce {
         }
     };
 
-    // Exception types.
-    struct Exception : std::exception {};
-    struct InternalError : Exception {};
-    struct StorageException : Exception {};
-    struct StorageEmptyKeyException : StorageException {};
-    struct StorageEmptyValueException : StorageException {};
-    struct StorageNoDataException : StorageException {};
-    struct StorageOverwriteNotAllowedException : StorageException {};
-    struct StorageIteratorOutOfBoundsException : StorageException {};
-    struct OrderKeysGoBackwardsException : Exception {};
-    struct ListenerHasNoDataToRead : Exception {};
-    struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};
-    struct StreamDoesNotExistException : Exception {};
-    struct MalformedStorageHeadException : Exception {};
-
     // StreamManager provides mid-level access to data in the streams.
     // It abstracts out:
     // 1) Low-level storage:
@@ -192,6 +186,7 @@ namespace TailProduce {
             try {
                 storage.Get(key_builder.head_storage_key, storage_key);
             } catch(const StorageException&) {
+                VLOG(3) << "throw StreamDoesNotExistException();";
                 throw StreamDoesNotExistException();
             }
             return T_STORAGE_KEY_BUILDER::ParseStorageKey(storage_key);
@@ -223,6 +218,7 @@ namespace TailProduce {
                 VLOG(2)
                     << "Malformed key: input length " << storage_key.size()
                     << ", expected length " << expected_size << ".";
+                VLOG(3) << "throw MalformedStorageHeadException();";
                 throw MalformedStorageHeadException();
             }
             head_pair_type key;
@@ -233,6 +229,7 @@ namespace TailProduce {
                     << "Malformed key: cannot parse the secondary key '"
                     << std::string(p, reinterpret_cast<const char*>(&storage_key[0]) + storage_key.size()) << "'"
                     << " from '" << antibytes(storage_key) << ".'";
+                VLOG(3) << "throw MalformedStorageHeadException();";
                 throw MalformedStorageHeadException();
             }
             const std::vector<uint8_t> golden = 
@@ -243,6 +240,7 @@ namespace TailProduce {
                 VLOG(2)
                     << "Malformed key: input '" << antibytes(storage_key) << "', "
                     << "re-generated: '" << antibytes(golden) << "'.";
+                VLOG(3) << "throw MalformedStorageHeadException();";
                 throw MalformedStorageHeadException();
             }
             return key;
@@ -354,9 +352,11 @@ namespace TailProduce {
         // Will throw an exception if no data is available.
         void ExportEntry(typename T::entry_type& entry) {
             if (!HasData()) {
+                VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
                 throw ::TailProduce::ListenerHasNoDataToRead();
             }
             if (!iterator) {
+                VLOG(3) << "throw ::TailProduce::InternalError();";
                 throw ::TailProduce::InternalError();
             }
             // TODO(dkorolev): Make this proof-of-concept code efficient.
@@ -370,9 +370,11 @@ namespace TailProduce {
         // Will throw an exception if no further data is (yet) available.
         void AdvanceToNextEntry() {
             if (!HasData()) {
+                VLOG(3) << "throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();";
                 throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();
             }
             if (!iterator) {
+                VLOG(3) << "throw ::TailProduce::InternalError();";
                 throw ::TailProduce::InternalError();
             }
             cursor_key = iterator->Key();
@@ -418,6 +420,7 @@ namespace TailProduce {
             typename T::head_pair_type new_head(order_key, 0);
             if (new_head.first < stream.head.first) {
                 // Order keys should only be increasing.
+                VLOG(3) << "throw ::TailProduce::OrderKeysGoBackwardsException();";
                 throw ::TailProduce::OrderKeysGoBackwardsException();
             }
             if (!(stream.head.first < new_head.first)) {
@@ -442,6 +445,46 @@ namespace TailProduce {
         void operator=(const UnsafePublisher&) = delete;
         T& stream;
     };
+
+    class StreamManagerParams {
+      public:
+        // Using default StreamManagerParams requires non-header-only usecase,
+        // since command line flags must be defined in a single compile unit.
+        // NOTE: This method is not implemented yet, and this is on purpose.
+        //       The default construct of static framework, that uses is, should be avoided, at least in the tests.
+        // TODO(dkorolev): Implement it.
+        static StreamManagerParams FromCommandLineFlags();
+
+        template<typename T_ORDER_KEY>
+        StreamManagerParams&
+        CreateStream(const std::string& name, const T_ORDER_KEY& key, const uint32_t secondary_key = 0) {
+            std::vector<uint8_t>& placeholder = init[name];
+            if (!placeholder.empty()) {
+                // TODO(dkorolev): Add a test for it.
+                VLOG(3) << "throw StreamAlreadyListedForCreationException();";
+                throw StreamAlreadyListedForCreationException();
+            }
+            placeholder = OrderKey::template StaticSerializeAsStorageKey<T_ORDER_KEY>(key, secondary_key);
+            VLOG(3) << "Registering stream '" << name << "' as '" << antibytes(placeholder) << "'.";
+            return *this;
+        }
+
+        template<typename T_STORAGE> void Apply(T_STORAGE& storage) const {
+            for (auto cit : init) {
+                VLOG(3) << "Populating stream '" << cit.first << "' to the storage.";
+                try {
+                    storage.Set(::TailProduce::bytes("s:" + cit.first), cit.second);
+                } catch(const StorageOverwriteNotAllowedException&) {
+                    VLOG(3) << "throw StreamAlreadyExistsException();";
+                    throw StreamAlreadyExistsException();
+                }
+            }
+        }
+
+     private:
+       // TODO(dkorolev): Fix this hack.
+       std::map<std::string, std::vector<uint8_t>> init;
+    };
 };
 
 // TailProduce static framework macros.
@@ -452,7 +495,15 @@ namespace TailProduce {
       public: \
         typedef typename BASE::storage_type storage_type; \
         storage_type& storage; \
-        explicit NAME(storage_type& storage) : storage(storage) {} \
+        static storage_type& EnsureStreamsAreCreatedDuringInitialization( \
+                storage_type& storage, \
+                const ::TailProduce::StreamManagerParams& params) { \
+            params.Apply(storage); \
+            return storage; \
+        } \
+        NAME(storage_type& storage, \
+             const ::TailProduce::StreamManagerParams& params = ::TailProduce::StreamManagerParams::FromCommandLineFlags()) \
+          : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) {} \
         NAME(const NAME&) = delete; \
         NAME(NAME&&) = delete; \
         void operator=(const NAME&) = delete; \
@@ -468,7 +519,7 @@ namespace TailProduce {
         typedef BASE captured_base; \
         const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
 
-#define TAILPRODUCE_STREAM(NAME, ENTRY_TYPE, ORDER_KEY_TYPE) \
+#define TAILPRODUCE_STREAM(MANAGER, NAME, ENTRY_TYPE, ORDER_KEY_TYPE) \
         struct NAME##_type { \
             typedef ENTRY_TYPE entry_type; \
             typedef ORDER_KEY_TYPE order_key_type; \
@@ -478,13 +529,13 @@ namespace TailProduce {
             typedef ::TailProduce::UnsafePublisher<NAME##_type> unsafe_publisher_type; \
             typedef std::pair<order_key_type, uint32_t> head_pair_type; \
             typedef ::TailProduce::StorageKeyBuilder<NAME##_type> key_builder_type; \
-            StreamManagerImpl* manager; \
+            MANAGER* manager; \
             stream_type stream; \
             const std::string name; \
             key_builder_type key_builder; \
             head_pair_type head; \
             NAME##_type( \
-                StreamManagerImpl* manager, \
+                MANAGER* manager, \
                 const char* stream_name, \
                 const char* entry_type_name, \
                 const char* entry_order_key_name) \

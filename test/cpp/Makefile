@@ -1,7 +1,9 @@
-CPP=clang++  # TODO(dkorolev): we should probably keep g++ as the default,
-             # although I seem to like clang++'s speed and error messages better.
+# TODO(dkorolev): we should probably keep g++ as the default,
+# although I seem to like clang++'s speed and error messages better.
 
-CPPFLAGS=-std=c++11 -I ../../
+CPP=g++
+
+CPPFLAGS=-std=c++11 -g -I ../../
 LDFLAGS=-pthread -lgflags -lglog -static
 
 SRC=$(wildcard *.cc)

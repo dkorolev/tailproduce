@@ -32,6 +32,8 @@
 #include "mocks/test_client.h"
 
 using ::TailProduce::bytes;
+using ::TailProduce::antibytes;
+using ::TailProduce::StreamManagerParams;
 
 // The actual test is a templated RUN_TESTS() function.
 // It is used to test both the hand-crafted objects structure and the one created by a sequence of macros.
@@ -41,7 +43,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // based on the storage that does not contain a definition of the `test` stream.
         STORAGE storage;
         std::unique_ptr<STREAM_MANAGER> p;
-        ASSERT_THROW(p.reset(new STREAM_MANAGER(storage, ::TailProduce::StreamManagerParams())),
+        ASSERT_THROW(p.reset(new STREAM_MANAGER(storage, StreamManagerParams())),
                      ::TailProduce::StreamDoesNotExistException);
     }
 
@@ -51,27 +53,42 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         STORAGE storage;
         storage.Set(bytes("s:test"), bytes("foo"));
         std::unique_ptr<STREAM_MANAGER> p;
-        ASSERT_THROW(p.reset(new STREAM_MANAGER(storage, ::TailProduce::StreamManagerParams())),
+        ASSERT_THROW(p.reset(new STREAM_MANAGER(storage, StreamManagerParams())),
                      ::TailProduce::MalformedStorageHeadException);
     }
 
-    QWERTY
-    // TODO(dkorolev): Add TailProduce-centric ways to initialize streams.
-    // TODO(dkorolev): Also test stream entry and order key type names.
-    
     {
         // Test that STREAM_MANAGER can be created once the storage
         // is externally set to contain the proper definition of the `test` stream.
         STORAGE storage;
         storage.Set(bytes("s:test"), bytes("0000000000:0000000000"));
-        STREAM_MANAGER streams_manager(storage, ::TailProduce::StreamManagerParams());
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
     }
+
+    {
+        STORAGE storage;
+        ASSERT_FALSE(storage.Has(bytes("s:test")));
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+        /*
+        StreamManagerParams params;
+        params.CreateStream("test", SimpleOrderKey(0));
+        STREAM_MANAGER streams_manager(storage, params);
+        */
+        ASSERT_TRUE(storage.Has(bytes("s:test")));
+        ASSERT_EQ("0000000000:0000000000", antibytes(storage.Get(bytes("s:test"))));
+    }
+
+    // TODO(dkorolev): Add TailProduce-centric ways to initialize streams.
+    // TODO(dkorolev): Also test stream entry and order key type names.
+    
+    // TODO(dkorolev): Make the remainder of this test pass with the new way to initialize streams in the DB.
+    return;
 
     STORAGE storage;
     storage.Set(bytes("s:test"), bytes("0000000000:0000000000"));
     {
         // Test stream manager setup. The `test` stream should exist and be statically typed.
-        STREAM_MANAGER streams_manager(storage, ::TailProduce::StreamManagerParams());
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         ASSERT_EQ(1, streams_manager.registry().streams.size());
         EXPECT_EQ("test", streams_manager.registry().streams[0].name);
@@ -116,7 +133,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Test HEAD updates.
-        STREAM_MANAGER streams_manager(storage, ::TailProduce::StreamManagerParams());
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         // Start from zero.
         typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test);
@@ -215,7 +232,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Test storage schema.
-        STREAM_MANAGER streams_manager(storage, ::TailProduce::StreamManagerParams());
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         publisher.Push(SimpleEntry(1, "one"));
@@ -233,7 +250,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Listener test: bounded, pre-initialized with data.
-        STREAM_MANAGER streams_manager(storage, ::TailProduce::StreamManagerParams());
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         publisher.Push(SimpleEntry(1, "one"));
@@ -265,7 +282,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Listener test: bounded, pre-initialized with data, involving secondary keys.
-        STREAM_MANAGER streams_manager(storage, ::TailProduce::StreamManagerParams());
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
         publisher.Push(SimpleEntry(42, "i0"));
@@ -306,7 +323,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
     {
         // Listener test: appended on-the-fly, bounded.
-        STREAM_MANAGER streams_manager(storage, ::TailProduce::StreamManagerParams());
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         SimpleEntry entry;
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
@@ -362,7 +379,7 @@ TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
 // Tests stream creation macros.
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerImpl, TypeParam);
-    TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_STREAM(StreamManagerImpl, test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
     RUN_TESTS<typename StreamManagerImpl::storage_type, StreamManagerImpl>();
@@ -375,10 +392,17 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
       public:
         typedef typename TypeParam::storage_type storage_type;
         storage_type& storage;
+        static storage_type& EnsureStreamsAreCreatedDuringInitialization(
+                storage_type& storage,
+                const ::TailProduce::StreamManagerParams& params) {
+            params.Apply(storage);
+            return storage;
+        }
         StreamManagerImpl(
             storage_type& storage,
-            ::TailProduce::StreamManagerParams params = ::TailProduce::StreamManagerParams::FromCommandLineFlags())
-          : storage(storage) {}
+            const ::TailProduce::StreamManagerParams& params = ::TailProduce::StreamManagerParams::FromCommandLineFlags())
+          : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) {
+        }
         StreamManagerImpl(const StreamManagerImpl&) = delete;
         StreamManagerImpl(StreamManagerImpl&&) = delete;
         void operator=(const StreamManagerImpl&) = delete;

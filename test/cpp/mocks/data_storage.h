@@ -35,10 +35,12 @@ class MockDataStorage : ::TailProduce::Storage {
             << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
             VLOG(3) << "Attempted to Set() an entry with an empty key.";
+            VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
             throw ::TailProduce::StorageEmptyKeyException();
         }
         if (value.empty()) {
             VLOG(3) << "Attempted to Set() an entry with an empty value.";
+            VLOG(3) << "throw ::TailProduce::StorageEmptyValueException();";
             throw ::TailProduce::StorageEmptyValueException();
         }
         std::vector<uint8_t>& placeholder = data_[key];
@@ -52,6 +54,7 @@ class MockDataStorage : ::TailProduce::Storage {
                     << "', has already been set to '"
                     << std::string(placeholder.begin(), placeholder.end())
                     << "'.";
+                VLOG(3) << "throw ::TailProduce::StorageOverwriteNotAllowedException();";
                 throw ::TailProduce::StorageOverwriteNotAllowedException();
             }
         }
@@ -65,6 +68,7 @@ class MockDataStorage : ::TailProduce::Storage {
     bool Has(const KEY_TYPE& key) {
         if (key.empty()) {
             VLOG(3) << "Attempted to Has() with an empty key.";
+            VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
             throw ::TailProduce::StorageEmptyKeyException();
         }
         const auto cit = data_.find(key);
@@ -74,12 +78,14 @@ class MockDataStorage : ::TailProduce::Storage {
     void Get(const KEY_TYPE& key, VALUE_TYPE& value) const {
         if (key.empty()) {
             VLOG(3) << "Attempted to Get() an entry with an empty key.";
+            VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
             throw ::TailProduce::StorageEmptyKeyException();
         }
         const auto cit = data_.find(key);
         if (cit != data_.end()) {
             value = cit->second;
         } else {
+            VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
         VLOG(3)
@@ -115,6 +121,7 @@ class MockDataStorage : ::TailProduce::Storage {
         void Next() {
             if (Done()) {
                 VLOG(3) << "Attempted to Next() an iterator for which Done() is true.";
+                VLOG(3) << "throw ::TailProduce::StorageIteratorOutOfBoundsException();";
                 throw ::TailProduce::StorageIteratorOutOfBoundsException();
             }
             ++cit_;
