@@ -9,6 +9,7 @@
 #include "mocks/data_storage.h"
 #include "mocks/test_client.h"
 
+using ::TailProduce::bytes;
 using ::TailProduce::StreamManagerParams;
 
 TEST(StreamManagerSmokeTest, SmokeTest) {
@@ -144,5 +145,36 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
         ASSERT_TRUE(listener_from_three_to_five_not_inclusive.ReachedEnd());
+    }
+}
+
+TEST(StreamManagerSmokeTest, DataInjected) {
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
+    TAILPRODUCE_STREAM(Impl, foo, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_STATIC_FRAMEWORK_END();
+
+    MockDataStorage storage;
+
+    {
+        // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
+        Impl streams_manager(storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(100)));
+    }
+
+    storage.Set(bytes("d:foo:0000000042:0000000000"), bytes("{\"value0\":{\"key\":42,\"data\":\"Yay!\"}}"));
+
+    {
+        // Mimic the consecutive run(s) that rely on the fact that the stream exists.
+        Impl streams_manager(storage, StreamManagerParams());
+
+        SimpleEntry entry;
+
+        typename Impl::foo_type::unsafe_listener_type listener(streams_manager.foo);
+
+        ASSERT_TRUE(listener.HasData());
+        ASSERT_FALSE(listener.ReachedEnd());
+
+        listener.ExportEntry(entry);
+        EXPECT_EQ(42, entry.key);
+        EXPECT_EQ("Yay!", entry.data);
     }
 }
