@@ -2,7 +2,7 @@
 #define UNSAFELISTENERS_H
 
 #include <memory>
-#include "Stream.h"
+#include "stream.h"
 
 namespace TailProduce {
     // UnsafeListener contains the logic of creating and re-creating storage-level read iterators,

@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "leveldb/db.h"
-#include "db_module.h"
+#include "storage.h"
 #include "dbm_leveldb_iterator.h"
 #include "dbm_iterator.h"
 
@@ -12,14 +12,14 @@ namespace TailProduce {
         class Iterator;
     public:
         DbMLevelDb(std::string const& dbname = "/tmp/tailproducedb");
-        virtual Value_Type GetRecord(Key_Type const& key);
-        virtual void PutRecord(Key_Type const& key, Value_Type const& value);
-        virtual void DeleteRecord(Key_Type const& key);
+        virtual ::TailProduce::Storage::VALUE_TYPE GetRecord(::TailProduce::Storage::KEY_TYPE const& key);
+        virtual void PutRecord(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value);
+        virtual void DeleteRecord(::TailProduce::Storage::KEY_TYPE const& key);
 
         DbMIterator<std::shared_ptr<DbMLevelDbIterator>>
-        GetIterator(Key_Type const& keyPrefix,
-                    Key_Type const& startKey = Key_Type(), 
-                    Key_Type const& endKey = Key_Type()) {
+        GetIterator(::TailProduce::Storage::KEY_TYPE const& keyPrefix,
+                    ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(), 
+                    ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE()) {
             std::shared_ptr<DbMLevelDbIterator> it(new DbMLevelDbIterator(db_, keyPrefix, startKey, endKey));
             return DbMIterator<std::shared_ptr<DbMLevelDbIterator>>(it);
         }

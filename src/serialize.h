@@ -1,14 +1,7 @@
 #ifndef SERIALIZE_H
 #define SERIALIZE_H
 
-#include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
-
-#include "cereal/types/string.hpp"
-#include "cereal/types/vector.hpp"
-#include "cereal/types/map.hpp"
-
-#include "cereal/types/polymorphic.hpp"
 
 namespace TailProduce {
     // Cereal-based serialization.

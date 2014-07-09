@@ -4,12 +4,15 @@
 #include <memory>
 #include <boost/filesystem.hpp>
 
+#include "../../src/tailproduce.h"
 #include "../../src/helpers.h"
 
 #include "../../src/storage_manager.h"
 #include "../../src/db_module.h"
 #include "../../src/dbm_leveldb.h"
 #include "../../src/dbm_leveldb_iterator.h"
+
+using ::TailProduce::bytes;
 
 std::string
 makeKey(std::string const& streamId, std::string const& value = std::string()) {

@@ -4,7 +4,7 @@
 CPP=g++
 
 CPPFLAGS=-std=c++11 -g -I ../../ -I .
-LDFLAGS=-pthread -lgflags -lglog  -lleveldb -lboost_system -lboost_filesystem -static
+LDFLAGS=-pthread -lgflags -lglog  -lleveldb -lboost_system -lboost_filesystem
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=build/%.o)

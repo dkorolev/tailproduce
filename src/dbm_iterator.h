@@ -3,7 +3,8 @@
 
 // Iterator class that wraps around what ever Data Base Module Iterator we have
 
-#include "db_module.h"
+#include "storage.h"
+
 namespace TailProduce {
     template <typename It>
     struct DbMIterator {
@@ -11,8 +12,8 @@ namespace TailProduce {
         DbMIterator(DbMIterator&&) = default;  // TODO: understand how a shared_ptr responds with move dynamics??
         DbMIterator(It val) : it_(val) {}
         void Next() { it_->Next(); }
-        Key_Type Key() const { return it_->Key(); }
-        Value_Type Value() const { return it_->Value(); }
+        ::TailProduce::Storage::KEY_TYPE Key() const { return it_->Key(); }
+        ::TailProduce::Storage::VALUE_TYPE Value() const { return it_->Value(); }
         bool Done() { return it_->Done(); }
     private:
         It it_;

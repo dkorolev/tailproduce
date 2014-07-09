@@ -17,7 +17,7 @@ void showValid( leveldb::Iterator* it_) {
 #endif
 
 void
-TailProduce::DbMLevelDbIterator::CreateIterator_(Key_Type const& key, bool advance) {
+TailProduce::DbMLevelDbIterator::CreateIterator_(::TailProduce::Storage::KEY_TYPE const& key, bool advance) {
     it_.reset(db_->NewIterator(leveldb::ReadOptions()));
     it_->Seek(key);
     if (it_->Valid() && advance) {
@@ -26,9 +26,9 @@ TailProduce::DbMLevelDbIterator::CreateIterator_(Key_Type const& key, bool advan
 };
 
 TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db, 
-                                                    Key_Type const& keyPrefix, 
-                                                    Key_Type const& startKey, 
-                                                    Key_Type const& endKey) : 
+                                                    ::TailProduce::Storage::KEY_TYPE const& keyPrefix, 
+                                                    ::TailProduce::Storage::KEY_TYPE const& startKey, 
+                                                    ::TailProduce::Storage::KEY_TYPE const& endKey) : 
     db_(db), keyPrefix_(keyPrefix), endKey_(endKey) {
 
     if (keyPrefix.empty()) 
@@ -55,17 +55,17 @@ TailProduce::DbMLevelDbIterator::Next() {
         CreateIterator_(lastKey_, true);
 }
 
-TailProduce::Key_Type
+::TailProduce::Storage::KEY_TYPE
 TailProduce::DbMLevelDbIterator::Key() const {
     if (it_->Valid())
         return it_->key().ToString();
     throw std::out_of_range("Can not obtain a Key() from a non valid iterator.");
 }
 
-TailProduce::Value_Type
+TailProduce::Storage::VALUE_TYPE
 TailProduce::DbMLevelDbIterator::Value() const {
     if (it_->Valid()) {
-        Value_Type r_vec(it_->value().size());
+        ::TailProduce::Storage::VALUE_TYPE r_vec(it_->value().size());
         int elemSize = sizeof(decltype(*(it_->value().data())));
         memcpy(r_vec.data(), it_->value().data(), elemSize * it_->value().size());
         return r_vec;
@@ -85,7 +85,7 @@ TailProduce::DbMLevelDbIterator::Done() {
     
     if (!it_->Valid()) return true;  // We are done if the iterator is not valid.
 
-    Key_Type key = it_->key().ToString();
+    ::TailProduce::Storage::KEY_TYPE key = it_->key().ToString();
 
     return ((!endKey_.empty() && key >= endKey_ ) || // We are done if we have progressed beyond the last specified
             (key.compare(0, keyPrefix_.length(), keyPrefix_) != 0));  // Or we are done if the keyPrefix is changing

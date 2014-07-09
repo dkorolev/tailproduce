@@ -5,30 +5,20 @@
 
 #include <glog/logging.h>
 
-namespace TailProduce {
-    // Data storage proxy, originally LevelDB.
-    struct Storage {
-        typedef std::string KEY_TYPE;
-        typedef std::vector<uint8_t> VALUE_TYPE;
-        // TODO(dkorolev): Document the expected interface.
-    };
-
-    //struct Producer {};  // Client-defined job.
-};
-
 #include "tpexceptions.h"
 
-#include "StreamsRegistry.h"
-#include "Stream.h"
-#include "Entry.h"
-#include "OrderKey.h"
-#include "StreamInstance.h"
-#include "Serialize.h"
-#include "StreamManager.h"
-#include "StorageKeyBuilder.h"
-#include "Listeners.h"
-#include "Publishers.h"
-#include "StreamManagerParams.h"
+#include "storage.h"
+#include "streams_registry.h"
+#include "stream.h"
+#include "entry.h"
+#include "order_key.h"
+#include "stream_instance.h"
+#include "serialize.h"
+#include "stream_manager.h"
+#include "storage_key_builder.h"
+#include "listeners.h"
+#include "publishers.h"
+#include "stream_manager_params.h"
 
 
 // TailProduce static framework macros.
