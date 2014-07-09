@@ -29,7 +29,7 @@ class MockDataStorage : ::TailProduce::Storage {
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
         VLOG(3)
             << "MockDataStorage::Set('"
-            << ::TailProduce::antibytes(key)
+            << key
             << "', '"
             << ::TailProduce::antibytes(value)
             << (allow_overwrite ? "');" : "', allow_overwrite=true);");
@@ -48,7 +48,7 @@ class MockDataStorage : ::TailProduce::Storage {
             if (!placeholder.empty()) {
                 VLOG(3)
                     << "'"
-                    << std::string(key.begin(), key.end())
+                    << key
                     << "', that is attempted to be set to '"
                     << std::string(value.begin(), value.end())
                     << "', has already been set to '"

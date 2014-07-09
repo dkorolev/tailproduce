@@ -7,12 +7,25 @@
 
 #include "../../../src/tailproduce.h"
 
+#include <string>
+#include <cstring>
+#include <sstream>
+#include <iomanip>
+#include "cereal/archives/binary.hpp"
+#include "cereal/archives/json.hpp"
+
+#include "cereal/types/string.hpp"
+#include "cereal/types/vector.hpp"
+#include "cereal/types/map.hpp"
+
+#include "cereal/types/polymorphic.hpp"
+
 // Ordering key.
 struct SimpleOrderKey : ::TailProduce::OrderKey {
     SimpleOrderKey() = default;
-    explicit SimpleOrderKey(uint32_t key) : key(key) {
+    explicit SimpleOrderKey(uint32_t key) : ikey(key) {
     }
-    uint32_t key;
+    uint32_t ikey;
 
     /*
     size_t binary_OrderKeySizeInBytes() const { return 4; }
@@ -29,18 +42,19 @@ struct SimpleOrderKey : ::TailProduce::OrderKey {
 
     enum { size_in_bytes = 10 };  // TO GO AWAY -- D.K.
     bool operator<(const SimpleOrderKey& rhs) const {
-        return key < rhs.key;
+        return ikey < rhs.ikey;
     }
-    void SerializeOrderKey(uint8_t* ptr) const {
+    void SerializeOrderKey(::TailProduce::Storage::KEY_TYPE& ptr) const {
         char tmp[11];
-        snprintf(tmp, sizeof(tmp), "%010u", key);
-        memcpy(ptr, tmp, 10);
+        snprintf(tmp, sizeof(tmp), "%010u", ikey);
+        std::string stmp(tmp, 10);
+        ptr = stmp;
     }
-    void DeSerializeOrderKey(const uint8_t* ptr) {
+    void DeSerializeOrderKey(::TailProduce::Storage::KEY_TYPE const& ptr) {
         char tmp[11];
-        memcpy(tmp, ptr, 10);
+        memcpy(tmp, ptr.data(), 10);
         tmp[10] = '\0';
-        key = atoi(tmp);
+        ikey = atoi(tmp);
     }
     // TODO(dkorolev): A static function to extract the key w/o parsing the binary format.
 };
@@ -49,26 +63,28 @@ struct SimpleOrderKey : ::TailProduce::OrderKey {
 // For this test they are { uint32, string } pairs.
 struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable<SimpleEntry> {
     SimpleEntry() = default;
-    SimpleEntry(uint32_t key, const std::string& data) : key(key), data(data) {
+    SimpleEntry(uint32_t key, ::TailProduce::Storage::KEY_TYPE const& data) : 
+        ikey(key),
+        data(data) {
     }
 
     SimpleOrderKey ExtractSimpleOrderKey() const {
-        return SimpleOrderKey(key);
+        return SimpleOrderKey(ikey);
     }
     
 
     // Used as order key, 1, 2, 3, etc.
-    uint32_t key;
+    uint32_t ikey;
     // To test data extraction, "one", "two", "three", or anything else for the sake of this test.
-    std::string data;
+    ::TailProduce::Storage::KEY_TYPE data;
 
   private:
     friend class cereal::access;
     template<class A> void serialize(A& ar) {
-        ar(CEREAL_NVP(key), CEREAL_NVP(data));
+        ar(CEREAL_NVP(ikey), CEREAL_NVP(data));
     }
     // TOOD(dkorolev): Extracting the order key as uint32_t,
-    //                 failing to extract it as any other type at compine time.
+    //                 failing to extract it as any other type at combine time.
 };
 
 namespace TailProduce {

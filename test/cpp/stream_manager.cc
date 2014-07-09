@@ -51,7 +51,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // Test that STREAM_MANAGER throws an exception when attempted to be created
         // based on the storage that contains a malformed definition of the `test` stream.
         STORAGE storage;
-        storage.Set(bytes("s:test"), bytes("foo"));
+        storage.Set("s:test", bytes("foo"));
         std::unique_ptr<STREAM_MANAGER> p;
         ASSERT_THROW(p.reset(new STREAM_MANAGER(storage, StreamManagerParams())),
                      ::TailProduce::MalformedStorageHeadException);
@@ -61,21 +61,21 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // Test that STREAM_MANAGER can be created once the storage
         // is externally set to contain the proper definition of the `test` stream.
         STORAGE storage;
-        storage.Set(bytes("s:test"), bytes("0000000000:0000000000"));
+        storage.Set("s:test", bytes("0000000000:0000000000"));
         STREAM_MANAGER streams_manager(storage, StreamManagerParams());
     }
 
     {
         STORAGE storage;
-        ASSERT_FALSE(storage.Has(bytes("s:test")));
+        ASSERT_FALSE(storage.Has("s:test"));
         STREAM_MANAGER streams_manager(storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
         /*
         StreamManagerParams params;
         params.CreateStream("test", SimpleOrderKey(0));
         STREAM_MANAGER streams_manager(storage, params);
         */
-        ASSERT_TRUE(storage.Has(bytes("s:test")));
-        ASSERT_EQ("0000000000:0000000000", antibytes(storage.Get(bytes("s:test"))));
+        ASSERT_TRUE(storage.Has("s:test"));
+        ASSERT_EQ("0000000000:0000000000", antibytes(storage.Get("s:test")));
     }
 
     // TODO(dkorolev): Add TailProduce-centric ways to initialize streams.
@@ -83,9 +83,9 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
     
     // TODO(dkorolev): Make the remainder of this test pass with the new way to initialize streams in the DB.
     return;
-
+#if 0
     STORAGE storage;
-    storage.Set(bytes("s:test"), bytes("0000000000:0000000000"));
+    storage.Set("s:test", bytes("0000000000:0000000000"));
     {
         // Test stream manager setup. The `test` stream should exist and be statically typed.
         STREAM_MANAGER streams_manager(storage, StreamManagerParams());
@@ -106,12 +106,12 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         std::ostringstream os;
         SimpleEntry::SerializeEntry(os, entry);
         std::string s = os.str();
-        EXPECT_EQ("{\n    \"value0\": {\n        \"key\": 1,\n        \"data\": \"Test\"\n    }\n}\n", s);
+        EXPECT_EQ("{\n    \"value0\": {\n        \"ikey\": 1,\n        \"data\": \"Test\"\n    }\n}\n", s);
         {
             SimpleEntry restored;
             std::istringstream is(s);
             SimpleEntry::DeSerializeEntry(is, restored);
-            EXPECT_EQ(1, restored.key);
+            EXPECT_EQ(1, restored.ikey);
             EXPECT_EQ("Test", restored.data);
         }
     }
@@ -121,13 +121,15 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         SimpleEntry entry(42, "The Answer");
         SimpleOrderKey order_key =
             ::TailProduce::OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry>::ExtractOrderKey(entry);
-        uint8_t serialized_key[SimpleOrderKey::size_in_bytes];
+        //uint8_t serialized_key[SimpleOrderKey::size_in_bytes];
+        std::string serialized_key;
         order_key.SerializeOrderKey(serialized_key);
-        EXPECT_EQ("0000000042", std::string(serialized_key, serialized_key + sizeof(serialized_key)));
+        //EXPECT_EQ("0000000042", std::string(serialized_key, serialized_key + sizeof(serialized_key)));
+        EXPECT_EQ("0000000042", serialized_key);
         {
             SimpleOrderKey deserialized_order_key;
             deserialized_order_key.DeSerializeOrderKey(serialized_key);
-            EXPECT_EQ(42, deserialized_order_key.key);
+            EXPECT_EQ(42, deserialized_order_key.ikey);
         }
     }
 
@@ -140,17 +142,17 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         typename STREAM_MANAGER::test_type::head_pair_type head;
 
         head = listener.GetHead();
-        EXPECT_EQ(0, head.first.key);
+        EXPECT_EQ(0, head.first.ikey);
         EXPECT_EQ(0, head.second);
     
         // Instantiating a publisher does not change HEAD.
         {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
             head = publisher.GetHead();
-            EXPECT_EQ(0, head.first.key);
+            EXPECT_EQ(0, head.first.ikey);
             EXPECT_EQ(0, head.second);
             head = listener.GetHead();
-            EXPECT_EQ(0, head.first.key);
+            EXPECT_EQ(0, head.first.ikey);
             EXPECT_EQ(0, head.second);
         }
 
@@ -159,41 +161,41 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
 
-            publisher.Push(SimpleEntry(1, "foo"));
+            publisher.Push(SimpleEntry(1, ("foo")));
             head = publisher.GetHead();
-            EXPECT_EQ(1, head.first.key);
+            EXPECT_EQ(1, head.first.ikey);
             EXPECT_EQ(0, head.second);
             head = listener.GetHead();
-            EXPECT_EQ(1, head.first.key);
+            EXPECT_EQ(1, head.first.ikey);
             EXPECT_EQ(0, head.second);
-            EXPECT_EQ(bytes("0000000001:0000000000"), storage.Get(bytes("s:test")));
+            EXPECT_EQ(bytes("0000000001:0000000000"), storage.Get("s:test"));
 
-            publisher.Push(SimpleEntry(1, "bar"));
+            publisher.Push(SimpleEntry(1, ("bar")));
             head = publisher.GetHead();
-            EXPECT_EQ(1, head.first.key);
+            EXPECT_EQ(1, head.first.ikey);
             EXPECT_EQ(1, head.second);
             head = listener.GetHead();
-            EXPECT_EQ(1, head.first.key);
+            EXPECT_EQ(1, head.first.ikey);
             EXPECT_EQ(1, head.second);
-            EXPECT_EQ(bytes("0000000001:0000000001"), storage.Get(bytes("s:test")));
-
-            publisher.PushHead(SimpleOrderKey(2));
-            head = publisher.GetHead();
-            EXPECT_EQ(2, head.first.key);
-            EXPECT_EQ(0, head.second);
-            head = listener.GetHead();
-            EXPECT_EQ(2, head.first.key);
-            EXPECT_EQ(0, head.second);
-            EXPECT_EQ(bytes("0000000002:0000000000"), storage.Get(bytes("s:test")));
+            EXPECT_EQ(bytes("0000000001:0000000001"), storage.Get("s:test"));
 
             publisher.PushHead(SimpleOrderKey(2));
             head = publisher.GetHead();
-            EXPECT_EQ(2, head.first.key);
+            EXPECT_EQ(2, head.first.ikey);
+            EXPECT_EQ(0, head.second);
+            head = listener.GetHead();
+            EXPECT_EQ(2, head.first.ikey);
+            EXPECT_EQ(0, head.second);
+            EXPECT_EQ(bytes("0000000002:0000000000"), storage.Get("s:test"));
+
+            publisher.PushHead(SimpleOrderKey(2));
+            head = publisher.GetHead();
+            EXPECT_EQ(2, head.first.ikey);
             EXPECT_EQ(1, head.second);
             head = listener.GetHead();
-            EXPECT_EQ(2, head.first.key);
+            EXPECT_EQ(2, head.first.ikey);
             EXPECT_EQ(1, head.second);
-            EXPECT_EQ(bytes("0000000002:0000000001"), storage.Get(bytes("s:test")));
+            EXPECT_EQ(bytes("0000000002:0000000001"), storage.Get("s:test"));
         }
 
         // Instantiating a publisher starting from a fixed HEAD moves HEAD there.
@@ -201,18 +203,18 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test,
                                                                                 SimpleOrderKey(10));
             head = publisher.GetHead();
-            EXPECT_EQ(10, head.first.key);
+            EXPECT_EQ(10, head.first.ikey);
             EXPECT_EQ(0, head.second);
             head = listener.GetHead();
-            EXPECT_EQ(10, head.first.key);
+            EXPECT_EQ(10, head.first.ikey);
             EXPECT_EQ(0, head.second);
-            EXPECT_EQ(bytes("0000000010:0000000000"), storage.Get(bytes("s:test")));
+            EXPECT_EQ(bytes("0000000010:0000000000"), storage.Get("s:test"));
         }
 
         // Throws an exception attempting to move the HEAD backwards when doing Push().
         {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
-            ASSERT_THROW(publisher.Push(SimpleEntry(0, "boom")), ::TailProduce::OrderKeysGoBackwardsException);
+            ASSERT_THROW(publisher.Push(SimpleEntry(0, ("boom"))), ::TailProduce::OrderKeysGoBackwardsException);
         }
 
         // Throws an exception attempting to move the HEAD backwards when doing PushHead().
@@ -235,17 +237,17 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
-        publisher.Push(SimpleEntry(1, "one"));
-        publisher.Push(SimpleEntry(2, "two"));
-        publisher.Push(SimpleEntry(3, "three"));
+        publisher.Push(SimpleEntry(1, ("one")));
+        publisher.Push(SimpleEntry(2, ("two")));
+        publisher.Push(SimpleEntry(3, ("three")));
 
-        EXPECT_EQ(bytes("0000000003:0000000000"), storage.Get(bytes("s:test")));
+        EXPECT_EQ(bytes("0000000003:0000000000"), storage.Get("s:test"));
         EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"key\": 1,\n        \"data\": \"one\"\n    }\n}\n"),
-                  storage.Get(bytes("d:test:0000000001:0000000000")));
+                  storage.Get("d:test:0000000001:0000000000"));
         EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"key\": 2,\n        \"data\": \"two\"\n    }\n}\n"),
-                  storage.Get(bytes("d:test:0000000002:0000000000")));
+                  storage.Get("d:test:0000000002:0000000000"));
         EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"key\": 3,\n        \"data\": \"three\"\n    }\n}\n"),
-                  storage.Get(bytes("d:test:0000000003:0000000000")));
+                  storage.Get("d:test:0000000003:0000000000"));
     }
 
     {
@@ -253,11 +255,11 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
-        publisher.Push(SimpleEntry(1, "one"));
-        publisher.Push(SimpleEntry(2, "two"));
-        publisher.Push(SimpleEntry(3, "three"));
-        publisher.Push(SimpleEntry(4, "four"));
-        publisher.Push(SimpleEntry(5, "five"));
+        publisher.Push(SimpleEntry(1, ("one")));
+        publisher.Push(SimpleEntry(2, ("two")));
+        publisher.Push(SimpleEntry(3, ("three")));
+        publisher.Push(SimpleEntry(4, ("four")));
+        publisher.Push(SimpleEntry(5, ("five")));
 
         SimpleEntry entry;
         typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test,
@@ -266,14 +268,14 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
         listener.ExportEntry(entry);
-        EXPECT_EQ(2, entry.key);
-        EXPECT_EQ("two", entry.data);
+        EXPECT_EQ(2, entry.ikey);
+        EXPECT_EQ(("two"), entry.data);
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
         listener.ExportEntry(entry);
-        EXPECT_EQ(3, entry.key);
-        EXPECT_EQ("three", entry.data);
+        EXPECT_EQ(3, entry.ikey);
+        EXPECT_EQ(("three"), entry.data);
         listener.AdvanceToNextEntry();
         EXPECT_FALSE(listener.HasData());
         EXPECT_TRUE(listener.ReachedEnd());
@@ -285,13 +287,13 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
-        publisher.Push(SimpleEntry(42, "i0"));
-        publisher.Push(SimpleEntry(42, "i1"));
-        publisher.Push(SimpleEntry(42, "i2"));
-        publisher.Push(SimpleEntry(42, "i3"));
-        publisher.Push(SimpleEntry(42, "i4"));
-        publisher.Push(SimpleEntry(42, "i5"));
-        publisher.Push(SimpleEntry(42, "i6"));
+        publisher.Push(SimpleEntry(42, ("i0")));
+        publisher.Push(SimpleEntry(42, ("i1")));
+        publisher.Push(SimpleEntry(42, ("i2")));
+        publisher.Push(SimpleEntry(42, ("i3")));
+        publisher.Push(SimpleEntry(42, ("i4")));
+        publisher.Push(SimpleEntry(42, ("i5")));
+        publisher.Push(SimpleEntry(42, ("i6")));
 
         SimpleEntry entry;
         typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
@@ -301,20 +303,20 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         ASSERT_TRUE(!listener.ReachedEnd());
         ASSERT_TRUE(listener.HasData());
         listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.key);
-        EXPECT_EQ("i2", entry.data);
+        EXPECT_EQ(42, entry.ikey);
+        EXPECT_EQ(("i2"), entry.data);
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
         listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.key);
-        EXPECT_EQ("i3", entry.data);
+        EXPECT_EQ(42, entry.ikey);
+        EXPECT_EQ(("i3"), entry.data);
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
         listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.key);
-        EXPECT_EQ("i4", entry.data);
+        EXPECT_EQ(42, entry.ikey);
+        EXPECT_EQ(("i4"), entry.data);
         listener.AdvanceToNextEntry();
         EXPECT_FALSE(listener.HasData());
         EXPECT_TRUE(listener.ReachedEnd());
@@ -331,31 +333,31 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                                                                           SimpleOrderKey(10),
                                                                           SimpleOrderKey(20));
 
-        publisher.Push(SimpleEntry(5, "five: ignored as before the beginning of the range"));
+        publisher.Push(SimpleEntry(5, ("five: ignored as before the beginning of the range")));
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
 
-        publisher.Push(SimpleEntry(10, "ten"));
+        publisher.Push(SimpleEntry(10, ("ten")));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
         listener.ExportEntry(entry);
-        EXPECT_EQ(10, entry.key);
-        EXPECT_EQ("ten", entry.data);
+        EXPECT_EQ(10, entry.ikey);
+        EXPECT_EQ(("ten"), entry.data);
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
 
-        publisher.Push(SimpleEntry(15, "fifteen"));
+        publisher.Push(SimpleEntry(15, ("fifteen")));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
         listener.ExportEntry(entry);
-        EXPECT_EQ(15, entry.key);
-        EXPECT_EQ("fifteen", entry.data);
+        EXPECT_EQ(15, entry.ikey);
+        EXPECT_EQ(("fifteen"), entry.data);
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
 
-        publisher.Push(SimpleEntry(20, "twenty: ignored as part the non-included end the of range"));
+        publisher.Push(SimpleEntry(20, ("twenty: ignored as part the non-included end the of range")));
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(listener.ReachedEnd());
         ASSERT_THROW(listener.ExportEntry(entry), ::TailProduce::ListenerHasNoDataToRead);
@@ -445,4 +447,5 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
     };
 
     RUN_TESTS<typename StreamManagerImpl::storage_type, StreamManagerImpl>();
+#endif
 }

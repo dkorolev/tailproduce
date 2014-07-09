@@ -56,91 +56,91 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
         ASSERT_FALSE(listener_all.ReachedEnd());
         listener_all.ExportEntry(entry);
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(1, entry.key);
+        EXPECT_EQ(1, entry.ikey);
         EXPECT_EQ("one", entry.data);
         listener_all.ExportEntry(entry);
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(2, entry.key);
-        EXPECT_EQ("two", entry.data);
+        EXPECT_EQ(2, entry.ikey);
+        EXPECT_EQ(("two"), entry.data);
         ASSERT_FALSE(listener_all.HasData());
         ASSERT_FALSE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.ReachedEnd());
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
 
-        publisher.Push(SimpleEntry(3, "three"));
-        publisher.Push(SimpleEntry(4, "four"));
+        publisher.Push(SimpleEntry(3, ("three")));
+        publisher.Push(SimpleEntry(4, ("four")));
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
         listener_all.ExportEntry(entry);
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(3, entry.key);
-        EXPECT_EQ("three", entry.data);
+        EXPECT_EQ(3, entry.ikey);
+        EXPECT_EQ(("three"), entry.data);
         listener_all.ExportEntry(entry);
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(4, entry.key);
-        EXPECT_EQ("four", entry.data);
+        EXPECT_EQ(4, entry.ikey);
+        EXPECT_EQ(("four"), entry.data);
         ASSERT_FALSE(listener_all.HasData());
 
         ASSERT_TRUE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
         listener_from_three.ExportEntry(entry);
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(3, entry.key);
-        EXPECT_EQ("three", entry.data);
+        EXPECT_EQ(3, entry.ikey);
+        EXPECT_EQ(("three"), entry.data);
         listener_from_three.ExportEntry(entry);
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(4, entry.key);
-        EXPECT_EQ("four", entry.data);
+        EXPECT_EQ(4, entry.ikey);
+        EXPECT_EQ(("four"), entry.data);
         ASSERT_FALSE(listener_from_three.HasData());
 
         ASSERT_TRUE(listener_from_three_to_five_not_inclusive.HasData());
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.ReachedEnd());
         listener_from_three_to_five_not_inclusive.ExportEntry(entry);
         listener_from_three_to_five_not_inclusive.AdvanceToNextEntry();
-        EXPECT_EQ(3, entry.key);
-        EXPECT_EQ("three", entry.data);
+        EXPECT_EQ(3, entry.ikey);
+        EXPECT_EQ(("three"), entry.data);
         listener_from_three_to_five_not_inclusive.ExportEntry(entry);
         listener_from_three_to_five_not_inclusive.AdvanceToNextEntry();
-        EXPECT_EQ(4, entry.key);
-        EXPECT_EQ("four", entry.data);
+        EXPECT_EQ(4, entry.ikey);
+        EXPECT_EQ(("four"), entry.data);
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
 
-        publisher.Push(SimpleEntry(5, "five"));
-        publisher.Push(SimpleEntry(6, "six"));
-        publisher.Push(SimpleEntry(7, "seven"));
+        publisher.Push(SimpleEntry(5, ("five")));
+        publisher.Push(SimpleEntry(6, ("six")));
+        publisher.Push(SimpleEntry(7, ("seven")));
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
         listener_all.ExportEntry(entry);
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(5, entry.key);
-        EXPECT_EQ("five", entry.data);
+        EXPECT_EQ(5, entry.ikey);
+        EXPECT_EQ(("five"), entry.data);
         listener_all.ExportEntry(entry);
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(6, entry.key);
-        EXPECT_EQ("six", entry.data);
+        EXPECT_EQ(6, entry.ikey);
+        EXPECT_EQ(("six"), entry.data);
         listener_all.ExportEntry(entry);
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(7, entry.key);
-        EXPECT_EQ("seven", entry.data);
+        EXPECT_EQ(7, entry.ikey);
+        EXPECT_EQ(("seven"), entry.data);
         ASSERT_FALSE(listener_all.HasData());
 
         ASSERT_TRUE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
         listener_from_three.ExportEntry(entry);
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(5, entry.key);
-        EXPECT_EQ("five", entry.data);
+        EXPECT_EQ(5, entry.ikey);
+        EXPECT_EQ(("five"), entry.data);
         listener_from_three.ExportEntry(entry);
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(6, entry.key);
-        EXPECT_EQ("six", entry.data);
+        EXPECT_EQ(6, entry.ikey);
+        EXPECT_EQ(("six"), entry.data);
         listener_from_three.ExportEntry(entry);
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(7, entry.key);
-        EXPECT_EQ("seven", entry.data);
+        EXPECT_EQ(7, entry.ikey);
+        EXPECT_EQ(("seven"), entry.data);
         ASSERT_FALSE(listener_from_three.HasData());
 
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
@@ -159,8 +159,8 @@ TEST(StreamManagerSmokeTest, DataInjected) {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
         Impl streams_manager(storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(100)));
     }
-
-    storage.Set(bytes("d:foo:0000000042:0000000000"), bytes("{\"value0\":{\"key\":42,\"data\":\"Yay!\"}}"));
+    
+    storage.Set("d:foo:0000000042:0000000000", bytes("{\"value0\":{\"ikey\":42,\"data\":\"Yay!\"}}"));
 
     {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.
@@ -174,7 +174,7 @@ TEST(StreamManagerSmokeTest, DataInjected) {
         ASSERT_FALSE(listener.ReachedEnd());
 
         listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.key);
-        EXPECT_EQ("Yay!", entry.data);
+        EXPECT_EQ(42, entry.ikey);
+        EXPECT_EQ(("Yay!"), entry.data);
     }
 }

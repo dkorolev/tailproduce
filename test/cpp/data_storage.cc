@@ -21,94 +21,94 @@ TYPED_TEST(DataStorageTest, HasRightBaseClass) {
 
 TYPED_TEST(DataStorageTest, AddsEntries) {
     TypeParam storage;
-    EXPECT_FALSE(storage.Has(bytes("foo")));
-    EXPECT_FALSE(storage.Has(bytes(1)));
-    storage.Set(bytes("foo"), bytes("bar"));
-    EXPECT_TRUE(storage.Has(bytes("foo")));
-    EXPECT_FALSE(storage.Has(bytes(1)));
-    storage.Set(bytes(1), bytes(42));
-    EXPECT_TRUE(storage.Has(bytes("foo")));
-    EXPECT_TRUE(storage.Has(bytes(1)));
+    EXPECT_FALSE(storage.Has("foo"));
+    EXPECT_FALSE(storage.Has("1"));
+    storage.Set("foo", bytes("bar"));
+    EXPECT_TRUE(storage.Has("foo"));
+    EXPECT_FALSE(storage.Has("1"));
+    storage.Set("1", bytes(42));
+    EXPECT_TRUE(storage.Has("foo"));
+    EXPECT_TRUE(storage.Has("1"));
 }
 
 TYPED_TEST(DataStorageTest, DuplicateEntries) {
     TypeParam storage;
-    storage.Set(bytes("key"), bytes("old"));
-    ASSERT_THROW(storage.Set(bytes("key"), bytes("new")), ::TailProduce::StorageOverwriteNotAllowedException);
+    storage.Set("key", bytes("old"));
+    ASSERT_THROW(storage.Set("key", bytes("new")), ::TailProduce::StorageOverwriteNotAllowedException);
 }
 
 TYPED_TEST(DataStorageTest, SetsOverwritesAndGets) {
     TypeParam storage;
-    storage.Set(bytes("key"), bytes("first"));
-    EXPECT_EQ(bytes("first"), storage.Get(bytes("key")));
-    storage.SetAllowingOverwrite(bytes("key"), bytes("second"));
-    EXPECT_EQ(bytes("second"), storage.Get(bytes("key")));
+    storage.Set("key", bytes("first"));
+    EXPECT_EQ(bytes("first"), storage.Get("key"));
+    storage.SetAllowingOverwrite("key", bytes("second"));
+    EXPECT_EQ(bytes("second"), storage.Get("key"));
 }
 
 TYPED_TEST(DataStorageTest, BasicExceptions) {
     TypeParam storage;
-    ASSERT_THROW(storage.Set(bytes(""), bytes("foo")), ::TailProduce::StorageEmptyKeyException);
-    ASSERT_THROW(storage.Set(bytes("bar"), bytes("")), ::TailProduce::StorageEmptyValueException);
-    ASSERT_THROW(storage.Get(bytes("baz")), ::TailProduce::StorageNoDataException);
+    ASSERT_THROW(storage.Set("", bytes("foo")), ::TailProduce::StorageEmptyKeyException);
+    ASSERT_THROW(storage.Set("bar", bytes("")), ::TailProduce::StorageEmptyValueException);
+    ASSERT_THROW(storage.Get("baz"), ::TailProduce::StorageNoDataException);
 }
 
 TYPED_TEST(DataStorageTest, BoundedRangeIterator) {
     TypeParam storage;
-    storage.Set(bytes("001"), bytes("one"));
-    storage.Set(bytes("002"), bytes("two"));
-    storage.Set(bytes("003"), bytes("three"));
-    storage.Set(bytes("004"), bytes("four"));
-    storage.Set(bytes("005"), bytes("five"));
-    typename TypeParam::Iterator iterator(storage, bytes("002"), bytes("004"));
+    storage.Set("001", bytes("one"));
+    storage.Set("002", bytes("two"));
+    storage.Set("003", bytes("three"));
+    storage.Set("004", bytes("four"));
+    storage.Set("005", bytes("five"));
+    typename TypeParam::Iterator iterator(storage, "002", "004");
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("two"));
-    ASSERT_TRUE(iterator.Key() == bytes("002"));
+    ASSERT_TRUE(iterator.Key() == "002");
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("three"));
-    ASSERT_TRUE(iterator.Key() == bytes("003"));
+    ASSERT_TRUE(iterator.Key() == "003");
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
 }
 
 TYPED_TEST(DataStorageTest, SemiBoundedRangeIterator) {
     TypeParam storage;
-    storage.Set(bytes(1), bytes("one"));
-    storage.Set(bytes(2), bytes("two"));
-    storage.Set(bytes(3), bytes("three"));
-    storage.Set(bytes(4), bytes("four"));
-    storage.Set(bytes(5), bytes("five"));
-    typename TypeParam::Iterator iterator(storage, bytes(3));
+    storage.Set("1", bytes("one"));
+    storage.Set("2", bytes("two"));
+    storage.Set("3", bytes("three"));
+    storage.Set("4", bytes("four"));
+    storage.Set("5", bytes("five"));
+    typename TypeParam::Iterator iterator(storage, "3");
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("three"));
-    ASSERT_TRUE(iterator.Key() == bytes(3));
+    ASSERT_TRUE(iterator.Key() == "3");
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("four"));
-    ASSERT_TRUE(iterator.Key() == bytes(4));
+    ASSERT_TRUE(iterator.Key() == "4");
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("five"));
-    ASSERT_TRUE(iterator.Key() == bytes(5));
+    ASSERT_TRUE(iterator.Key() == "5");
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
 }
 
 TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBounds) {
     TypeParam storage;
-    storage.Set(bytes(1), bytes("one"));
-    storage.Set(bytes(2), bytes("two"));
-    storage.Set(bytes(3), bytes("three"));
-    storage.Set(bytes(4), bytes("four"));
-    storage.Set(bytes(5), bytes("five"));
-    typename TypeParam::Iterator iterator(storage, bytes(2), bytes(4));
+    storage.Set("1", bytes("one"));
+    storage.Set("2", bytes("two"));
+    storage.Set("3", bytes("three"));
+    storage.Set("4", bytes("four"));
+    storage.Set("5", bytes("five"));
+    typename TypeParam::Iterator iterator(storage, "2", "4");
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("two"));
-    ASSERT_TRUE(iterator.Key() == bytes(2));
+    ASSERT_TRUE(iterator.Key() == "2");
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("three"));
-    ASSERT_TRUE(iterator.Key() == bytes(3));
+    ASSERT_TRUE(iterator.Key() == "3");
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
     ASSERT_THROW(iterator.Next(), ::TailProduce::StorageIteratorOutOfBoundsException);
@@ -116,12 +116,12 @@ TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBounds) {
 
 TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBounds) {
     TypeParam storage;
-    storage.Set(bytes(1), bytes("one"));
-    storage.Set(bytes(2), bytes("two"));
-    typename TypeParam::Iterator iterator(storage, bytes(2));
+    storage.Set("1", bytes("one"));
+    storage.Set("2", bytes("two"));
+    typename TypeParam::Iterator iterator(storage, "2");
     ASSERT_FALSE(iterator.Done());
     ASSERT_TRUE(iterator.Value() == bytes("two"));
-    ASSERT_TRUE(iterator.Key() == bytes(2));
+    ASSERT_TRUE(iterator.Key() == "2");
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
     ASSERT_THROW(iterator.Next(), ::TailProduce::StorageIteratorOutOfBoundsException);
