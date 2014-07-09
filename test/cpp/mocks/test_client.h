@@ -44,17 +44,13 @@ struct SimpleOrderKey : ::TailProduce::OrderKey {
     bool operator<(const SimpleOrderKey& rhs) const {
         return ikey < rhs.ikey;
     }
-    void SerializeOrderKey(::TailProduce::Storage::KEY_TYPE& ptr) const {
+    void SerializeOrderKey(::TailProduce::Storage::KEY_TYPE& ref) const {
         char tmp[11];
         snprintf(tmp, sizeof(tmp), "%010u", ikey);
-        std::string stmp(tmp, 10);
-        ptr = stmp;
+        ref = tmp;
     }
-    void DeSerializeOrderKey(::TailProduce::Storage::KEY_TYPE const& ptr) {
-        char tmp[11];
-        memcpy(tmp, ptr.data(), 10);
-        tmp[10] = '\0';
-        ikey = atoi(tmp);
+    void DeSerializeOrderKey(::TailProduce::Storage::KEY_TYPE const& ref) {
+        ikey = atoi(ref.c_str());
     }
     // TODO(dkorolev): A static function to extract the key w/o parsing the binary format.
 };

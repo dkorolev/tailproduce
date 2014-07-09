@@ -64,4 +64,5 @@ namespace TailProduce {
         ::TailProduce::Storage::KEY_TYPE const end_stream_key;
     };
 };
+
 #endif
