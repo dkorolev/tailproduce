@@ -1,7 +1,8 @@
 # TODO(dkorolev): we should probably keep g++ as the default,
 # although I seem to like clang++'s speed and error messages better.
 
-CPP=g++
+#CPP=g++
+CPP=clang++
 
 CPPFLAGS=-std=c++11 -g -I ../../
 LDFLAGS=-pthread -lgflags -lglog -static

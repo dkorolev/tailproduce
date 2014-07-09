@@ -14,7 +14,6 @@ namespace TailProduce {
         // 2) Needs template<typename T> static void SerializeEntry(std::ostream& os, const T& entry);
         // 3) Needs template<typename T> static void DeSerializeEntry(std::istream& is, T& entry);
     };
-
 };
 
 #endif

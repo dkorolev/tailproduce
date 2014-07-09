@@ -24,17 +24,11 @@ namespace TailProduce {
             static_assert(T_ORDER_KEY::size_in_bytes > 0,
                           "OrderKey::StaticAppendAsStorageKey::T_ORDER_KEY::size_in_bytes should be positive.");
             // TODO(dkorolev): This secondary key implementation as fixed 10 bytes is not final.
-            std::ostringstream os;
             ::TailProduce::Storage::KEY_TYPE pkey;
             primary_key.SerializeOrderKey(pkey);
+            std::ostringstream os;
             os << pkey << ':' << std::setfill('0') << std::setw(10) << secondary_key;
-            output = os.str();
-            //uint8_t result[T_ORDER_KEY::size_in_bytes + 1 + 11];
-            //primary_key.SerializeOrderKey(result);
-            //result[T_ORDER_KEY::size_in_bytes] = ':';
-            //snprintf(reinterpret_cast<char*>(result + T_ORDER_KEY::size_in_bytes + 1), 11, "%010u", secondary_key);
-            //std::copy(result, result + sizeof(result) - 1, std::back_inserter(output));
-            
+            output.append(os.str());
         }
         
         template<typename T_ORDER_KEY> 
