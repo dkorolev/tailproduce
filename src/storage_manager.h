@@ -2,7 +2,7 @@
 #define _STORAGE_MANAGER_H
 
 #include <utility>
-#include "db_module.h"
+#include "storage.h"
 #include "dbm_iterator.h"
 
 namespace TailProduce {
@@ -14,19 +14,20 @@ namespace TailProduce {
         StorageManager(dbmodule& dbm) : dbm_(dbm) {}
 
         auto 
-        GetIterator(Key_Type const& keyPrefix,
-                    Key_Type const& startKey = Key_Type(),
-                    Key_Type const& endKey = Key_Type()) -> 
+        GetIterator(::TailProduce::Storage::KEY_TYPE const& keyPrefix,
+                    ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
+                    ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE()) -> 
             decltype(std::declval<dbmodule>().GetIterator(startKey,endKey)) 
         {
             return dbm_.GetIterator(keyPrefix, startKey, endKey);
         }
 
-        void Set(Key_Type const& key, Value_Type const& value) {
+        void Set(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value) {
             dbm_.PutRecord(key, value);
         }
 
-        Value_Type Get(Key_Type const& key) {
+        ::TailProduce::Storage::VALUE_TYPE
+        Get(::TailProduce::Storage::KEY_TYPE const& key) {
             return dbm_.GetRecord(key);
         }
     };
