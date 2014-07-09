@@ -68,8 +68,8 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.ReachedEnd());
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
 
-        publisher.Push(SimpleEntry(3, ("three")));
-        publisher.Push(SimpleEntry(4, ("four")));
+        publisher.Push(SimpleEntry(3, "three"));
+        publisher.Push(SimpleEntry(4, "four"));
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
@@ -107,9 +107,9 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
         EXPECT_EQ(("four"), entry.data);
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
 
-        publisher.Push(SimpleEntry(5, ("five")));
-        publisher.Push(SimpleEntry(6, ("six")));
-        publisher.Push(SimpleEntry(7, ("seven")));
+        publisher.Push(SimpleEntry(5, "five"));
+        publisher.Push(SimpleEntry(6, "six"));
+        publisher.Push(SimpleEntry(7, "seven"));
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
