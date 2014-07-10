@@ -1,6 +1,11 @@
 #ifndef STREAMINSTANCE_H
 #define STREAMINSTANCE_H
 
+#include <string>
+#include <type_traits>
+#include "streams_registry.h"
+#include "stream.h"
+
 namespace TailProduce {
     template<typename T_ENTRY, typename T_ORDER_KEY> 
     class StreamInstance : public Stream {

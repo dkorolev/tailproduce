@@ -1,10 +1,12 @@
 #ifndef STREAMSREGISTRY_H
 #define STREAMSREGISTRY_H
 
+#include <string>
+#include <vector>
+#include <set>
+
 namespace TailProduce {
-
     class Stream;
-
     class StreamsRegistry {
       public:
         struct StreamsRegistryEntry {
@@ -15,7 +17,7 @@ namespace TailProduce {
             // * For dynamic frameworks, they point to dynamically allocated instances
             //   of per-stream implementations, which are also owned by the instance
             //   of the cover TailProduce class.
-            const Stream* impl;
+            TailProduce::Stream const* impl;
             std::string name;
             std::string entry_type;
             std::string order_key_type;

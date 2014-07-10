@@ -7,27 +7,27 @@
 
 namespace TailProduce {
     template <typename dbmodule>
-    class StorageManager {
+    class StorageManager : public Storage{
     private:
         dbmodule &dbm_;
     public:
         StorageManager(dbmodule& dbm) : dbm_(dbm) {}
 
         auto 
-        GetIterator(::TailProduce::Storage::KEY_TYPE const& keyPrefix,
-                    ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
-                    ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE()) -> 
+        GetIterator(KEY_TYPE const& keyPrefix,
+                    KEY_TYPE const& startKey = KEY_TYPE(),
+                    KEY_TYPE const& endKey = KEY_TYPE()) -> 
             decltype(std::declval<dbmodule>().GetIterator(startKey,endKey)) 
         {
             return dbm_.GetIterator(keyPrefix, startKey, endKey);
         }
 
-        void Set(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value) {
+        void Set(::TailProduce::Storage::KEY_TYPE const& key, VALUE_TYPE const& value) {
             dbm_.PutRecord(key, value);
         }
 
-        ::TailProduce::Storage::VALUE_TYPE
-        Get(::TailProduce::Storage::KEY_TYPE const& key) {
+        VALUE_TYPE
+        Get(KEY_TYPE const& key) {
             return dbm_.GetRecord(key);
         }
     };

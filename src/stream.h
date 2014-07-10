@@ -1,8 +1,8 @@
-#ifndef STREAMSREGISTRY_H
-#define STREAMSREGISTRY_H
+#ifndef STREAM_H
+#define STREAM_H
 
 #include <string>
-#include "StreamsRegistry.h"
+#include "streams_registry.h"
 
 namespace TailProduce {
 
