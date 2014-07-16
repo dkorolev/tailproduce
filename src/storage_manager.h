@@ -26,6 +26,10 @@ namespace TailProduce {
             dbm_.PutRecord(key, value);
         }
 
+        void AdminSet(::TailProduce::Storage::KEY_TYPE const& key, VALUE_TYPE const& value) {
+            dbm_.AdminPutRecord(key, value);
+        }
+
         VALUE_TYPE
         Get(KEY_TYPE const& key) {
             return dbm_.GetRecord(key);

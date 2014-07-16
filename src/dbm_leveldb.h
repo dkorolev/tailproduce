@@ -12,9 +12,10 @@ namespace TailProduce {
         class Iterator;
     public:
         DbMLevelDb(std::string const& dbname = "/tmp/tailproducedb");
-        virtual ::TailProduce::Storage::VALUE_TYPE GetRecord(::TailProduce::Storage::KEY_TYPE const& key);
-        virtual void PutRecord(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value);
-        virtual void DeleteRecord(::TailProduce::Storage::KEY_TYPE const& key);
+        ::TailProduce::Storage::VALUE_TYPE GetRecord(::TailProduce::Storage::KEY_TYPE const& key);
+        void AdminPutRecord(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value);
+        void PutRecord(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value);
+        void DeleteRecord(::TailProduce::Storage::KEY_TYPE const& key);
 
         DbMIterator<std::shared_ptr<DbMLevelDbIterator>>
         GetIterator(::TailProduce::Storage::KEY_TYPE const& keyPrefix,

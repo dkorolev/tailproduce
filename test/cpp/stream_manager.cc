@@ -84,7 +84,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         EXPECT_EQ("test", streams_manager.registry().streams[0].name);
         EXPECT_EQ("SimpleEntry", streams_manager.registry().streams[0].entry_type);
         EXPECT_EQ("SimpleOrderKey", streams_manager.registry().streams[0].order_key_type);
-        using Stream = ::TailProduce::Stream;
+        using Stream = ::TailProduce::Stream<SimpleOrderKey>;
         EXPECT_TRUE(streams_manager.registry().streams[0].impl == static_cast<Stream*>(&streams_manager.test.stream));
         EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
         EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
@@ -419,6 +419,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             typedef ::TailProduce::UnsafePublisher<test_type> unsafe_publisher_type;
             typedef std::pair<order_key_type, uint32_t> head_pair_type;
             typedef ::TailProduce::StorageKeyBuilder<test_type> key_builder_type;
+            order_key_type ok;
             StreamManagerImpl* manager;
             stream_type stream;
             const std::string name;
@@ -429,7 +430,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                       const char* entry_type_name,
                       const char* entry_order_key_name)
               : manager(manager),
-                stream(manager->registry_, stream_name, entry_type_name, entry_order_key_name),
+                stream(manager->registry_, ok, stream_name, entry_type_name, entry_order_key_name),
               name(stream_name),
               key_builder(name),
               head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) {

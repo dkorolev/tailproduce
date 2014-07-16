@@ -8,16 +8,17 @@
 
 namespace TailProduce {
     template<typename T_ENTRY, typename T_ORDER_KEY> 
-    class StreamInstance : public Stream {
+    class StreamInstance : public Stream<T_ORDER_KEY> {
       public:
         typedef T_ENTRY ENTRY_TYPE;
         typedef T_ORDER_KEY ORDER_KEY_TYPE;
         StreamInstance(
             TailProduce::StreamsRegistry& registry,
+            T_ORDER_KEY& order_key,
             const std::string& stream_name,
             const std::string& entry_type_name,
             const std::string& order_key_type_name)
-            : Stream(registry, stream_name, entry_type_name, order_key_type_name) {
+            : Stream<T_ORDER_KEY>(registry, order_key, stream_name, entry_type_name, order_key_type_name) {
             using TE = ::TailProduce::Entry;
             static_assert(std::is_base_of<TE, T_ENTRY>::value,
                           "StreamInstance::T_ENTRY should be derived from Entry.");

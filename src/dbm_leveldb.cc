@@ -30,6 +30,13 @@ TailProduce::DbMLevelDb::PutRecord(::TailProduce::Storage::KEY_TYPE const& key, 
 }
 
 void
+TailProduce::DbMLevelDb::AdminPutRecord(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value) {
+    std::string v_put(value.begin(), value.end());
+    leveldb::Status s = db_->Put(leveldb::WriteOptions(), key, v_put);
+    if (!s.ok()) throw std::domain_error(s.ToString());
+}
+
+void
 TailProduce::DbMLevelDb::DeleteRecord(::TailProduce::Storage::KEY_TYPE const& key) {
     leveldb::Status s = db_->Delete(leveldb::WriteOptions(), key);
     if (!s.ok()) throw std::domain_error(s.ToString());

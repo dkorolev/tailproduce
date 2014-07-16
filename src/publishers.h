@@ -17,11 +17,13 @@ namespace TailProduce {
         }
 
         void Push(const typename T::entry_type& entry) {
-            typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type> impl;
+            typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type,
+                                                         typename T::entry_type> impl;
             PushHead(impl::ExtractOrderKey(entry));
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
-            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head), bytes(value_output_stream.str()));
+            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head), 
+                                        bytes(value_output_stream.str()));
         }
 
         void PushHead(const typename T::order_key_type& order_key) {
