@@ -1,0 +1,194 @@
+= TailProduce =
+
+== DbmIterator ==
+Wraps around data base module iterator
+
+=== Provides: ===
+Net(), Key(), Value(), Done() methods.
+
+=== Constraints: ===
+Expects shared_ptr to dbm_<type>_iterator
+
+
+== DbmLeveldb ==
+Wraps around leveldb
+
+=== Provides: ===
+GetRecord(), PutRecord(), DeleteRecord() and GetIterator() methods.
+
+=== Constraints: ===
+None
+
+
+== DbmLeveldbIterator ==
+Iterator to iterate over leveldb database module.   Provides "smart" features.
+
+=== Provides: ===
+Key(), Value(), Done() methods
+
+=== Constraints: ===
+None
+
+
+== Entry ==
+Base class data values to be stored.
+
+=== Provides: ===
+Nothing
+
+
+=== Constraints: ===
+None
+
+== Helpers ==
+Converts input types to std::vector<uint8_t>
+
+
+== Listeners ==
+hasa Stream object.
+hasa storage manager object.
+Duplicates much of the iterator behavior of the Dbm Iterator
+
+=== Provides: ===
+GetHead(), HasData(), ReachedEnd(), ExportEntry(), AdvanceToNextEntry() methods.
+
+=== Constraints: ===
+None
+
+== OrderKey ==
+The orderKey object is used to create a key for a given stream.  There is a 1:1 relationship between streams and OrderKeys.   The keys must be lexicographically sortable.
+
+=== Provides: ===
+Key creation and key “reversal”
+
+=== Constraints: ===
+Uses two RangedData objects as part of the key. Must have a non empty StreamId.
+
+
+== Publishers ==
+Isa Stream object.
+
+Deals with Entry objects which it serializes.
+
+UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
+
+=== Provides: ===
+Push(), PushHead(), GetHead() methods.
+
+=== Constraints: ===
+Requires access to the OrderKey object
+
+
+== RangedData ==
+The RangedData object is used to create a lexicographically sortable string that is ranged between two values, and upper and a lower, inclusive.
+
+=== Provides: ===
+means of getting a min, max and arbitrary value, and value reversal.
+
+=== Constraints: ===
+ Accepts only unsigned values.
+
+
+== Serialize ==
+Serialize/Deserializes entries
+
+=== Provides: ===
+SerializeEntry() and DeSerializeEntry() methods.
+
+=== Constraints: ===
+Use cereal json archive
+
+
+== Storage ==
+Base class for StorageManager
+
+=== Provides: ===
+Type defs for key and values
+
+=== Constraints: ===
+None
+
+
+== StorageKeyBuilder ==
+creates storage keys and head storage keys.  Also end range value.  Value checking.
+
+=== Provides: ===
+- End range value.
+- Head storage key
+- key prefix value
+- Ability to reverse the key into components
+
+=== Constraints: ===
+Keys must be ints.
+
+
+== StorageManager ==
+Provides an interface over a database module.
+
+=== Provides: ===
+Get(), Set() and GetIterator() methods.
+
+=== Constraints: ===
+Requires a Database Module (ie, leveldb)
+
+
+== Stream ==
+Registers itself with the stream registry
+
+=== Provides: ===
+Reference to the stream manager
+
+=== Constraints: ===
+
+
+== StreamInstance ==
+Derives from stream. Associates the entry type and order key with the stream.  Provides the StreamsRegistry object that the stream object will registry itself with.  Verifies we have a derivation of OrderKey and Entry.
+
+=== Provides: ===
+Nothing
+=== Constraints: ===
+None
+
+== StreamManager ==
+Fetches last write key for the stream.  Returns Primary, secondary key pair
+
+=== Provides: ===
+A StreamsRegistry object.
+FetchHeadOrDie() method.
+
+=== Constraints: ===
+None
+
+== StreamManagerParams ==
+Creates a stream.  Writes the latest key to the storage.
+
+=== Provides: ===
+
+=== Constraints: ===
+Makes assumptions about the storage key and components of the key
+
+
+== StreamsRegistry ==
+Maintains a list of all known streams.  Does not allow streams with duplicate stream id.
+
+.Notes
+- High level object part of main?
+- Want a stream prefix and a registry and stream locator value.
+- Want a stream prefix and a lastwrite key.  (streamId?)
+- Want a loadStreamsFromDb().  Requires direct db access.  Requires (de)serialiaztion of registry values. 
+- Want saveToDb().  Requires direct db access.  Requires (de)serialiaztion of registry values.
+- Do we want a link to the Stream Manager?  How does this object differ from the stream manager????
+
+=== Provides: ===
+Vector of Streams Registry Entry
+set of stream ids
+
+=== Constraints: ===
+None
+
+
+.Thoughts
+- Main starts up and reads all stream ids and supporting data then creates the streams.
+- StreamsManager, or somewhere, keeps stream info pertaining to last put, or the min key if no key exists
+- Framework module creates a storage manager object.
+

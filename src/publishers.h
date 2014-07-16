@@ -1,6 +1,9 @@
 #ifndef UNSAFEPUBLISHER_H
 #define UNSAFEPUBLISHER_H
 
+#include <sstream>
+
+
 namespace TailProduce {
     // UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
     template<typename T> 

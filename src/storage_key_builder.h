@@ -1,6 +1,8 @@
 #ifndef STORAGEKEYBUILDER_H
 #define STORAGEKEYBUILDER_H
 
+#include <string>
+
 namespace TailProduce {
     // StorageKeyBuilder implements the BuildStorageKey function to convert
     // { stream name, typed order key, secondary key } into ::TailProduce::Storage::KEY_TYPE-s.
@@ -13,7 +15,7 @@ namespace TailProduce {
             end_stream_key("d:" + stream_name + ":\xff") {
             using TOK = ::TailProduce::OrderKey;
             static_assert(std::is_base_of<TOK, order_key_type>::value,
-                          "StorageKeyBuilder: T::order_key_type should be derived from Stream.");
+                          "StorageKeyBuilder: T::order_key_type should be derived from OrderKey.");
         }
         ::TailProduce::Storage::KEY_TYPE BuildStorageKey(const head_pair_type& key) const {
             ::TailProduce::Storage::KEY_TYPE storage_key = prefix;

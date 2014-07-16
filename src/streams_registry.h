@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <exception>
 
 namespace TailProduce {
     class Stream;

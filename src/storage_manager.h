@@ -7,7 +7,7 @@
 
 namespace TailProduce {
     template <typename dbmodule>
-    class StorageManager : public Storage{
+    class StorageManager : public Storage {
     private:
         dbmodule &dbm_;
     public:
