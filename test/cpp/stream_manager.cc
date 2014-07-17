@@ -419,18 +419,18 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             typedef ::TailProduce::UnsafePublisher<test_type> unsafe_publisher_type;
             typedef std::pair<order_key_type, uint32_t> head_pair_type;
             typedef ::TailProduce::StorageKeyBuilder<test_type> key_builder_type;
-            order_key_type ok;
             StreamManagerImpl* manager;
             stream_type stream;
             const std::string name;
             key_builder_type key_builder;
             head_pair_type head;
+            ::TailProduce::ConfigValues cv = ::TailProduce::ConfigValues("S", "D", "Register", "LastWrite", ':');
             test_type(StreamManagerImpl* manager,
                       const char* stream_name,
                       const char* entry_type_name,
                       const char* entry_order_key_name)
               : manager(manager),
-                stream(manager->registry_, ok, stream_name, entry_type_name, entry_order_key_name),
+                stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name),
               name(stream_name),
               key_builder(name),
               head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) {

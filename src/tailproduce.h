@@ -19,6 +19,7 @@
 #include "listeners.h"
 #include "publishers.h"
 #include "stream_manager_params.h"
+#include "config_values.h"
 
 
 // TailProduce static framework macros.
@@ -68,14 +69,14 @@
             const std::string name; \
             key_builder_type key_builder; \
             head_pair_type head; \
-            order_key_type ok;\
+            ::TailProduce::ConfigValues cv = ::TailProduce::ConfigValues("S", "D", "Register", "LastWrite", ':'); \
             NAME##_type( \
                 MANAGER* manager, \
                 const char* stream_name, \
                 const char* entry_type_name, \
                 const char* entry_order_key_name) \
               : manager(manager), \
-                stream(manager->registry_, ok, stream_name, entry_type_name, entry_order_key_name), \
+                stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name), \
                 name(stream_name), \
                 key_builder(name), \
                 head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) { \

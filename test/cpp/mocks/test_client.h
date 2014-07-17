@@ -23,8 +23,9 @@
 // Ordering key.
 struct SimpleOrderKey : ::TailProduce::OrderKey {
     SimpleOrderKey() = default;
-    explicit SimpleOrderKey(uint32_t key) : ikey(key) {
-    }
+    SimpleOrderKey(std::string const& streamId,
+                   TailProduce::ConfigValues const& cv) : ikey(0) {}
+    explicit SimpleOrderKey(uint32_t key) : ikey(key) {}
     uint32_t ikey;
 
     /*
