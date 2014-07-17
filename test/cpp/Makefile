@@ -5,6 +5,8 @@
 CPP=clang++
 
 CPPFLAGS=-std=c++11 -g -I ../../ -I .
+
+# TODO(dkorolev): This required `-lsnappy -L/home/dima/github/dkorolev/TAILPRODUCE/tailproduce`
 LDFLAGS=-pthread -lgflags -lglog  -lleveldb -lboost_system -lboost_filesystem
 
 SRC=$(wildcard *.cc)

@@ -3,7 +3,11 @@
 
 namespace TailProduce {
     // Exception types.
-    struct Exception : std::exception {};
+    struct Exception : std::exception {
+        virtual const char* what() const noexcept {
+            return "TailProduce Exception.";
+        }
+    };
     struct InternalError : Exception {};
     struct StorageException : Exception {};
     struct StorageEmptyKeyException : StorageException {};
