@@ -80,12 +80,12 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // Test stream manager setup. The `test` stream should exist and be statically typed.
         STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
-        ASSERT_EQ(1, streams_manager.registry().streams.size());
-        EXPECT_EQ("test", streams_manager.registry().streams[0].name);
-        EXPECT_EQ("SimpleEntry", streams_manager.registry().streams[0].entry_type);
-        EXPECT_EQ("SimpleOrderKey", streams_manager.registry().streams[0].order_key_type);
+        auto entry = streams_manager.registry().Get("test");
+        EXPECT_EQ("test", entry.name);
+        EXPECT_EQ("SimpleEntry", entry.entry_type);
+        EXPECT_EQ("SimpleOrderKey", entry.order_key_type);
         using Stream = ::TailProduce::Stream<SimpleOrderKey>;
-        EXPECT_TRUE(streams_manager.registry().streams[0].impl == static_cast<Stream*>(&streams_manager.test.stream));
+        EXPECT_TRUE(entry.impl == static_cast<Stream*>(&streams_manager.test.stream));
         EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
         EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
     }

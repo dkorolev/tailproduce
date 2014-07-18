@@ -1,9 +1,9 @@
 #ifndef STREAMS_REGISTRY_H
 #define STREAMS_REGISTRY_H
 
+#include <iostream>
 #include <string>
-#include <vector>
-#include <set>
+#include <unordered_map>
 #include <glog/logging.h>
 
 namespace TailProduce {
@@ -23,19 +23,30 @@ namespace TailProduce {
             std::string entry_type;
             std::string order_key_type;
         };
-        std::vector<StreamsRegistryEntry> streams;
-        std::set<std::string> names;
+
+        StreamsRegistryEntry
+        Get(std::string const& name) const {
+            auto entry = streams.find(name);
+            std::cout << "Seeking " << name << std::endl;
+            if (entry == streams.end()) {
+                std::cout << "What the fuck!!!!\n";
+                return StreamsRegistryEntry{nullptr, "", "", ""};  // return an empty non valid object
+            }
+            return entry->second;
+        }
 
         void Add(TailProduce::StreamBase* impl,
                  const std::string& name,
                  const std::string& entry_type,
                  const std::string& order_key_type) {
-            if (names.find(name) != names.end()) {
+            std::cout << "Registering Stream " << name << std::endl;
+            if (streams.find(name) != streams.end()) {
                 LOG(FATAL) << "Attempted to register the '" << name << "' stream more than once.";
             }
-            names.insert(name);
-            streams.push_back(StreamsRegistryEntry{impl, name, entry_type, order_key_type});
+            streams.insert(std::make_pair(name, StreamsRegistryEntry{impl, name, entry_type, order_key_type}));
         }
+    private:
+        std::unordered_map<std::string, StreamsRegistryEntry> streams;
     };
 };
 

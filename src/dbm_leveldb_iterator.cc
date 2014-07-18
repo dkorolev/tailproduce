@@ -33,7 +33,14 @@ TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB>
 
     if (keyPrefix.empty()) 
         throw std::invalid_argument("May not start a query with an empty keyPrefix.");
-    lastKey_ = keyPrefix + startKey;
+
+    if (startKey.substr(0, keyPrefix.length()) != keyPrefix) {
+        lastKey_ = keyPrefix + startKey;
+    }
+    else {
+        lastKey_ = startKey;
+    }
+
     CreateIterator_(lastKey_, false);
     firstRead_ = it_->Valid();
 }

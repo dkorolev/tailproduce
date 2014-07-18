@@ -17,10 +17,10 @@ namespace TailProduce {
     template <typename ORDER_KEY>
     struct Stream : StreamBase {
         Stream(StreamsRegistry& registry,
-               ConfigValues &cv,
-               const std::string& stream_name,
-               const std::string& entry_type_name,
-               const std::string& order_key_type_name) : 
+               ConfigValues const& cv,
+               std::string const& stream_name,
+               std::string const& entry_type_name,
+               std::string const& order_key_type_name) : 
             StreamBase(stream_name),
             orderKey_(stream_name, cv) {
             registry.Add(this, stream_name, entry_type_name, order_key_type_name);
