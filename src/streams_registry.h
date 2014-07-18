@@ -1,7 +1,6 @@
 #ifndef STREAMS_REGISTRY_H
 #define STREAMS_REGISTRY_H
 
-#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <glog/logging.h>
@@ -27,9 +26,7 @@ namespace TailProduce {
         StreamsRegistryEntry
         Get(std::string const& name) const {
             auto entry = streams.find(name);
-            std::cout << "Seeking " << name << std::endl;
             if (entry == streams.end()) {
-                std::cout << "What the fuck!!!!\n";
                 return StreamsRegistryEntry{nullptr, "", "", ""};  // return an empty non valid object
             }
             return entry->second;
@@ -39,7 +36,6 @@ namespace TailProduce {
                  const std::string& name,
                  const std::string& entry_type,
                  const std::string& order_key_type) {
-            std::cout << "Registering Stream " << name << std::endl;
             if (streams.find(name) != streams.end()) {
                 LOG(FATAL) << "Attempted to register the '" << name << "' stream more than once.";
             }
