@@ -32,10 +32,11 @@ namespace TailProduce {
             return entry->second;
         }
 
-        void Add(TailProduce::StreamBase* impl,
-                 const std::string& name,
-                 const std::string& entry_type,
-                 const std::string& order_key_type) {
+        void 
+        Add(TailProduce::StreamBase* impl,
+            const std::string& name,
+            const std::string& entry_type,
+            const std::string& order_key_type) {
             if (streams.find(name) != streams.end()) {
                 LOG(FATAL) << "Attempted to register the '" << name << "' stream more than once.";
             }

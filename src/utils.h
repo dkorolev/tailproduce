@@ -37,14 +37,8 @@ namespace TailProduce {
             TailProduce::StreamPersist persisted;
             std::istringstream is(streamValues);  // make the string a stream
             cereal::JSONInputArchive ar(is);      // make a JSON Input Archive from the string
-            ar(persisted);                        // populate Persisted
-            auto stream = STREAM_PTR(new STREAM(registry,
-                                                cv,
-                                                persisted.stream_name,
-                                                persisted.entry_type_name,
-                                                persisted.order_key_type_name));
-            
-            
+            ar(persisted);                        // populate persisted
+            auto stream = STREAM_PTR(new STREAM(registry, cv, persisted));
             results.insert(std::make_pair(stream->GetId(), stream));
             iterator.Next();
         }
