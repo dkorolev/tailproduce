@@ -50,4 +50,5 @@ namespace TailProduce {
         std::map<::TailProduce::Storage::KEY_TYPE, ::TailProduce::Storage::VALUE_TYPE> init;
     };
 };
+
 #endif
