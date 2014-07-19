@@ -1,0 +1,23 @@
+CPP=g++
+CPPFLAGS=-std=c++11 -g -I .
+LDFLAGS=
+
+SRC=$(wildcard src/*.cc)
+OBJ=$(SRC:src/%.cc=build/%.o)
+LIB=lib/libtailproduce.a
+
+.PHONY: all clean
+
+all: build ${LIB}
+
+build:
+	mkdir -p build lib
+
+build/%.o: src/%.cc
+	${CPP} ${CPPFLAGS} -o $@ -c $<
+
+$(LIB): $(OBJ)
+	ar rcs $(LIB) $(OBJ)
+
+clean:
+	rm -rf build lib

@@ -1,4 +1,4 @@
-// A one-minute intro to gtest.
+// A tree-minutes intro to gtest.
 //
 // 0) gtest ships as source code and should be compiled per-project.
 //    Makefile in this directory does it.
@@ -25,11 +25,16 @@
 // 4) For {ASSERT,EXPECT}_{EQ,NE}, put the expected value as the first parameter.
 //    For cleaner error messages.
 //
-// 5) ASSERT_DEATH(function(), "Expected regex for the last line of standard error.")
+// 5) ASSERT_THROW(statement, exception_type) ensures the exception is thrown.
+//
+// 6) ASSERT_DEATH(function(), "Expected regex for the last line of standard error.")
 //    can be used to ensure certain call fails. The convention is to use
 //    the "DeathTest" suffix for those tests and to not mix functional tests with death tests.
 //
-// 6) Prefix a test name with "DISABLED_" to exclude it from being run.
+// 7) gtest supports templated tests, where objects of various tests are passed to the same test method.
+//    Each type results in the whole new statically compiled test.
+//
+// 8) Prefix a test name with "DISABLED_" to exclude it from being run.
 //    Use sparingly and try to keep master clean from disabled tests.
 
 #include <vector>
@@ -39,13 +44,13 @@
 #include <glog/logging.h>
 
 // Basic test syntax.
-TEST(GTestTest, Trivial) { 
+TEST(GTestTest, Trivial) {
     EXPECT_EQ(42, 42);
     ASSERT_TRUE(42 == 42);
 }
 
 // Various comparisons.
-TEST(GTestTest, Passing) { 
+TEST(GTestTest, Passing) {
     EXPECT_EQ(4, 2 + 2);
     EXPECT_GT(2 * 2, 3);
     EXPECT_GE(2 * 2, 4);
@@ -66,10 +71,20 @@ TEST(GTestTest, DeathTest) {
     ASSERT_DEATH(die(), "Example .* message\\.");
 }
 
+// An example of a test throwing an exception.
+TEST(GTestTest, ExceptionThrowingTest) {
+    struct FooException {};
+    auto f = [](int a) {
+        if (a < 0) throw FooException();
+    };
+    f(+1);
+    ASSERT_THROW(f(-1), FooException);
+}
+
 // An example of a templated test.
 // https://code.google.com/p/googletest/wiki/AdvancedGuide
 // https://code.google.com/p/googletest/source/browse/trunk/samples/sample6_unittest.cc
-template<typename T> class GTestTemplatedTest : public ::testing::Test {};
+template <typename T> class GTestTemplatedTest : public ::testing::Test {};
 
 // The typedef is necessary for the TYPED_TEST_CASE macro to parse correctly.
 typedef ::testing::Types<std::vector<int>, std::deque<int>> ContainersTypeList;
