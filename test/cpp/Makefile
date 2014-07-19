@@ -2,7 +2,7 @@ CPP=clang++
 
 CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/
 
-LDFLAGS=-pthread -lgflags -lglog  -lleveldb -lboost_system -lboost_filesystem -L../../leveldb/
+LDFLAGS=-pthread -lgflags -lglog -lboost_system -lboost_filesystem ../../leveldb/libleveldb.a -lsnappy
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=build/%.o)

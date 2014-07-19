@@ -2,7 +2,7 @@ LEVELDB_WITH_VERSION=leveldb-1.15.0
 
 .PHONY: test lib clean
 
-lib: leveldb/libleveldb.so
+lib: leveldb/libleveldb.a
 	make -f Makefile.tailproduce
 
 clean:
@@ -19,7 +19,7 @@ love: lib test
 # Keep dependencies static.
 
 # From http://code.google.com/p/leveldb/downloads/list
-leveldb/libleveldb.so: ${LEVELDB_WITH_VERSION}.tar.gz
+leveldb/libleveldb.a: ${LEVELDB_WITH_VERSION}.tar.gz
 	tar xzf ${LEVELDB_WITH_VERSION}.tar.gz
 	ln -sf ${LEVELDB_WITH_VERSION} leveldb
 	(cd leveldb ; CXX=clang++ make)
