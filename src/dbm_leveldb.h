@@ -32,4 +32,5 @@ namespace TailProduce {
         std::string dbname_;
     };
 };
+
 #endif

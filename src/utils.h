@@ -54,4 +54,5 @@ namespace TailProduce {
         storage.AdminSet(skey, TailProduce::bytes(objStr));
     }
 };
+
 #endif

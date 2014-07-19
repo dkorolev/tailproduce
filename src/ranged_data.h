@@ -119,4 +119,5 @@ namespace TailProduce {
         RangedData<uint64_t> dr_;
     };
 };
+
 #endif
