@@ -14,6 +14,8 @@ cleanall: clean
 test: cereal
 	(make -f Makefile.tailproduce; cd test/cpp && make test)
 
+love: lib test
+
 # Keep dependencies static.
 
 # From http://code.google.com/p/leveldb/downloads/list
