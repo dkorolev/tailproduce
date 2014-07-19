@@ -18,7 +18,9 @@ test: cereal
 
 # From http://code.google.com/p/leveldb/downloads/list
 leveldb/libleveldb.so: ${LEVELDB_WITH_VERSION}.tar.gz
-	tar xzf ${LEVELDB_WITH_VERSION}.tar.gz && ln -sf ${LEVELDB_WITH_VERSION} leveldb && (cd leveldb ; make)
+	tar xzf ${LEVELDB_WITH_VERSION}.tar.gz
+	ln -sf ${LEVELDB_WITH_VERSION} leveldb
+	(cd leveldb ; CXX=clang++ make)
 
 # From git clone git@github.com:USCiLab/cereal.git
 cereal:
