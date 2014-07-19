@@ -1,6 +1,10 @@
 lib/
 build/
 test/cpp/build
+
+leveldb
+leveldb-1.15.0/
+
 cereal/
 .exrc
 **/core

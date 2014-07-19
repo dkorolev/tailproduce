@@ -1,13 +1,8 @@
-# TODO(dkorolev): we should probably keep g++ as the default,
-# although I seem to like clang++'s speed and error messages better.
-
-#CPP=g++
 CPP=clang++
 
-CPPFLAGS=-std=c++11 -g -I ../../ -I .
+CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/
 
-# TODO(dkorolev): This required `-lsnappy -L/home/dima/github/dkorolev/TAILPRODUCE/tailproduce`
-LDFLAGS=-pthread -lgflags -lglog  -lleveldb -lboost_system -lboost_filesystem
+LDFLAGS=-pthread -lgflags -lglog  -lleveldb -lboost_system -lboost_filesystem -L../../leveldb/
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=build/%.o)
