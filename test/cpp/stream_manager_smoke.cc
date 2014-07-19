@@ -32,13 +32,9 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         typename Impl::test_type::unsafe_publisher_type publisher(streams_manager.test);
         typename Impl::test_type::unsafe_listener_type listener_all(streams_manager.test);
-        typename Impl::test_type::unsafe_listener_type listener_from_three(
-            streams_manager.test,
-            SimpleOrderKey(3));
+        typename Impl::test_type::unsafe_listener_type listener_from_three(streams_manager.test, SimpleOrderKey(3));
         typename Impl::test_type::unsafe_listener_type listener_from_three_to_five_not_inclusive(
-            streams_manager.test,
-            SimpleOrderKey(3),
-            SimpleOrderKey(5));
+            streams_manager.test, SimpleOrderKey(3), SimpleOrderKey(5));
 
         ASSERT_FALSE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
@@ -159,7 +155,7 @@ TEST(StreamManagerSmokeTest, DataInjected) {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
         Impl streams_manager(storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(100)));
     }
-    
+
     storage.Set("d:foo:0000000042:0000000000", bytes("{\"value0\":{\"ikey\":42,\"data\":\"Yay!\"}}"));
 
     {

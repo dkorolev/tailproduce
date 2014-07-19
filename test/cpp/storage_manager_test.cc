@@ -13,20 +13,17 @@
 
 using ::TailProduce::bytes;
 
-std::string
-makeKey(std::string const& streamId, std::string const& value = std::string()) {
+std::string makeKey(std::string const& streamId, std::string const& value = std::string()) {
     // We want to add a time element to the key so it will be unique per run.
     auto timeNow = std::chrono::system_clock::now();
     auto duration = timeNow.time_since_epoch();
     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
     std::ostringstream os;
     os << streamId << "-";
-    if (!value.empty())
-        os << value << "-";
+    if (!value.empty()) os << value << "-";
     os << millis;
     return os.str();
 }
-
 
 TEST(StorageManagerTest, AddsEntries) {
     // Simple test adds a couple of entries and verifies we can retrieve them.
@@ -90,7 +87,7 @@ TEST(StorageManageTest, BoundedRangeDynamicIterator) {
     ASSERT_TRUE(iterator.Key() == key2);
     ASSERT_FALSE(iterator.Done());
     storage.Set(key3, bytes("three"));
-    storage.Set(key4 , bytes("four"));
+    storage.Set(key4, bytes("four"));
     storage.Set(key5, bytes("five"));
     iterator.Next();  // Now at key3.
     ASSERT_FALSE(iterator.Done());
@@ -104,8 +101,8 @@ TEST(StorageManageTest, BoundedRangeDynamicIterator) {
 }
 
 TEST(StorageManageTest, SemiBoundedRangeIterator) {
-    // Create an iterator that does not have a terminating end.  Verify that we can 
-   // retrieve the entire stream.
+    // Create an iterator that does not have a terminating end.  Verify that we can
+    // retrieve the entire stream.
     boost::filesystem::remove_all("../leveldbTest");
     auto dbm = TailProduce::DbMLevelDb("../leveldbTest");
     auto storage = TailProduce::StorageManager<TailProduce::DbMLevelDb>(dbm);
@@ -115,7 +112,7 @@ TEST(StorageManageTest, SemiBoundedRangeIterator) {
     auto key3 = makeKey("SemiBoundedRangeIterator", "3");
     auto key4 = makeKey("SemiBoundedRangeIterator", "4");
     auto key5 = makeKey("SemiBoundedRangeIterator", "5");
-    auto key6 = makeKey("NextStreamId","6");
+    auto key6 = makeKey("NextStreamId", "6");
     storage.Set(key1, bytes("one"));
     storage.Set(key2, bytes("two"));
     storage.Set(key3, bytes("three"));
@@ -184,11 +181,11 @@ TEST(StorageManageTest, UnboundedRangeDynamicIterator) {
 
     auto key1 = makeKey("UnboundedRangeDynamicIterator", "101");
     auto key2 = makeKey("UnboundedRangeDynamicIterator", "102");
-    auto key3 = makeKey("UnboundedRangeDynamicIterator","103");
-    auto key4 = makeKey("UnboundedRangeDynamicIterator","104");
+    auto key3 = makeKey("UnboundedRangeDynamicIterator", "103");
+    auto key4 = makeKey("UnboundedRangeDynamicIterator", "104");
     storage.Set(key1, bytes("this"));
-    // Now this is a more typical case.  Create an unbounded iterator when there is 1 or more records in the db.  
-    auto iterator = storage.GetIterator("UnboundedRangeDynamicIterator-","101");
+    // Now this is a more typical case.  Create an unbounded iterator when there is 1 or more records in the db.
+    auto iterator = storage.GetIterator("UnboundedRangeDynamicIterator-", "101");
     ASSERT_FALSE(iterator.Done());
 
     storage.Set(key2, bytes("too"));
@@ -269,7 +266,7 @@ TEST(StorageManageTest, UnboundedIteratorOutOfBoundsDeathTest) {
     ASSERT_TRUE(iterator.Done());
     storage.Set(key3, bytes("three"));
     storage.Set(key4, bytes("four"));
-    ASSERT_FALSE(iterator.Done()); // Iterator gets rebuilt and positioned at key3
+    ASSERT_FALSE(iterator.Done());  // Iterator gets rebuilt and positioned at key3
     ASSERT_TRUE(iterator.Value() == bytes("three"));
     ASSERT_TRUE(iterator.Key() == key3);
     iterator.Next();

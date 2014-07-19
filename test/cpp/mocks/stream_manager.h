@@ -16,11 +16,11 @@
 // 7) Ensure that if data is attempted to be over-written, its consistency is verified and no overwrites take place.
 // 8) Support merging multiple streams.
 
-template<typename T_DATA_STORAGE> class MockStreamManager : public TailProduce::StreamManager {
+template <typename T_DATA_STORAGE> class MockStreamManager : public TailProduce::StreamManager {
   public:
     typedef T_DATA_STORAGE storage_type;
     T_DATA_STORAGE storage;
-//  public:
+    //  public:
     // TODO(dkorolev): Support the functionality of eight bullet points above.
 
     /*
@@ -38,11 +38,11 @@ template<typename T_DATA_STORAGE> class MockStreamManager : public TailProduce::
         return !storage_.Get(TailProduce::KeySchema::StreamMeta(stream_name)).empty();
     }
 
-//    const T_DATA_STORAGE& 
+//    const T_DATA_STORAGE&
     */
 
-//  private:
-//    T_DATA_STORAGE storage_;
+    //  private:
+    //    T_DATA_STORAGE storage_;
 };
 
 #endif  // TAILPRODUCE_MOCKS_STREAM_MANAGER_H

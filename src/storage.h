@@ -12,7 +12,7 @@ namespace TailProduce {
         // TODO(dkorolev): Document the expected interface.
     };
 
-    //struct Producer {};  // Client-defined job.
+    // struct Producer {};  // Client-defined job.
 };
 
 #endif

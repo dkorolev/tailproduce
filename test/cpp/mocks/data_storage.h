@@ -18,7 +18,7 @@
 // 2) Provide read access iterators.
 //    Given the range [from, to), or indefinitely from [from, ...).
 //    Allows providing a non-existing key as `from`, uses std::map::lower_bound().
-//    
+//
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
@@ -27,12 +27,8 @@ class MockDataStorage : ::TailProduce::Storage {
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
-        VLOG(3)
-            << "MockDataStorage::Set('"
-            << key
-            << "', '"
-            << ::TailProduce::antibytes(value)
-            << (allow_overwrite ? "');" : "', allow_overwrite=true);");
+        VLOG(3) << "MockDataStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
+                << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
             VLOG(3) << "Attempted to Set() an entry with an empty key.";
             VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -46,14 +42,9 @@ class MockDataStorage : ::TailProduce::Storage {
         std::vector<uint8_t>& placeholder = data_[key];
         if (!allow_overwrite) {
             if (!placeholder.empty()) {
-                VLOG(3)
-                    << "'"
-                    << key
-                    << "', that is attempted to be set to '"
-                    << std::string(value.begin(), value.end())
-                    << "', has already been set to '"
-                    << std::string(placeholder.begin(), placeholder.end())
-                    << "'.";
+                VLOG(3) << "'" << key << "', that is attempted to be set to '"
+                        << std::string(value.begin(), value.end()) << "', has already been set to '"
+                        << std::string(placeholder.begin(), placeholder.end()) << "'.";
                 VLOG(3) << "throw ::TailProduce::StorageOverwriteNotAllowedException();";
                 throw ::TailProduce::StorageOverwriteNotAllowedException();
             }
@@ -88,12 +79,8 @@ class MockDataStorage : ::TailProduce::Storage {
             VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
-        VLOG(3)
-            << "MockDataStorage::Get('"
-            << ::TailProduce::antibytes(key)
-            << ") == '"
-            << ::TailProduce::antibytes(value)
-            << "'.";
+        VLOG(3) << "MockDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
+                << ::TailProduce::antibytes(value) << "'.";
     }
 
     // TODO(dkorolev): Read more about move semantics of C++ and eliminate a potentially unoptimized copy.
@@ -105,9 +92,7 @@ class MockDataStorage : ::TailProduce::Storage {
 
     struct Iterator {
         Iterator(MockDataStorage& master, const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE())
-            : data_(master.data_),
-              end_(end),
-              cit_(data_.lower_bound(begin)) {
+            : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
         }
 
         bool Valid() const {
@@ -147,7 +132,7 @@ class MockDataStorage : ::TailProduce::Storage {
         Iterator(Iterator&&) = delete;
         void operator=(const Iterator&) = delete;
     };
-    
+
   private:
     MAP_TYPE data_;
 };

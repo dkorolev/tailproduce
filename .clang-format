@@ -1,0 +1,27 @@
+# Usage (D.K., Ubuntu 12.04): $ (find . -iname "*.cc" ; find . -iname "*.h") | xargs clang-format-3.5 -i
+
+BasedOnStyle: Google
+
+IndentWidth: 4
+TabWidth: 4
+AccessModifierOffset: -2
+
+ColumnLimit: 117
+
+NamespaceIndentation: All
+
+AlwaysBreakTemplateDeclarations: false
+
+PointerAlignment: Right
+
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackParameters: false  # Use multiple lines for parameters.
+BreakConstructorInitializersBeforeComma: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true  # One per line.
+
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+
+Cpp11BracedListStyle: true
+
+IndentCaseLabels: true

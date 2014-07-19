@@ -8,8 +8,8 @@
 
 namespace TailProduce {
     class DbMLevelDbIterator {
-    public:
-        DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db, 
+      public:
+        DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db,
                            ::TailProduce::Storage::KEY_TYPE const& keyPrefix,
                            ::TailProduce::Storage::KEY_TYPE const& startKey,
                            ::TailProduce::Storage::KEY_TYPE const& endKey);
@@ -17,7 +17,8 @@ namespace TailProduce {
         ::TailProduce::Storage::KEY_TYPE Key() const;
         ::TailProduce::Storage::VALUE_TYPE Value() const;
         bool Done();
-    private:
+
+      private:
         bool firstRead_;
         ::TailProduce::Storage::KEY_TYPE keyPrefix_;
         ::TailProduce::Storage::KEY_TYPE lastKey_;
@@ -31,4 +32,5 @@ namespace TailProduce {
         void CreateIterator_(::TailProduce::Storage::KEY_TYPE const& key, bool advance);
     };
 };
+
 #endif

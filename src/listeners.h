@@ -7,8 +7,7 @@
 namespace TailProduce {
     // UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
     // presenting data in serialized format and keeping track of HEAD order keys.
-    template<typename T> 
-    struct UnsafeListener {
+    template <typename T> struct UnsafeListener {
         UnsafeListener() = delete;
 
         // Unbounded.
@@ -17,41 +16,39 @@ namespace TailProduce {
         }
 
         UnsafeListener(const T& stream, const typename T::head_pair_type& begin = typename T::head_pair_type())
-          : stream(stream),
-            storage(stream.manager->storage),
-            cursor_key(stream.key_builder.BuildStorageKey(begin)),
-            need_to_increment_cursor(false),
-            has_end_key(false),
-            reached_end(false) {
-            VLOG(3)
-                << this << ": UnsafeListener::UnsafeListener('" << stream.name << "', "
-                << "begin='" << cursor_key << "');";
+            : stream(stream),
+              storage(stream.manager->storage),
+              cursor_key(stream.key_builder.BuildStorageKey(begin)),
+              need_to_increment_cursor(false),
+              has_end_key(false),
+              reached_end(false) {
+            VLOG(3) << this << ": UnsafeListener::UnsafeListener('" << stream.name << "', "
+                    << "begin='" << cursor_key << "');";
         }
         UnsafeListener(const T& stream, const typename T::order_key_type& begin)
-          : UnsafeListener(stream, std::make_pair(begin, 0)) {
+            : UnsafeListener(stream, std::make_pair(begin, 0)) {
         }
 
         // Bounded.
         UnsafeListener(const T& stream,
                        const typename T::head_pair_type& begin,
                        const typename T::head_pair_type& end)
-          : stream(stream),
-            storage(stream.manager->storage),
-            cursor_key(stream.key_builder.BuildStorageKey(begin)),
-            need_to_increment_cursor(false),
-            has_end_key(true),
-            end_key(stream.key_builder.BuildStorageKey(end)),
-            reached_end(false) {
+            : stream(stream),
+              storage(stream.manager->storage),
+              cursor_key(stream.key_builder.BuildStorageKey(begin)),
+              need_to_increment_cursor(false),
+              has_end_key(true),
+              end_key(stream.key_builder.BuildStorageKey(end)),
+              reached_end(false) {
         }
         UnsafeListener(const T& stream,
                        const typename T::order_key_type& begin,
                        const typename T::order_key_type& end)
-          : UnsafeListener(stream, std::make_pair(begin, 0),
-            std::make_pair(end, 0)) {
+            : UnsafeListener(stream, std::make_pair(begin, 0), std::make_pair(end, 0)) {
         }
 
         UnsafeListener(UnsafeListener&&) = default;
-        
+
         const typename T::head_pair_type& GetHead() const {
             return stream.head;
         }

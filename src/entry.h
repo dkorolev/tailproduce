@@ -3,8 +3,7 @@
 
 namespace TailProduce {
     // A serializable entry.
-    template<typename T1, typename T2>
-    struct OrderKeyExtractorImpl {};
+    template <typename T1, typename T2> struct OrderKeyExtractorImpl {};
     struct Entry {
         // 1) Need the following fully specialized template within namespace ::TailProduce:
         //       template<> struct OrderKeyExtractorImpl<OrderKeyType, EntryType> {

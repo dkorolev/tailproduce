@@ -19,20 +19,19 @@
 
 namespace TailProduce {
     // This block of code is used to create a stream and a producer pair from the stream persist objects in the db
-    template<typename ORDER_KEY, typename STORAGE>
-    auto 
-    RestorePersistedStreams(TailProduce::StreamsRegistry& registry,
-                            STORAGE& storage, 
-                            TailProduce::ConfigValues const& cv) -> 
-        std::unordered_map< std::string, std::shared_ptr<TailProduce::Stream<ORDER_KEY>>>
-    {
+    template <typename ORDER_KEY, typename STORAGE>
+    auto RestorePersistedStreams(TailProduce::StreamsRegistry& registry,
+                                 STORAGE& storage,
+                                 TailProduce::ConfigValues const& cv)
+        -> std::unordered_map<std::string, std::shared_ptr<TailProduce::Stream<ORDER_KEY>>> {
         typedef TailProduce::Stream<ORDER_KEY> STREAM;
         typedef std::shared_ptr<STREAM> STREAM_PTR;
 
         std::unordered_map<std::string, STREAM_PTR> results;
-        auto knownStreamsKey = cv.GetStreamsRegister(""); // passing an empty string will allow creating an iterator of all known streams
+        auto knownStreamsKey = cv.GetStreamsRegister(
+            "");  // passing an empty string will allow creating an iterator of all known streams
         auto iterator = storage.GetIterator(knownStreamsKey);
-        while(!iterator.Done()) {
+        while (!iterator.Done()) {
             std::string streamValues = antibytes(iterator.Value());
             TailProduce::StreamPersist persisted;
             std::istringstream is(streamValues);  // make the string a stream
@@ -45,12 +44,8 @@ namespace TailProduce {
         return results;
     }
 
-    template<typename STORAGE>
-    void
-    PersistStream(STORAGE storage, 
-                  TailProduce::StreamPersist &sp,
-                  TailProduce::ConfigValues& cv)
-    {
+    template <typename STORAGE>
+    void PersistStream(STORAGE storage, TailProduce::StreamPersist& sp, TailProduce::ConfigValues& cv) {
         // The reverse of this is to store the known streams in the DB.
         std::ostringstream os;
         (cereal::JSONOutputArchive(os))(sp);
@@ -58,6 +53,5 @@ namespace TailProduce {
         TailProduce::Storage::KEY_TYPE skey = cv.GetStreamsRegister(sp.stream_name);
         storage.AdminSet(skey, TailProduce::bytes(objStr));
     }
-
 };
 #endif

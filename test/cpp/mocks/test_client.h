@@ -23,9 +23,10 @@
 // Ordering key.
 struct SimpleOrderKey : ::TailProduce::OrderKey {
     SimpleOrderKey() = default;
-    SimpleOrderKey(std::string const& streamId,
-                   TailProduce::ConfigValues const& cv) : ikey(0) {}
-    explicit SimpleOrderKey(uint32_t key) : ikey(key) {}
+    SimpleOrderKey(std::string const& streamId, TailProduce::ConfigValues const& cv) : ikey(0) {
+    }
+    explicit SimpleOrderKey(uint32_t key) : ikey(key) {
+    }
     uint32_t ikey;
 
     /*
@@ -60,15 +61,12 @@ struct SimpleOrderKey : ::TailProduce::OrderKey {
 // For this test they are { uint32, string } pairs.
 struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable<SimpleEntry> {
     SimpleEntry() = default;
-    SimpleEntry(uint32_t key, ::TailProduce::Storage::KEY_TYPE const& data) : 
-        ikey(key),
-        data(data) {
+    SimpleEntry(uint32_t key, ::TailProduce::Storage::KEY_TYPE const& data) : ikey(key), data(data) {
     }
 
     SimpleOrderKey ExtractSimpleOrderKey() const {
         return SimpleOrderKey(ikey);
     }
-    
 
     // Used as order key, 1, 2, 3, etc.
     uint32_t ikey;
@@ -77,7 +75,7 @@ struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable
 
   private:
     friend class cereal::access;
-    template<class A> void serialize(A& ar) {
+    template <class A> void serialize(A& ar) {
         ar(CEREAL_NVP(ikey), CEREAL_NVP(data));
     }
     // TOOD(dkorolev): Extracting the order key as uint32_t,
@@ -85,9 +83,9 @@ struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable
 };
 
 namespace TailProduce {
-    template<> struct OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry> {
+    template <> struct OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry> {
         static SimpleOrderKey ExtractOrderKey(const SimpleEntry& entry) {
-           return entry.ExtractSimpleOrderKey();
+            return entry.ExtractSimpleOrderKey();
         }
     };
 };

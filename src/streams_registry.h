@@ -23,8 +23,7 @@ namespace TailProduce {
             std::string order_key_type;
         };
 
-        StreamsRegistryEntry
-        Get(std::string const& name) const {
+        StreamsRegistryEntry Get(std::string const& name) const {
             auto entry = streams.find(name);
             if (entry == streams.end()) {
                 return StreamsRegistryEntry{nullptr, "", "", ""};  // return an empty non valid object
@@ -32,17 +31,17 @@ namespace TailProduce {
             return entry->second;
         }
 
-        void 
-        Add(TailProduce::StreamBase* impl,
-            const std::string& name,
-            const std::string& entry_type,
-            const std::string& order_key_type) {
+        void Add(TailProduce::StreamBase* impl,
+                 const std::string& name,
+                 const std::string& entry_type,
+                 const std::string& order_key_type) {
             if (streams.find(name) != streams.end()) {
                 LOG(FATAL) << "Attempted to register the '" << name << "' stream more than once.";
             }
             streams.insert(std::make_pair(name, StreamsRegistryEntry{impl, name, entry_type, order_key_type}));
         }
-    private:
+
+      private:
         std::unordered_map<std::string, StreamsRegistryEntry> streams;
     };
 };

@@ -6,19 +6,18 @@
 #include "dbm_iterator.h"
 
 namespace TailProduce {
-    template <typename dbmodule>
-    class StorageManager : public Storage {
-    private:
-        dbmodule &dbm_;
-    public:
-        StorageManager(dbmodule& dbm) : dbm_(dbm) {}
+    template <typename dbmodule> class StorageManager : public Storage {
+      private:
+        dbmodule& dbm_;
 
-        auto 
-        GetIterator(KEY_TYPE const& keyPrefix,
-                    KEY_TYPE const& startKey = KEY_TYPE(),
-                    KEY_TYPE const& endKey = KEY_TYPE()) -> 
-            decltype(std::declval<dbmodule>().GetIterator(startKey,endKey)) 
-        {
+      public:
+        StorageManager(dbmodule& dbm) : dbm_(dbm) {
+        }
+
+        auto GetIterator(KEY_TYPE const& keyPrefix,
+                         KEY_TYPE const& startKey = KEY_TYPE(),
+                         KEY_TYPE const& endKey = KEY_TYPE())
+            -> decltype(std::declval<dbmodule>().GetIterator(startKey, endKey)) {
             return dbm_.GetIterator(keyPrefix, startKey, endKey);
         }
 
@@ -38,4 +37,3 @@ namespace TailProduce {
 };
 
 #endif
-

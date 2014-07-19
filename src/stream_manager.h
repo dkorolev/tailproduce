@@ -16,15 +16,14 @@ namespace TailProduce {
     //      Instead of storage-level Iterators that may hit the end and have to be re-created,
     //      StreamManager works on the scale of append-only Producers and stream-only Listeners.
     struct StreamManager {
-        template<typename T_ORDER_KEY, typename T_STORAGE_KEY_BUILDER, typename T_STORAGE>
-        static std::pair<T_ORDER_KEY, uint32_t> FetchHeadOrDie(
-                const std::string& name,
-                const T_STORAGE_KEY_BUILDER& key_builder,
-                T_STORAGE& storage) {
+        template <typename T_ORDER_KEY, typename T_STORAGE_KEY_BUILDER, typename T_STORAGE>
+        static std::pair<T_ORDER_KEY, uint32_t> FetchHeadOrDie(const std::string& name,
+                                                               const T_STORAGE_KEY_BUILDER& key_builder,
+                                                               T_STORAGE& storage) {
             ::TailProduce::Storage::VALUE_TYPE storage_value;
             try {
                 storage.Get(key_builder.head_storage_key, storage_value);
-            } catch(const StorageException&) {
+            } catch (const StorageException&) {
                 VLOG(3) << "throw StreamDoesNotExistException();";
                 throw StreamDoesNotExistException();
             }

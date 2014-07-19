@@ -20,7 +20,7 @@
 //   Merging multiple streams maintaining strongly typed entries.
 //   Ephemeral entry types as markers.
 //   setTimeout()-style insertion of callbacks to be invoked by the framework later.
-//  
+//
 //   Framework is the level where the above is handler.
 
 #include <gtest/gtest.h>
@@ -37,7 +37,7 @@ using ::TailProduce::StreamManagerParams;
 
 // The actual test is a templated RUN_TESTS() function.
 // It is used to test both the hand-crafted objects structure and the one created by a sequence of macros.
-template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
+template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
     {
         // Test that STREAM_MANAGER throws an exception when attempted to be created
         // based on the storage that does not contain a definition of the `test` stream.
@@ -91,7 +91,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
     }
 
     {
-       // Test that entries can be serialized and de-serialized.
+        // Test that entries can be serialized and de-serialized.
         SimpleEntry entry(1, "Test");
         std::ostringstream os;
         SimpleEntry::SerializeEntry(os, entry);
@@ -132,7 +132,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         head = listener.GetHead();
         EXPECT_EQ(0, head.first.ikey);
         EXPECT_EQ(0, head.second);
-    
+
         // Instantiating a publisher does not change HEAD.
         {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
@@ -252,9 +252,8 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(5, "five"));
 
         SimpleEntry entry;
-        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test,
-                                                                          SimpleOrderKey(2),
-                                                                          SimpleOrderKey(4));
+        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
+            streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
         listener.ExportEntry(entry);
@@ -288,9 +287,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
         SimpleEntry entry;
         typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
-            streams_manager.test,
-            std::make_pair(SimpleOrderKey(42), 2),
-            std::make_pair(SimpleOrderKey(42), 5));
+            streams_manager.test, std::make_pair(SimpleOrderKey(42), 2), std::make_pair(SimpleOrderKey(42), 5));
         ASSERT_TRUE(!listener.ReachedEnd());
         ASSERT_TRUE(listener.HasData());
         listener.ExportEntry(entry);
@@ -321,9 +318,8 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
         SimpleEntry entry;
         typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
-        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test,
-                                                                          SimpleOrderKey(10),
-                                                                          SimpleOrderKey(20));
+        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
+            streams_manager.test, SimpleOrderKey(10), SimpleOrderKey(20));
 
         publisher.Push(SimpleEntry(5, "five: ignored as before the beginning of the range"));
         ASSERT_TRUE(!listener.HasData());
@@ -362,7 +358,7 @@ template<typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
     }
 }
 
-template<typename T> class StreamManagerTest : public ::testing::Test {};
+template <typename T> class StreamManagerTest : public ::testing::Test {};
 
 // Unit test for TailProduce stream manager.
 
@@ -387,19 +383,20 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         typedef typename TypeParam::storage_type storage_type;
         storage_type& storage;
         static storage_type& EnsureStreamsAreCreatedDuringInitialization(
-                storage_type& storage,
-                const ::TailProduce::StreamManagerParams& params) {
+            storage_type& storage,
+            const ::TailProduce::StreamManagerParams& params) {
             params.Apply(storage);
             return storage;
         }
-        StreamManagerImpl(
-            storage_type& storage,
-            const ::TailProduce::StreamManagerParams& params = ::TailProduce::StreamManagerParams::FromCommandLineFlags())
-          : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) {
+        StreamManagerImpl(storage_type& storage,
+                          const ::TailProduce::StreamManagerParams& params =
+                              ::TailProduce::StreamManagerParams::FromCommandLineFlags())
+            : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) {
         }
         StreamManagerImpl(const StreamManagerImpl&) = delete;
         StreamManagerImpl(StreamManagerImpl&&) = delete;
         void operator=(const StreamManagerImpl&) = delete;
+
       private:
         using TSM = ::TailProduce::StreamManager;
         static_assert(std::is_base_of<TSM, TypeParam>::value,
@@ -408,8 +405,11 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value,
                       "StreamManagerImpl: TypeParam::storage_type should be derived from Storage.");
         ::TailProduce::StreamsRegistry registry_;
+
       public:
-        const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
+        const ::TailProduce::StreamsRegistry& registry() const {
+            return registry_;
+        }
         struct test_type {
             typedef SimpleEntry entry_type;
             typedef SimpleOrderKey order_key_type;
@@ -429,11 +429,15 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                       const char* stream_name,
                       const char* entry_type_name,
                       const char* entry_order_key_name)
-              : manager(manager),
-                stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name),
-              name(stream_name),
-              key_builder(name),
-              head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) {
+                : manager(manager),
+                  stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name),
+                  name(stream_name),
+                  key_builder(name),
+                  head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type,
+                                                                             key_builder_type,
+                                                                             storage_type>(name,
+                                                                                           key_builder,
+                                                                                           manager->storage)) {
             }
         };
         test_type test = test_type(this, "test", "SimpleEntry", "SimpleOrderKey");

@@ -12,7 +12,7 @@
 
 using ::TailProduce::bytes;
 
-TEST(MSBConversion, UInt16) { 
+TEST(MSBConversion, UInt16) {
     uint16_t v = as_msb(static_cast<uint16_t>(0x1234));
     EXPECT_NE(0x1234, v);
     EXPECT_EQ(0x1234, msb_to_host_order(v));
@@ -21,7 +21,7 @@ TEST(MSBConversion, UInt16) {
     EXPECT_EQ(0x34, p[1]);
 }
 
-TEST(MSBConversion, Int16) { 
+TEST(MSBConversion, Int16) {
     int16_t v = as_msb(static_cast<int16_t>(0x1234));
     EXPECT_NE(0x1234, v);
     EXPECT_EQ(0x1234, msb_to_host_order(v));
@@ -30,7 +30,7 @@ TEST(MSBConversion, Int16) {
     EXPECT_EQ(0x34, p[1]);
 }
 
-TEST(MSBConversion, UInt32) { 
+TEST(MSBConversion, UInt32) {
     uint32_t v = as_msb(static_cast<uint32_t>(0x87654321));
     EXPECT_NE(0x87654321, v);
     EXPECT_EQ(0x87654321, msb_to_host_order(v));
@@ -41,7 +41,7 @@ TEST(MSBConversion, UInt32) {
     EXPECT_EQ(0x21, p[3]);
 }
 
-TEST(MSBConversion, Int32) { 
+TEST(MSBConversion, Int32) {
     int32_t v = as_msb(static_cast<int32_t>(0x87654321));
     EXPECT_NE(0x87654321, v);
     EXPECT_EQ(0x87654321, msb_to_host_order(v));
@@ -52,7 +52,7 @@ TEST(MSBConversion, Int32) {
     EXPECT_EQ(0x21, p[3]);
 }
 
-TEST(MSBConversion, UInt64) { 
+TEST(MSBConversion, UInt64) {
     uint64_t v = as_msb(static_cast<uint64_t>(0xdeadbeef12345678));
     EXPECT_NE(0xdeadbeef12345678, v);
     EXPECT_EQ(0xdeadbeef12345678, msb_to_host_order(v));
@@ -67,7 +67,7 @@ TEST(MSBConversion, UInt64) {
     EXPECT_EQ(0x78, p[7]);
 }
 
-TEST(MSBConversion, Int64) { 
+TEST(MSBConversion, Int64) {
     int64_t v = as_msb(static_cast<int64_t>(0xdeadbeef12345678));
     EXPECT_NE(0xdeadbeef12345678, v);
     EXPECT_EQ(0xdeadbeef12345678, msb_to_host_order(v));

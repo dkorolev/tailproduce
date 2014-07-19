@@ -3,11 +3,9 @@
 
 #include <sstream>
 
-
 namespace TailProduce {
     // UnsafePublisher contains the logic of appending data to the streams and updating their HEAD order keys.
-    template<typename T> 
-    struct UnsafePublisher {
+    template <typename T> struct UnsafePublisher {
         UnsafePublisher() = delete;
         explicit UnsafePublisher(T& stream) : stream(stream) {
         }
@@ -17,12 +15,11 @@ namespace TailProduce {
         }
 
         void Push(const typename T::entry_type& entry) {
-            typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type,
-                                                         typename T::entry_type> impl;
+            typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type> impl;
             PushHead(impl::ExtractOrderKey(entry));
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
-            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head), 
+            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head),
                                         bytes(value_output_stream.str()));
         }
 
@@ -37,12 +34,9 @@ namespace TailProduce {
                 new_head.second = stream.head.second + 1;
             }
             // TODO(dkorolev): Perhaps more checks here?
-            auto v = OrderKey::template 
-                StaticSerializeAsStorageKey<typename T::order_key_type>(new_head.first,
-                                                                        new_head.second);
-            stream.manager->storage.SetAllowingOverwrite(
-                stream.key_builder.head_storage_key,
-                bytes(v));
+            auto v = OrderKey::template StaticSerializeAsStorageKey<typename T::order_key_type>(new_head.first,
+                                                                                                new_head.second);
+            stream.manager->storage.SetAllowingOverwrite(stream.key_builder.head_storage_key, bytes(v));
 
             stream.head = new_head;
         }
