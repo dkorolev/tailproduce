@@ -16,6 +16,9 @@ test: cereal
 
 love: lib test
 
+indent:
+	find src/ test/ -regextype posix-egrep -regex ".*\.(cc|h)" | xargs clang-format-3.5 -i
+
 # Keep dependencies static.
 
 # From http://code.google.com/p/leveldb/downloads/list

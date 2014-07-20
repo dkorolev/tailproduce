@@ -1,5 +1,3 @@
-# Usage (D.K., Ubuntu 12.04): $ (find . -iname "*.cc" ; find . -iname "*.h") | xargs clang-format-3.5 -i
-
 BasedOnStyle: Google
 
 IndentWidth: 4
