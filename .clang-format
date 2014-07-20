@@ -10,7 +10,8 @@ NamespaceIndentation: All
 
 AlwaysBreakTemplateDeclarations: false
 
-PointerAlignment: Right
+# Incompatible with newer clang-format-3.5. Yeah, I know... -- @dkorolev
+# PointerAlignment: Right
 
 AllowAllParametersOfDeclarationOnNextLine: false
 BinPackParameters: false  # Use multiple lines for parameters.
