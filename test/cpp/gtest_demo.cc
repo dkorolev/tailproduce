@@ -14,7 +14,7 @@
 //    $
 //
 // 1) ASSERT_* interrupts the TEST() { .. } if failing,
-//    EXPECT_* considers the TEST(), but continues to execute it.
+//    EXPECT_* considers the TEST() failed, but continues to execute it.
 //
 // 2) ASSERT-s and EXPECT-s can be used as output streams. No newline needed.
 //    EXPECT_EQ(4, 2 * 2) << "Something is wrong with multiplication."
@@ -105,8 +105,8 @@ TYPED_TEST(GTestTemplatedTest, TemplatedContainersTest) {
 }
 
 // An example of a failing test.
-// It is both marked as DISABLED and guarded by #if false to
-// not pollute the output with the "YOU HAVE 1 DISABLED TEST" message.
+// It is both marked as DISABLED and guarded by #if false
+// to not pollute the output with the "YOU HAVE 1 DISABLED TEST" message.
 
 #if false
 TEST(GTestTest, DISABLED_Failing) { 

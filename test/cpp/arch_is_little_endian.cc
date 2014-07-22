@@ -2,8 +2,6 @@
 
 #include <gtest/gtest.h>
 
-#include <arpa/inet.h>
-
 TEST(ArchIsLittleEndian, Int16) {
     uint16_t v = 0x1234;
     const uint8_t* p = reinterpret_cast<const uint8_t*>(&v);

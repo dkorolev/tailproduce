@@ -156,6 +156,7 @@ TEST(StreamManagerSmokeTest, DataInjected) {
         Impl streams_manager(storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(100)));
     }
 
+    // Add one data entry.
     storage.Set("d:foo:0000000042:0000000000", bytes("{\"value0\":{\"ikey\":42,\"data\":\"Yay!\"}}"));
 
     {
@@ -171,6 +172,6 @@ TEST(StreamManagerSmokeTest, DataInjected) {
 
         listener.ExportEntry(entry);
         EXPECT_EQ(42, entry.ikey);
-        EXPECT_EQ(("Yay!"), entry.data);
+        EXPECT_EQ("Yay!", entry.data);
     }
 }

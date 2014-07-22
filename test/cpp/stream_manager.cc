@@ -74,22 +74,6 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         ASSERT_EQ("0000000000:0000000000", antibytes(local_storage.Get("s:test")));
     }
 
-    STORAGE storage;
-    storage.Set("s:test", bytes("0000000000:0000000000"));
-    {
-        // Test stream manager setup. The `test` stream should exist and be statically typed.
-        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
-
-        auto entry = streams_manager.registry().Get("test");
-        EXPECT_EQ("test", entry.name);
-        EXPECT_EQ("SimpleEntry", entry.entry_type);
-        EXPECT_EQ("SimpleOrderKey", entry.order_key_type);
-        using Stream = ::TailProduce::Stream<SimpleOrderKey>;
-        EXPECT_TRUE(entry.impl == static_cast<Stream*>(&streams_manager.test.stream));
-        EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
-        EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
-    }
-
     {
         // Test that entries can be serialized and de-serialized.
         SimpleEntry entry(1, "Test");
@@ -119,6 +103,23 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             deserialized_order_key.DeSerializeOrderKey(serialized_key);
             EXPECT_EQ(42, deserialized_order_key.ikey);
         }
+    }
+
+    STORAGE storage;
+    storage.Set("s:test", bytes("0000000000:0000000000"));
+
+    {
+        // Test stream manager setup. The `test` stream should exist and be statically typed.
+        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
+
+        auto entry = streams_manager.registry().Get("test");
+        EXPECT_EQ("test", entry.name);
+        EXPECT_EQ("SimpleEntry", entry.entry_type);
+        EXPECT_EQ("SimpleOrderKey", entry.order_key_type);
+        using Stream = ::TailProduce::Stream<SimpleOrderKey>;
+        EXPECT_TRUE(entry.impl == static_cast<Stream*>(&streams_manager.test.stream));
+        EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
+        EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
     }
 
     {
@@ -199,13 +200,13 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             EXPECT_EQ(bytes("0000000010:0000000000"), storage.Get("s:test"));
         }
 
-        // Throws an exception attempting to move the HEAD backwards when doing Push().
+        // Throws an exception attempting to move HEAD backwards when doing Push().
         {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
             ASSERT_THROW(publisher.Push(SimpleEntry(0, "boom")), ::TailProduce::OrderKeysGoBackwardsException);
         }
 
-        // Throws an exception attempting to move the HEAD backwards when doing PushHead().
+        // Throws an exception attempting to move HEAD backwards when doing PushHead().
         {
             typename STREAM_MANAGER::test_type::unsafe_publisher_type publisher(streams_manager.test);
             ASSERT_THROW(publisher.PushHead(SimpleOrderKey(0)), ::TailProduce::OrderKeysGoBackwardsException);
@@ -360,13 +361,11 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
 template <typename T> class StreamManagerTest : public ::testing::Test {};
 
-// Unit test for TailProduce stream manager.
-
 // TODO(dkorolev): Add LevelDB data storage along with the mock one.
 typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
 TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
 
-// Tests stream creation macros.
+// Runs the tests against the static framework defined by macros.
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerImpl, TypeParam);
     TAILPRODUCE_STREAM(StreamManagerImpl, test, SimpleEntry, SimpleOrderKey);
@@ -375,8 +374,8 @@ TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
     RUN_TESTS<typename StreamManagerImpl::storage_type, StreamManagerImpl>();
 }
 
-// This test explicitly lists what stream definition macros expand into.
-// Used as a reference point, as well as to ensure the macros do what they are designed to.
+// Runs the test against explicitly defined static framework.
+// Used as a reference point, as well as to ensure the macros do what they are designed for.
 TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
     class StreamManagerImpl {
       public:
