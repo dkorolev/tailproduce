@@ -1,5 +1,5 @@
-CPP=g++
-CPPFLAGS=-std=c++11 -g
+CPP=clang++
+CPPFLAGS=-std=c++11 -g -I ./leveldb/include/
 LDFLAGS=
 
 SRC=$(wildcard src/*.cc)
