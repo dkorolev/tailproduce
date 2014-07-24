@@ -15,6 +15,7 @@ using ::TailProduce::StreamManagerParams;
 TEST(StreamManagerSmokeTest, SmokeTest) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
     MockDataStorage storage;
@@ -161,6 +162,7 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 TEST(StreamManagerSmokeTest, DataInjected) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
     TAILPRODUCE_STREAM(foo, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_PUBLISHER(foo);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
     MockDataStorage storage;

@@ -62,6 +62,7 @@
                 name(stream_name), \
                 key_builder(name), \
                 head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) { \
+                manager->streams_declared_.insert(#NAME); \
             } \
         }; \
         NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE)
@@ -69,7 +70,7 @@
 #define TAILPRODUCE_PUBLISHER(NAME) \
         struct NAME##_publisher_type : ::TailProduce::Publisher<NAME##_type> { \
             typedef ::TailProduce::Publisher<NAME##_type> base; \
-            explicit NAME##_publisher_type(framework_type* manager) : base(manager->test) { \
+            explicit NAME##_publisher_type(framework_type* manager) : base(manager->NAME) { \
                 manager->stream_publishers_declared_.insert(#NAME); \
             } \
         }; \

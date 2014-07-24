@@ -29,7 +29,7 @@ namespace TailProduce {
     struct StreamAlreadyExistsException : Exception {};
     struct StreamHasNoWriterDefinedException : Exception {
         explicit StreamHasNoWriterDefinedException(const std::string& name)
-            : Exception("StreamHasNoWriterDefinedException: '" + name + "'.)") {
+            : Exception("StreamHasNoWriterDefinedException: '" + name + "'.") {
         }
     };
 };
