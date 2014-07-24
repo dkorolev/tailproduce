@@ -380,8 +380,8 @@ TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
 // Runs the tests against the static framework defined by macros.
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerImpl, TypeParam);
-    TAILPRODUCE_STREAM(StreamManagerImpl, test, SimpleEntry, SimpleOrderKey);
-    TAILPRODUCE_PUBLISHER(StreamManagerImpl, test);
+    TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
     RUN_TESTS<typename StreamManagerImpl::storage_type, StreamManagerImpl>();
