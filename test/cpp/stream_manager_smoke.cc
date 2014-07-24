@@ -30,7 +30,7 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         SimpleEntry entry;
 
-        typename Impl::test_type::unsafe_publisher_type publisher(streams_manager.test);
+        typename Impl::test_type::publisher_type publisher(streams_manager.test);
         typename Impl::test_type::unsafe_listener_type listener_all(streams_manager.test);
         typename Impl::test_type::unsafe_listener_type listener_from_three(streams_manager.test, SimpleOrderKey(3));
         typename Impl::test_type::unsafe_listener_type listener_from_three_to_five_not_inclusive(
