@@ -6,8 +6,6 @@
 // TODO(dkorolev): Rename INTERNAL_UnsafePublisher once the transition is completed.
 
 namespace TailProduce {
-    // TODO(dkorolev): Debug the case where an exception is thrown from this constructor of streams manager.
-    // Doesn't seem to do what it should so far.
     inline void EnsureThereAreNoStreamsWithoutPublishers(const std::set<std::string>& streams_declared,
                                                          const std::set<std::string>& stream_publishers_declared) {
         std::vector<std::string> diff;
