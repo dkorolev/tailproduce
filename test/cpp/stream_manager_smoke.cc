@@ -12,6 +12,25 @@
 using ::TailProduce::bytes;
 using ::TailProduce::StreamManagerParams;
 
+struct Aggregator {
+    Aggregator() {
+    }
+    mutable size_t count = 0;
+    mutable std::string data = "";
+    void operator()(const SimpleEntry& entry) const {
+        std::ostringstream os;
+        os << '[' << count << "]:{" << entry.ikey << ",'" << entry.data << "'}";
+        if (count) {
+            data.append(",");
+        }
+        data.append(os.str());
+        ++count;
+    }
+    Aggregator(const Aggregator&) = delete;
+    Aggregator(Aggregator&&) = delete;
+    void operator=(const Aggregator&) = delete;
+};
+
 TEST(StreamManagerSmokeTest, SmokeTest) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
@@ -28,6 +47,9 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
     {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.
         Impl streams_manager(storage, StreamManagerParams());
+
+        Aggregator aggregator;
+        auto async_listener = streams_manager.test_listener(aggregator);
 
         SimpleEntry entry;
 
@@ -157,6 +179,11 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
         ASSERT_TRUE(listener_from_three_to_five_not_inclusive.ReachedEnd());
+
+        ASSERT_EQ(
+            "[0]:{1,'one'},[1]:{2,'two'},[2]:{3,'three'},[3]:{4,'four'},"
+            "[4]:{5,'five'},[5]:{6,'six'},[6]:{7,'seven'",
+            aggregator.data);
     }
 }
 
@@ -179,17 +206,10 @@ TEST(StreamManagerSmokeTest, DataInjected) {
     {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.
         Impl streams_manager(storage, StreamManagerParams());
-
-        SimpleEntry entry;
-
-        typename Impl::foo_type::INTERNAL_unsafe_listener_type listener(streams_manager.foo);
-
-        ASSERT_TRUE(listener.HasData());
-        ASSERT_FALSE(listener.ReachedEnd());
-
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
-            EXPECT_EQ(42, entry.ikey);
-            EXPECT_EQ("Yay!", entry.data);
-        });
+        Aggregator aggregator;
+        EXPECT_EQ(0, aggregator.count);
+        auto async_listener = streams_manager.foo_listener(aggregator);
+        EXPECT_EQ(1, aggregator.count);
+        EXPECT_EQ("[0]:{42,'Yay!'}", aggregator.data);
     }
 }
