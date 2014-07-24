@@ -121,7 +121,8 @@ namespace TailProduce {
             processor(entry);
         }
 
-        // NOTE: ExportEntry() is deprecated in favor of ProcessEntrySync() to statically support polymorphic types.
+        // NOTE: ExportEntry() is deprecated in favor of ProcessEntrySync()
+        // to allow statically supporting polymorphic types.
         // DELETED_ExportEntry() populates the passed in entry object if data is available.
         // Will throw an exception if no data is available.
         void DELETED_ExportEntry(typename T::entry_type& entry) {
