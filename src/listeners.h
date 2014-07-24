@@ -3,14 +3,13 @@
 
 #include <memory>
 #include "stream.h"
+#include "event_subscriber.h"
 
 namespace TailProduce {
     // TODO(dkorolev): Rename this class.
     // INTERNAL_UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
     // presenting data in serialized format and keeping track of HEAD order keys.
     template <typename T> struct INTERNAL_UnsafeListener {
-        INTERNAL_UnsafeListener() = delete;
-
         // Unbounded.
         ~INTERNAL_UnsafeListener() {
             VLOG(3) << this << ": INTERNAL_UnsafeListener::~INTERNAL_UnsafeListener();";
@@ -48,8 +47,6 @@ namespace TailProduce {
                                 const typename T::order_key_type& end)
             : INTERNAL_UnsafeListener(stream, std::make_pair(begin, 0), std::make_pair(end, 0)) {
         }
-
-        INTERNAL_UnsafeListener(INTERNAL_UnsafeListener&&) = default;
 
         const typename T::head_pair_type& GetHead() const {
             return stream.head;
@@ -164,8 +161,6 @@ namespace TailProduce {
       private:
         typedef typename T::storage_type storage_type;
         typedef typename T::storage_type::Iterator iterator_type;
-        INTERNAL_UnsafeListener(const INTERNAL_UnsafeListener&) = delete;
-        void operator=(const INTERNAL_UnsafeListener&) = delete;
         const T& stream;
         storage_type& storage;
         ::TailProduce::Storage::KEY_TYPE cursor_key;
@@ -174,6 +169,11 @@ namespace TailProduce {
         ::TailProduce::Storage::KEY_TYPE const end_key;
         mutable bool reached_end;
         mutable std::unique_ptr<iterator_type> iterator;
+
+        INTERNAL_UnsafeListener() = delete;
+        INTERNAL_UnsafeListener(const INTERNAL_UnsafeListener&) = delete;
+        INTERNAL_UnsafeListener(INTERNAL_UnsafeListener&&) = delete;
+        void operator=(const INTERNAL_UnsafeListener&) = delete;
     };
 
     // TODO(dkorolev): Add support for other listener types, not just "all" range.
@@ -181,24 +181,46 @@ namespace TailProduce {
         AsyncListenersFactory(const T& stream) : stream(stream) {
         }
 
-        template <typename T_PROCESSOR> struct AsyncListener {
-            AsyncListener(const T& stream, T_PROCESSOR processor) : impl(stream), processor(processor) {
+        template <typename T_PROCESSOR> struct AsyncListener : ::TailProduce::Subscriber {
+            AsyncListener(const T& stream, T_PROCESSOR processor)
+                : impl(stream), processor(processor), subscribe(this, stream.subscriptions) {
+                // TODO(dkorolev): Retire this, see the TODO(dkorolev) right above RunFakeEventLoop().
+                RunFakeEventLoop();
             }
-            void DoIt() {
+            virtual ~AsyncListener() {
+            }
+
+            virtual void Poke() override {
+                // TODO(dkorolev): ALARM! This will fail miserably if a stream is appended to as a direct result
+                // of it just being appended to. Async implementation will take care of it.
+                RunFakeEventLoop();
+            }
+
+          private:
+            // TODO(dkorolev): This should be run in a separate thread, C++ style.
+            // Not it effectively is implemented in node.js style, blocking single-threaded.
+            // User-facing coding semantics should not change though, at least for the cases
+            // as simple as the current set of tests.
+            void RunFakeEventLoop() {
                 while (!impl.ReachedEnd() && impl.HasData()) {
                     impl.ProcessEntrySync(processor);
                     impl.AdvanceToNextEntry();
                 }
             }
 
-          private:
             INTERNAL_UnsafeListener<T> impl;
             T_PROCESSOR processor;
-            // TODO(dkorolev): Disabled copy constructor and move constructor magic here.
+            ::TailProduce::SubscribeWhileInScope<::TailProduce::SubscriptionsManager> subscribe;
+
+            AsyncListener() = delete;
+            AsyncListener(const AsyncListener&) = delete;
+            AsyncListener(AsyncListener&& rhs) = default;
+            void operator=(const AsyncListener&) = delete;
         };
 
-        template <typename T_PROCESSOR> AsyncListener<T_PROCESSOR> operator()(T_PROCESSOR processor) {
-            return AsyncListener<T_PROCESSOR>(stream, processor);
+        template <typename T_PROCESSOR>
+        std::unique_ptr<AsyncListener<T_PROCESSOR>> operator()(T_PROCESSOR processor) {
+            return std::unique_ptr<AsyncListener<T_PROCESSOR>>(new AsyncListener<T_PROCESSOR>(stream, processor));
         }
 
       private:

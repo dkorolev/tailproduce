@@ -52,6 +52,7 @@
             key_builder_type key_builder; \
             head_pair_type head; \
             ::TailProduce::ConfigValues cv = ::TailProduce::ConfigValues("S", "D", "Register", "LastWrite", ':'); \
+            mutable ::TailProduce::SubscriptionsManager subscriptions; \
             NAME##_type( \
                 framework_type* manager, \
                 const char* stream_name, \

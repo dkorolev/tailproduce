@@ -137,7 +137,6 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             os << entry.ikey << ':' << entry.data;
             last_as_string = os.str();
         });
-        async_listener.DoIt();
         EXPECT_EQ(0, seen);
         EXPECT_EQ("", last_as_string);
         typename STREAM_MANAGER::test_type::head_pair_type head;
@@ -170,7 +169,6 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             EXPECT_EQ(1, head.first.ikey);
             EXPECT_EQ(0, head.second);
             EXPECT_EQ(bytes("0000000001:0000000000"), storage.Get("s:test"));
-            async_listener.DoIt();
             EXPECT_EQ(1, seen);
             EXPECT_EQ("1:foo", last_as_string);
 
@@ -182,7 +180,6 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             EXPECT_EQ(1, head.first.ikey);
             EXPECT_EQ(1, head.second);
             EXPECT_EQ(bytes("0000000001:0000000001"), storage.Get("s:test"));
-            async_listener.DoIt();
             EXPECT_EQ(2, seen);
             EXPECT_EQ("1:bar", last_as_string);
 
@@ -194,7 +191,6 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             EXPECT_EQ(2, head.first.ikey);
             EXPECT_EQ(0, head.second);
             EXPECT_EQ(bytes("0000000002:0000000000"), storage.Get("s:test"));
-            async_listener.DoIt();
             EXPECT_EQ(2, seen);
             EXPECT_EQ("1:bar", last_as_string);
 
@@ -206,16 +202,13 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             EXPECT_EQ(2, head.first.ikey);
             EXPECT_EQ(1, head.second);
             EXPECT_EQ(bytes("0000000002:0000000001"), storage.Get("s:test"));
-            async_listener.DoIt();
             EXPECT_EQ(2, seen);
             EXPECT_EQ("1:bar", last_as_string);
 
             publisher.Push(SimpleEntry(100, "async"));
-            async_listener.DoIt();
             EXPECT_EQ(3, seen);
             EXPECT_EQ("100:async", last_as_string);
             publisher.Push(SimpleEntry(101, "is ok"));
-            async_listener.DoIt();
             EXPECT_EQ(4, seen);
             EXPECT_EQ("101:is ok", last_as_string);
         }
@@ -472,6 +465,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             key_builder_type key_builder;
             head_pair_type head;
             ::TailProduce::ConfigValues cv = ::TailProduce::ConfigValues("S", "D", "Register", "LastWrite", ':');
+            mutable ::TailProduce::SubscriptionsManager subscriptions;
             test_type(StreamManagerImpl* manager,
                       const char* stream_name,
                       const char* entry_type_name,
