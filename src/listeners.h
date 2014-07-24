@@ -176,21 +176,33 @@ namespace TailProduce {
         mutable std::unique_ptr<iterator_type> iterator;
     };
 
-    template <typename T> struct Listener {
-        Listener(const T& stream, const typename T::head_pair_type& begin = typename T::head_pair_type())
-            : impl(stream, begin) {
+    // TODO(dkorolev): Add support for other listener types, not just "all" range.
+    template <typename T> struct AsyncListenersFactory {
+        AsyncListenersFactory(const T& stream) : stream(stream) {
         }
-        Listener(const T& stream, const typename T::order_key_type& begin) : impl(stream, begin) {
-        }
-        Listener(const T& stream, const typename T::head_pair_type& begin, const typename T::head_pair_type& end)
-            : impl(stream, begin, end) {
-        }
-        Listener(const T& stream, const typename T::order_key_type& begin, const typename T::order_key_type& end)
-            : impl(stream, begin, end) {
+
+        template <typename T_PROCESSOR> struct AsyncListener {
+            AsyncListener(const T& stream, T_PROCESSOR processor) : impl(stream), processor(processor) {
+            }
+            void DoIt() {
+                while (!impl.ReachedEnd() && impl.HasData()) {
+                    impl.ProcessEntrySync(processor);
+                    impl.AdvanceToNextEntry();
+                }
+            }
+
+          private:
+            INTERNAL_UnsafeListener<T> impl;
+            T_PROCESSOR processor;
+            // TODO(dkorolev): Disabled copy constructor and move constructor magic here.
+        };
+
+        template <typename T_PROCESSOR> AsyncListener<T_PROCESSOR> operator()(T_PROCESSOR processor) {
+            return AsyncListener<T_PROCESSOR>(stream, processor);
         }
 
       private:
-        INTERNAL_UnsafeListener<T> impl;
+        const T& stream;
     };
 };
 

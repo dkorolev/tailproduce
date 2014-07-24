@@ -65,7 +65,8 @@
                 manager->streams_declared_.insert(#NAME); \
             } \
         }; \
-        NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE)
+        NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE); \
+        ::TailProduce::AsyncListenersFactory<NAME##_type> NAME##_listener = ::TailProduce::AsyncListenersFactory<NAME##_type>(NAME)
 
 #define TAILPRODUCE_PUBLISHER(NAME) \
         struct NAME##_publisher_type : ::TailProduce::Publisher<NAME##_type> { \
