@@ -9,4 +9,6 @@ cereal/
 .exrc
 **/core
 
+test/leveldbTest/
+
 **/.*.swp

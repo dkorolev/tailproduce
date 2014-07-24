@@ -67,7 +67,7 @@
             } \
         }; \
         NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE); \
-        ::TailProduce::AsyncListenersFactory<NAME##_type> NAME##_listener = ::TailProduce::AsyncListenersFactory<NAME##_type>(NAME)
+        ::TailProduce::AsyncListenersFactory<NAME##_type> new_scoped_##NAME##_listener = ::TailProduce::AsyncListenersFactory<NAME##_type>(NAME)
 
 #define TAILPRODUCE_PUBLISHER(NAME) \
         struct NAME##_publisher_type : ::TailProduce::Publisher<NAME##_type> { \

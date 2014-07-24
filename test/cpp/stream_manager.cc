@@ -131,12 +131,13 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
         size_t seen = 0;
         std::string last_as_string;
-        auto async_listener = streams_manager.test_listener([&seen, &last_as_string](const SimpleEntry& entry) {
-            ++seen;
-            std::ostringstream os;
-            os << entry.ikey << ':' << entry.data;
-            last_as_string = os.str();
-        });
+        auto test_listener_existence_scope =
+            streams_manager.new_scoped_test_listener([&seen, &last_as_string](const SimpleEntry& entry) {
+                ++seen;
+                std::ostringstream os;
+                os << entry.ikey << ':' << entry.data;
+                last_as_string = os.str();
+            });
         EXPECT_EQ(0, seen);
         EXPECT_EQ("", last_as_string);
         typename STREAM_MANAGER::test_type::head_pair_type head;
@@ -483,7 +484,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             }
         };
         test_type test = test_type(this, "test", "SimpleEntry", "SimpleOrderKey");
-        ::TailProduce::AsyncListenersFactory<test_type> test_listener =
+        ::TailProduce::AsyncListenersFactory<test_type> new_scoped_test_listener =
             ::TailProduce::AsyncListenersFactory<test_type>(test);
         struct test_publisher_type : ::TailProduce::Publisher<test_type> {
             typedef ::TailProduce::Publisher<test_type> base;

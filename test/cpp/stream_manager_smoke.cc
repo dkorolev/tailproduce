@@ -12,23 +12,26 @@
 using ::TailProduce::bytes;
 using ::TailProduce::StreamManagerParams;
 
+// Keep in mind that Stats and Aggregator must be two different classes,
+// since an instance of Aggregator will be cloned while being passed to the listener.
+struct Stats {
+    size_t count = 0;
+    std::string data = "";
+};
+
 struct Aggregator {
-    Aggregator() {
+    Stats& stats;
+    explicit Aggregator(Stats& stats) : stats(stats) {
     }
-    mutable size_t count = 0;
-    mutable std::string data = "";
-    void operator()(const SimpleEntry& entry) const {
+    void operator()(const SimpleEntry& entry) {
         std::ostringstream os;
-        os << '[' << count << "]:{" << entry.ikey << ",'" << entry.data << "'}";
-        if (count) {
-            data.append(",");
+        os << '[' << stats.count << "]:{" << entry.ikey << ",'" << entry.data << "'}";
+        if (stats.count) {
+            stats.data.append(",");
         }
-        data.append(os.str());
-        ++count;
+        stats.data.append(os.str());
+        ++stats.count;
     }
-    Aggregator(const Aggregator&) = delete;
-    Aggregator(Aggregator&&) = delete;
-    void operator=(const Aggregator&) = delete;
 };
 
 TEST(StreamManagerSmokeTest, SmokeTest) {
@@ -48,8 +51,8 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.
         Impl streams_manager(storage, StreamManagerParams());
 
-        Aggregator aggregator;
-        auto async_listener = streams_manager.test_listener(aggregator);
+        Stats stats;
+        auto test_listener_existence_scope = streams_manager.new_scoped_test_listener(Aggregator(stats));
 
         SimpleEntry entry;
 
@@ -180,10 +183,10 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
         ASSERT_TRUE(listener_from_three_to_five_not_inclusive.ReachedEnd());
 
-        ASSERT_EQ(
-            "[0]:{1,'one'},[1]:{2,'two'},[2]:{3,'three'},[3]:{4,'four'},"
-            "[4]:{5,'five'},[5]:{6,'six'},[6]:{7,'seven'",
-            aggregator.data);
+        std::string golden =
+            "[0]:{1,'one'},[1]:{2,'two'},[2]:{3,'three'},[3]:{4,'four'},[4]:{5,'five'},[5]:{6,'six'},[6]:{7,'seven'"
+            "}";
+        ASSERT_EQ(golden, stats.data);
     }
 }
 
@@ -206,10 +209,10 @@ TEST(StreamManagerSmokeTest, DataInjected) {
     {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.
         Impl streams_manager(storage, StreamManagerParams());
-        Aggregator aggregator;
-        EXPECT_EQ(0, aggregator.count);
-        auto async_listener = streams_manager.foo_listener(aggregator);
-        EXPECT_EQ(1, aggregator.count);
-        EXPECT_EQ("[0]:{42,'Yay!'}", aggregator.data);
+        Stats stats;
+        EXPECT_EQ(0, stats.count);
+        auto foo_listener_existence_scope = streams_manager.new_scoped_foo_listener(Aggregator(stats));
+        EXPECT_EQ(1, stats.count);
+        EXPECT_EQ("[0]:{42,'Yay!'}", stats.data);
     }
 }
