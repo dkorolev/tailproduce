@@ -97,9 +97,35 @@ namespace TailProduce {
             return reached_end;
         }
 
-        // ExportEntry() populates the passed in entry object if data is available.
+        // ProcessEntrySync() deserealizes the entry and calls the supplied method of the respective type.
+        // TODO(dkorolev): Support polymorphic types.
+        template<typename T_PROCESSOR> void ProcessEntrySync(T_PROCESSOR processor, bool require_data = true) {
+            if (!HasData()) {
+                if (require_data) {
+                    VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
+                    throw ::TailProduce::ListenerHasNoDataToRead();
+                } else {
+                    return;
+                }
+            }
+            if (!iterator) {
+                VLOG(3) << "throw ::TailProduce::InternalError();";
+                throw ::TailProduce::InternalError();
+            }
+            // TODO(dkorolev): Make this proof-of-concept code efficient.
+            ::TailProduce::Storage::VALUE_TYPE const value = iterator->Value();
+            const std::string value_as_string(value.begin(), value.end());
+            std::istringstream is(value_as_string);
+            typename T::entry_type entry;
+            T::entry_type::DeSerializeEntry(is, entry);
+            processor(entry);
+        }
+
+        // NOTE: ExportEntry() is deprecated in favor of ProcessEntrySync()
+        // to allow statically supporting polymorphic types.
+        // DELETED_ExportEntry() populates the passed in entry object if data is available.
         // Will throw an exception if no data is available.
-        void ExportEntry(typename T::entry_type& entry) {
+        void DELETED_ExportEntry(typename T::entry_type& entry) {
             if (!HasData()) {
                 VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
                 throw ::TailProduce::ListenerHasNoDataToRead();

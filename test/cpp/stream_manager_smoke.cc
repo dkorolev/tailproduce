@@ -50,14 +50,16 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
-        listener_all.ExportEntry(entry);
+        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(1, entry.ikey);
+            EXPECT_EQ("one", entry.data);
+        });
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(1, entry.ikey);
-        EXPECT_EQ("one", entry.data);
-        listener_all.ExportEntry(entry);
+        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(2, entry.ikey);
+            EXPECT_EQ("two", entry.data);
+        });
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(2, entry.ikey);
-        EXPECT_EQ(("two"), entry.data);
         ASSERT_FALSE(listener_all.HasData());
         ASSERT_FALSE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
@@ -69,38 +71,44 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
-        listener_all.ExportEntry(entry);
+        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(3, entry.ikey);
+            EXPECT_EQ("three", entry.data);
+        });
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(3, entry.ikey);
-        EXPECT_EQ(("three"), entry.data);
-        listener_all.ExportEntry(entry);
+        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(4, entry.ikey);
+            EXPECT_EQ("four", entry.data);
+        });
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(4, entry.ikey);
-        EXPECT_EQ(("four"), entry.data);
         ASSERT_FALSE(listener_all.HasData());
 
         ASSERT_TRUE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
-        listener_from_three.ExportEntry(entry);
+        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(3, entry.ikey);
+            EXPECT_EQ("three", entry.data);
+        });
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(3, entry.ikey);
-        EXPECT_EQ(("three"), entry.data);
-        listener_from_three.ExportEntry(entry);
+        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(4, entry.ikey);
+            EXPECT_EQ("four", entry.data);
+        });
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(4, entry.ikey);
-        EXPECT_EQ(("four"), entry.data);
         ASSERT_FALSE(listener_from_three.HasData());
 
         ASSERT_TRUE(listener_from_three_to_five_not_inclusive.HasData());
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.ReachedEnd());
-        listener_from_three_to_five_not_inclusive.ExportEntry(entry);
+        listener_from_three_to_five_not_inclusive.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(3, entry.ikey);
+            EXPECT_EQ("three", entry.data);
+        });
         listener_from_three_to_five_not_inclusive.AdvanceToNextEntry();
-        EXPECT_EQ(3, entry.ikey);
-        EXPECT_EQ(("three"), entry.data);
-        listener_from_three_to_five_not_inclusive.ExportEntry(entry);
+        listener_from_three_to_five_not_inclusive.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(4, entry.ikey);
+            EXPECT_EQ("four", entry.data);
+        });
         listener_from_three_to_five_not_inclusive.AdvanceToNextEntry();
-        EXPECT_EQ(4, entry.ikey);
-        EXPECT_EQ(("four"), entry.data);
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
 
         publisher.Push(SimpleEntry(5, "five"));
@@ -109,34 +117,40 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
-        listener_all.ExportEntry(entry);
+        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(5, entry.ikey);
+            EXPECT_EQ("five", entry.data);
+        });
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(5, entry.ikey);
-        EXPECT_EQ(("five"), entry.data);
-        listener_all.ExportEntry(entry);
+        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(6, entry.ikey);
+            EXPECT_EQ("six", entry.data);
+        });
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(6, entry.ikey);
-        EXPECT_EQ(("six"), entry.data);
-        listener_all.ExportEntry(entry);
+        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(7, entry.ikey);
+            EXPECT_EQ(("seven"), entry.data);
+        });
         listener_all.AdvanceToNextEntry();
-        EXPECT_EQ(7, entry.ikey);
-        EXPECT_EQ(("seven"), entry.data);
         ASSERT_FALSE(listener_all.HasData());
 
         ASSERT_TRUE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
-        listener_from_three.ExportEntry(entry);
+        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(5, entry.ikey);
+            EXPECT_EQ(("five"), entry.data);
+        });
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(5, entry.ikey);
-        EXPECT_EQ(("five"), entry.data);
-        listener_from_three.ExportEntry(entry);
+        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(6, entry.ikey);
+            EXPECT_EQ(("six"), entry.data);
+        });
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(6, entry.ikey);
-        EXPECT_EQ(("six"), entry.data);
-        listener_from_three.ExportEntry(entry);
+        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(7, entry.ikey);
+            EXPECT_EQ(("seven"), entry.data);
+        });
         listener_from_three.AdvanceToNextEntry();
-        EXPECT_EQ(7, entry.ikey);
-        EXPECT_EQ(("seven"), entry.data);
         ASSERT_FALSE(listener_from_three.HasData());
 
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
@@ -170,8 +184,9 @@ TEST(StreamManagerSmokeTest, DataInjected) {
         ASSERT_TRUE(listener.HasData());
         ASSERT_FALSE(listener.ReachedEnd());
 
-        listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.ikey);
-        EXPECT_EQ("Yay!", entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(42, entry.ikey);
+            EXPECT_EQ("Yay!", entry.data);
+        });
     }
 }

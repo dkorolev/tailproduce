@@ -257,15 +257,17 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ExportEntry(entry);
-        EXPECT_EQ(2, entry.ikey);
-        EXPECT_EQ(("two"), entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(2, entry.ikey);
+            EXPECT_EQ(("two"), entry.data);
+        });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ExportEntry(entry);
-        EXPECT_EQ(3, entry.ikey);
-        EXPECT_EQ(("three"), entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(3, entry.ikey);
+            EXPECT_EQ(("three"), entry.data);
+        });
         listener.AdvanceToNextEntry();
         EXPECT_FALSE(listener.HasData());
         EXPECT_TRUE(listener.ReachedEnd());
@@ -291,21 +293,24 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             streams_manager.test, std::make_pair(SimpleOrderKey(42), 2), std::make_pair(SimpleOrderKey(42), 5));
         ASSERT_TRUE(!listener.ReachedEnd());
         ASSERT_TRUE(listener.HasData());
-        listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.ikey);
-        EXPECT_EQ(("i2"), entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(42, entry.ikey);
+            EXPECT_EQ(("i2"), entry.data);
+        });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.ikey);
-        EXPECT_EQ(("i3"), entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(42, entry.ikey);
+            EXPECT_EQ(("i3"), entry.data);
+        });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ExportEntry(entry);
-        EXPECT_EQ(42, entry.ikey);
-        EXPECT_EQ(("i4"), entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(42, entry.ikey);
+            EXPECT_EQ(("i4"), entry.data);
+        });
         listener.AdvanceToNextEntry();
         EXPECT_FALSE(listener.HasData());
         EXPECT_TRUE(listener.ReachedEnd());
@@ -329,9 +334,10 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(10, "ten"));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ExportEntry(entry);
-        EXPECT_EQ(10, entry.ikey);
-        EXPECT_EQ(("ten"), entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(10, entry.ikey);
+            EXPECT_EQ(("ten"), entry.data);
+        });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
@@ -339,9 +345,10 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(15, "fifteen"));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ExportEntry(entry);
-        EXPECT_EQ(15, entry.ikey);
-        EXPECT_EQ(("fifteen"), entry.data);
+        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+            EXPECT_EQ(15, entry.ikey);
+            EXPECT_EQ(("fifteen"), entry.data);
+        });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
@@ -349,7 +356,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(20, "twenty: ignored as part the non-included end the of range"));
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(listener.ReachedEnd());
-        ASSERT_THROW(listener.ExportEntry(entry), ::TailProduce::ListenerHasNoDataToRead);
+        ASSERT_THROW(listener.ProcessEntrySync([](SimpleEntry){}), ::TailProduce::ListenerHasNoDataToRead);
         ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
     }
 
