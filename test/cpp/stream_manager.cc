@@ -127,7 +127,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         STREAM_MANAGER streams_manager(storage, StreamManagerParams());
 
         // Start from zero.
-        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(streams_manager.test);
+        typename STREAM_MANAGER::test_type::INTERNAL_unsafe_listener_type listener(streams_manager.test);
         typename STREAM_MANAGER::test_type::head_pair_type head;
 
         head = listener.GetHead();
@@ -258,7 +258,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(5, "five"));
 
         SimpleEntry entry;
-        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
+        typename STREAM_MANAGER::test_type::INTERNAL_unsafe_listener_type listener(
             streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
@@ -294,7 +294,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(42, "i6"));
 
         SimpleEntry entry;
-        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
+        typename STREAM_MANAGER::test_type::INTERNAL_unsafe_listener_type listener(
             streams_manager.test, std::make_pair(SimpleOrderKey(42), 2), std::make_pair(SimpleOrderKey(42), 5));
         ASSERT_TRUE(!listener.ReachedEnd());
         ASSERT_TRUE(listener.HasData());
@@ -329,7 +329,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
         SimpleEntry entry;
         auto& publisher = streams_manager.test_publisher;
-        typename STREAM_MANAGER::test_type::unsafe_listener_type listener(
+        typename STREAM_MANAGER::test_type::INTERNAL_unsafe_listener_type listener(
             streams_manager.test, SimpleOrderKey(10), SimpleOrderKey(20));
 
         publisher.Push(SimpleEntry(5, "five: ignored as before the beginning of the range"));
@@ -430,7 +430,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             typedef SimpleOrderKey order_key_type;
             typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type;
             typedef typename TypeParam::storage_type storage_type;
-            typedef ::TailProduce::UnsafeListener<test_type> unsafe_listener_type;
+            typedef ::TailProduce::INTERNAL_UnsafeListener<test_type> INTERNAL_unsafe_listener_type;
             typedef std::pair<order_key_type, uint32_t> head_pair_type;
             typedef ::TailProduce::StorageKeyBuilder<test_type> key_builder_type;
             StreamManagerImpl* manager;
