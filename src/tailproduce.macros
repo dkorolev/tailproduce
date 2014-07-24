@@ -14,7 +14,9 @@
         } \
         NAME(storage_type& storage, \
              const ::TailProduce::StreamManagerParams& params = ::TailProduce::StreamManagerParams::FromCommandLineFlags()) \
-          : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) {} \
+          : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) { \
+            ::TailProduce::EnsureThereAreNoStreamsWithoutPublishers(streams_declared_, stream_publishers_declared_); \
+        } \
         NAME(const NAME&) = delete; \
         NAME(NAME&&) = delete; \
         void operator=(const NAME&) = delete; \
@@ -26,6 +28,8 @@
         static_assert(std::is_base_of<TS, storage_type>::value, \
                       "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE::storage_type should be derived from Storage."); \
         ::TailProduce::StreamsRegistry registry_;  \
+        std::set<std::string> streams_declared_; \
+        std::set<std::string> stream_publishers_declared_; \
       public: \
         typedef BASE captured_base; \
         const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
@@ -60,6 +64,15 @@
             } \
         }; \
         NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE)
+
+#define TAILPRODUCE_PUBLISHER(MANAGER, NAME) \
+        struct NAME##_publisher_type : ::TailProduce::Publisher<NAME##_type> { \
+            typedef ::TailProduce::Publisher<NAME##_type> base; \
+            explicit NAME##_publisher_type(MANAGER* manager) : base(manager->test) { \
+                manager->stream_publishers_declared_.insert(#NAME); \
+            } \
+        }; \
+        NAME##_publisher_type NAME##_publisher = NAME##_publisher_type(this);
 
 #define TAILPRODUCE_STATIC_FRAMEWORK_END() \
     }
