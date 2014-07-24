@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <sstream>
 #include <iomanip>
+#include "storage.h"
 
 namespace TailProduce {
     // An interface to extract order keys in certain types. With fixed-size serialization.
