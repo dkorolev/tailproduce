@@ -6,7 +6,7 @@
 #include "storage.h"
 
 namespace TailProduce {
-    template <typename It> struct DbMIterator {
+    template <typename It> class DbMIterator {
       public:
         DbMIterator(DbMIterator&&) = default;  // TODO: understand how a shared_ptr responds with move dynamics??
         DbMIterator(It val) : it_(val) {
@@ -14,14 +14,21 @@ namespace TailProduce {
         void Next() {
             it_->Next();
         }
+
         ::TailProduce::Storage::KEY_TYPE Key() const {
             return it_->Key();
         }
+
         ::TailProduce::Storage::VALUE_TYPE Value() const {
             return it_->Value();
         }
+
         bool Done() {
             return it_->Done();
+        }
+
+        bool IsValid() const {
+            return it_->IsValid();
         }
 
       private:
