@@ -21,15 +21,7 @@ TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB>
                                                     ::TailProduce::Storage::KEY_TYPE const& startKey,
                                                     ::TailProduce::Storage::KEY_TYPE const& endKey)
     : db_(db), keyPrefix_(keyPrefix), endKey_(endKey) {
-
-    ::TailProduce::Storage::KEY_TYPE key;
-
-    if (startKey.substr(0, keyPrefix.length()) != keyPrefix) {
-        key = keyPrefix + startKey;
-    } else {
-        key = startKey;
-    }
-
+    ::TailProduce::Storage::KEY_TYPE key = keyPrefix + startKey;
     it_.reset(db_->NewIterator(leveldb::ReadOptions()));
     it_->Seek(key);
 }
