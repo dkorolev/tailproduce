@@ -5,7 +5,7 @@
 
 #include "../../src/tailproduce.h"
 
-#include "mocks/stream_manager.h"
+//#include "mocks/stream_manager.h"
 #include "mocks/data_storage.h"
 #include "mocks/test_client.h"
 
@@ -35,7 +35,7 @@ struct Aggregator {
 };
 
 TEST(StreamManagerSmokeTest, SmokeTest) {
-    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<MockDataStorage>);
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
@@ -191,7 +191,7 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 }
 
 TEST(StreamManagerSmokeTest, DataInjected) {
-    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, StreamManager<MockDataStorage>);
     TAILPRODUCE_STREAM(foo, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_PUBLISHER(foo);
     TAILPRODUCE_STATIC_FRAMEWORK_END();

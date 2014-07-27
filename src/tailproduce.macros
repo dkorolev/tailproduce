@@ -22,9 +22,9 @@
         NAME(NAME&&) = delete; \
         void operator=(const NAME&) = delete; \
       private: \
-        using TSM = ::TailProduce::StreamManager; \
+        using TSM = ::TailProduce::StreamManagerBase; \
         static_assert(std::is_base_of<TSM, BASE>::value, \
-                      "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE should be derived from StreamManager."); \
+                      "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE should be derived from StreamManagerBase."); \
         using TS = ::TailProduce::Storage; \
         static_assert(std::is_base_of<TS, storage_type>::value, \
                       "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE::storage_type should be derived from Storage."); \
@@ -62,7 +62,7 @@
                 stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name), \
                 name(stream_name), \
                 key_builder(name), \
-                head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) { \
+                head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) { \
                 manager->streams_declared_.insert(#NAME); \
             } \
         }; \

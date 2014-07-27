@@ -27,7 +27,7 @@
 
 #include "../../src/tailproduce.h"
 
-#include "mocks/stream_manager.h"
+//#include "mocks/stream_manager.h"
 #include "mocks/data_storage.h"
 #include "mocks/test_client.h"
 
@@ -401,8 +401,9 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 template <typename T> class StreamManagerTest : public ::testing::Test {};
 
 // TODO(dkorolev): Add LevelDB data storage along with the mock one.
-typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
-TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
+//typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
+//TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
+TYPED_TEST_CASE(StreamManagerTest, TestStreamManagerImplementationsImplementationsTypeList);
 
 // Runs the tests against the static framework defined by macros.
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
@@ -438,9 +439,9 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         void operator=(const StreamManagerImpl&) = delete;
 
       private:
-        using TSM = ::TailProduce::StreamManager;
+        using TSM = ::TailProduce::StreamManagerBase;
         static_assert(std::is_base_of<TSM, TypeParam>::value,
-                      "StreamManagerImpl: TypeParam should be derived from StreamManager.");
+                      "StreamManagerImpl: TypeParam should be derived from StreamManagerBase.");
         using TS = ::TailProduce::Storage;
         static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value,
                       "StreamManagerImpl: TypeParam::storage_type should be derived from Storage.");
@@ -475,7 +476,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                   stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name),
                   name(stream_name),
                   key_builder(name),
-                  head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type,
+                  head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<order_key_type,
                                                                              key_builder_type,
                                                                              storage_type>(name,
                                                                                            key_builder,

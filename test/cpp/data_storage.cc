@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <boost/filesystem.hpp>
+#include "mocks/data_storage.h"
 
+/*
+#include <boost/filesystem.hpp>
 #include "../../src/tailproduce.h"
 #include "../../src/helpers.h"
 
@@ -13,10 +15,12 @@
 
 #include "mocks/data_storage.h"
 
+*/
 using ::TailProduce::bytes;
 using ::TailProduce::antibytes;
 
 template <typename T> class DataStorageTest : public ::testing::Test {};
+/*
 
 struct LevelDBBeforeTestDeleter {
     explicit LevelDBBeforeTestDeleter(const std::string& pathname) {
@@ -32,8 +36,11 @@ struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBImpl {
     }
 };
 
-typedef ::testing::Types<MockDataStorage, LevelDBTestDataStorage> DataStorageImplementations;
-TYPED_TEST_CASE(DataStorageTest, DataStorageImplementations);
+//typedef ::testing::Types<MockDataStorage, LevelDBTestDataStorage> DataStorageImplementations;
+//typedef ::testing::Types<MockDataStorage> DataStorageImplementations;
+*/
+
+TYPED_TEST_CASE(DataStorageTest, TestDataStorageImplementationsTypeList);
 
 // TODO(dkorolev): Add similar tests to other files.
 TYPED_TEST(DataStorageTest, HasRightBaseClass) {

@@ -5,11 +5,12 @@
 #include <map>
 #include <string>
 
+#include <gtest/gtest.h>
 #include <glog/logging.h>
 
 #include "../../../src/tailproduce.h"
 
-// MockDataStorage supports the following functionality:
+// INTERNAL_MockDataStorage supports the following functionality:
 //
 // 1) Store data as binary key-value pairs.
 //    The design decision is to use std::string-s for keys and std::vector<uint8_t>-s for values.
@@ -23,12 +24,12 @@
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
-class MockDataStorage : ::TailProduce::Storage {
+class INTERNAL_MockDataStorage : ::TailProduce::Storage {
   public:
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
-        VLOG(3) << "MockDataStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
+        VLOG(3) << "INTERNAL_MockDataStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
                 << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
             VLOG(3) << "Attempted to Set() an entry with an empty key.";
@@ -80,7 +81,7 @@ class MockDataStorage : ::TailProduce::Storage {
             VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
-        VLOG(3) << "MockDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
+        VLOG(3) << "INTERNAL_MockDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
                 << ::TailProduce::antibytes(value) << "'.";
     }
 
@@ -92,7 +93,7 @@ class MockDataStorage : ::TailProduce::Storage {
     }
 
     struct StorageIterator {
-        StorageIterator(MockDataStorage& master,
+        StorageIterator(INTERNAL_MockDataStorage& master,
                         const KEY_TYPE& begin = KEY_TYPE(),
                         const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
@@ -143,5 +144,34 @@ class MockDataStorage : ::TailProduce::Storage {
   private:
     MAP_TYPE data_;
 };
+
+// LevelDB test wrapper available as well.
+// TODO(dkorolev): Make sure what is the best way to unify it. It should probably be outside this file.
+
+#include <boost/filesystem.hpp>
+
+#include "../../src/tailproduce.h"
+#include "../../src/helpers.h"
+
+#include "../../src/dbm_leveldb.h"
+#include "../../src/dbm_leveldb_iterator.h"
+
+struct LevelDBBeforeTestDeleter {
+    explicit LevelDBBeforeTestDeleter(const std::string& pathname) {
+        boost::filesystem::remove_all(pathname);
+    }
+};
+
+typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBImpl;
+struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBImpl {
+    const std::string pathname_ = "../leveldbTest";
+    ::TailProduce::DbMLevelDb db_;
+    LevelDBTestDataStorage() : LevelDBBeforeTestDeleter(pathname_), db_(pathname_), LevelDBImpl(db_) {
+    }
+};
+
+//typedef ::testing::Types<INTERNAL_MockDataStorage, LevelDBTestDataStorage> TestDataStorageImplementationsTypeList;
+typedef ::testing::Types<INTERNAL_MockDataStorage> TestDataStorageImplementationsTypeList;
+typedef ::testing::Types<::TailProduce::StreamManager<INTERNAL_MockDataStorage>> TestStreamManagerImplementationsImplementationsTypeList;
 
 #endif  // TAILPRODUCE_MOCKS_DATA_STORAGE_H
