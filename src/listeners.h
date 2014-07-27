@@ -160,7 +160,7 @@ namespace TailProduce {
 
       private:
         typedef typename T::storage_type storage_type;
-        typedef typename T::storage_type::Iterator iterator_type;
+        typedef typename T::storage_type::StorageIterator iterator_type;
         const T& stream;
         storage_type& storage;
         ::TailProduce::Storage::KEY_TYPE cursor_key;

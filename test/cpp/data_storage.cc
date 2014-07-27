@@ -1,16 +1,38 @@
 #include <gtest/gtest.h>
 
+#include <boost/filesystem.hpp>
+
 #include "../../src/tailproduce.h"
 #include "../../src/helpers.h"
+
+#include <glog/logging.h>
+
+// TODO(dkorolev): Ask Brian whether we should unify this.
+#include "../../src/dbm_leveldb.h"
+#include "../../src/dbm_leveldb_iterator.h"
 
 #include "mocks/data_storage.h"
 
 using ::TailProduce::bytes;
+using ::TailProduce::antibytes;
 
 template <typename T> class DataStorageTest : public ::testing::Test {};
 
-// TODO(dkorolev): Add more data storages here, specifically the LevelDB one once it's ready.
-typedef ::testing::Types<MockDataStorage> DataStorageImplementations;
+struct LevelDBBeforeTestDeleter {
+    explicit LevelDBBeforeTestDeleter(const std::string& pathname) {
+        boost::filesystem::remove_all(pathname);
+    }
+};
+
+typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBImpl;
+struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBImpl {
+    const std::string pathname_ = "../leveldbTest";
+    ::TailProduce::DbMLevelDb db_;
+    LevelDBTestDataStorage() : LevelDBBeforeTestDeleter(pathname_), db_(pathname_), LevelDBImpl(db_) {
+    }
+};
+
+typedef ::testing::Types<MockDataStorage, LevelDBTestDataStorage> DataStorageImplementations;
 TYPED_TEST_CASE(DataStorageTest, DataStorageImplementations);
 
 // TODO(dkorolev): Add similar tests to other files.
@@ -52,6 +74,24 @@ TYPED_TEST(DataStorageTest, BasicExceptions) {
     ASSERT_THROW(storage.Get("baz"), ::TailProduce::StorageNoDataException);
 }
 
+TYPED_TEST(DataStorageTest, SimpleIterator) {
+    TypeParam storage;
+    storage.Set("foo:1", bytes("one"));
+    storage.Set("foo:2", bytes("two"));
+    storage.Set("zzz:", bytes("will not get here"));
+    auto iterator = storage.CreateStorageIterator("foo:", "foo:\xff");
+    ASSERT_FALSE(iterator.Done());
+    EXPECT_EQ("foo:1", iterator.Key());
+    EXPECT_EQ("one", antibytes(iterator.Value()));
+    iterator.Next();
+    ASSERT_FALSE(iterator.Done());
+    EXPECT_EQ("foo:2", iterator.Key());
+    EXPECT_EQ("two", antibytes(iterator.Value()));
+    iterator.Next();
+    ASSERT_TRUE(iterator.Done());
+    ASSERT_THROW(iterator.Next(), ::TailProduce::StorageIteratorOutOfBoundsException);
+}
+
 TYPED_TEST(DataStorageTest, BoundedRangeIterator) {
     TypeParam storage;
     storage.Set("001", bytes("one"));
@@ -59,14 +99,14 @@ TYPED_TEST(DataStorageTest, BoundedRangeIterator) {
     storage.Set("003", bytes("three"));
     storage.Set("004", bytes("four"));
     storage.Set("005", bytes("five"));
-    typename TypeParam::Iterator iterator(storage, "002", "004");
+    typename TypeParam::StorageIterator iterator = storage.CreateStorageIterator("002", "004");
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("two"));
-    ASSERT_TRUE(iterator.Key() == "002");
+    EXPECT_EQ("002", iterator.Key());
+    EXPECT_EQ("two", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("three"));
-    ASSERT_TRUE(iterator.Key() == "003");
+    EXPECT_EQ("003", iterator.Key());
+    EXPECT_EQ("three", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
 }
@@ -78,18 +118,18 @@ TYPED_TEST(DataStorageTest, SemiBoundedRangeIterator) {
     storage.Set("3", bytes("three"));
     storage.Set("4", bytes("four"));
     storage.Set("5", bytes("five"));
-    typename TypeParam::Iterator iterator(storage, "3");
+    typename TypeParam::StorageIterator iterator = storage.CreateStorageIterator("3");
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("three"));
-    ASSERT_TRUE(iterator.Key() == "3");
+    EXPECT_EQ("3", iterator.Key());
+    EXPECT_EQ("three", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("four"));
-    ASSERT_TRUE(iterator.Key() == "4");
+    EXPECT_EQ("4", iterator.Key());
+    EXPECT_EQ("four", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("five"));
-    ASSERT_TRUE(iterator.Key() == "5");
+    EXPECT_EQ("5", iterator.Key());
+    EXPECT_EQ("five", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
 }
@@ -101,14 +141,15 @@ TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBounds) {
     storage.Set("3", bytes("three"));
     storage.Set("4", bytes("four"));
     storage.Set("5", bytes("five"));
-    typename TypeParam::Iterator iterator(storage, "2", "4");
+    // Test `auto` with `storage.CreateStorageIterator()` as well.
+    auto iterator = storage.CreateStorageIterator("2", "4");
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("two"));
-    ASSERT_TRUE(iterator.Key() == "2");
+    EXPECT_EQ("2", iterator.Key());
+    EXPECT_EQ("two", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("three"));
-    ASSERT_TRUE(iterator.Key() == "3");
+    EXPECT_EQ("3", iterator.Key());
+    EXPECT_EQ("three", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
     ASSERT_THROW(iterator.Next(), ::TailProduce::StorageIteratorOutOfBoundsException);
@@ -118,10 +159,10 @@ TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBounds) {
     TypeParam storage;
     storage.Set("1", bytes("one"));
     storage.Set("2", bytes("two"));
-    typename TypeParam::Iterator iterator(storage, "2");
+    auto iterator = storage.CreateStorageIterator("", "2");
     ASSERT_FALSE(iterator.Done());
-    ASSERT_TRUE(iterator.Value() == bytes("two"));
-    ASSERT_TRUE(iterator.Key() == "2");
+    EXPECT_EQ("1", iterator.Key());
+    EXPECT_EQ("one", antibytes(iterator.Value()));
     iterator.Next();
     ASSERT_TRUE(iterator.Done());
     ASSERT_THROW(iterator.Next(), ::TailProduce::StorageIteratorOutOfBoundsException);

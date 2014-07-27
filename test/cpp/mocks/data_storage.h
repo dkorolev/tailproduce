@@ -57,7 +57,7 @@ class MockDataStorage : ::TailProduce::Storage {
         Set(key, value, true);
     }
 
-    bool Has(const KEY_TYPE& key) {
+    bool Has(const KEY_TYPE& key) const {
         if (key.empty()) {
             VLOG(3) << "Attempted to Has() with an empty key.";
             VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -91,10 +91,13 @@ class MockDataStorage : ::TailProduce::Storage {
         return value;
     }
 
-    struct Iterator {
-        Iterator(MockDataStorage& master, const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE())
+    struct StorageIterator {
+        StorageIterator(MockDataStorage& master,
+                        const KEY_TYPE& begin = KEY_TYPE(),
+                        const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
         }
+        StorageIterator(StorageIterator&&) = default;
 
         bool Valid() const {
             return cit_ != data_.end() && (end_.empty() || cit_->first < end_);
@@ -128,11 +131,14 @@ class MockDataStorage : ::TailProduce::Storage {
         KEY_TYPE end_;
         typename MAP_TYPE::const_iterator cit_;
 
-        Iterator() = delete;
-        Iterator(const Iterator&) = delete;
-        Iterator(Iterator&&) = delete;
-        void operator=(const Iterator&) = delete;
+        StorageIterator() = delete;
+        StorageIterator(const StorageIterator&) = delete;
+        void operator=(const StorageIterator&) = delete;
     };
+
+    StorageIterator CreateStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
+        return StorageIterator(*this, begin, end);
+    }
 
   private:
     MAP_TYPE data_;

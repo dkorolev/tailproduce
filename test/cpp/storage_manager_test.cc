@@ -1,3 +1,5 @@
+// TODO(dkorolev): Ask Brian whether this test should be merged with the data_storage.cc one (and renamed?).
+
 #include <gtest/gtest.h>
 #include <exception>
 #include <chrono>
@@ -38,4 +40,3 @@ TEST(StorageManagerTest, AddsEntries) {
     EXPECT_EQ(storage.Get(makeKey(millis, "foo")), bytes("bar"));
     EXPECT_EQ(storage.Get(makeKey(millis, "1")), bytes(42));
 }
-

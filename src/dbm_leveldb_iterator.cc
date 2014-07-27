@@ -1,6 +1,10 @@
 #include <exception>
 #include <cstring>
+
+#include <glog/logging.h>
+
 #include "leveldb/db.h"
+
 #include "dbm_leveldb_iterator.h"
 
 #if 0
@@ -16,14 +20,12 @@ void showValid( leveldb::Iterator* it_) {
 
 #endif
 
-TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db,
-                                                    ::TailProduce::Storage::KEY_TYPE const& keyPrefix,
+TailProduce::DbMLevelDbIterator::DbMLevelDbIterator(leveldb::DB& db,
                                                     ::TailProduce::Storage::KEY_TYPE const& startKey,
                                                     ::TailProduce::Storage::KEY_TYPE const& endKey)
-    : db_(db), keyPrefix_(keyPrefix), endKey_(endKey) {
-    ::TailProduce::Storage::KEY_TYPE key = keyPrefix + startKey;
-    it_.reset(db_->NewIterator(leveldb::ReadOptions()));
-    it_->Seek(key);
+    : db_(db), endKey_(endKey) {
+    it_.reset(db_.NewIterator(leveldb::ReadOptions()));
+    it_->Seek(startKey);
 }
 
 void TailProduce::DbMLevelDbIterator::Next() {
@@ -46,15 +48,8 @@ TailProduce::Storage::VALUE_TYPE TailProduce::DbMLevelDbIterator::Value() const 
     throw std::out_of_range("Can not obtain a Value() from a non valid iterator.");
 }
 
-bool TailProduce::DbMLevelDbIterator::IsValid() const {
-    return it_->Valid();
-}
-
-bool TailProduce::DbMLevelDbIterator::Done() {
-    if (!it_->Valid()) return true;  // We are done if the iterator is not valid.
-
-    ::TailProduce::Storage::KEY_TYPE key = it_->key().ToString();
-
-    return ((!endKey_.empty() && key >= endKey_) ||  // We are done if we have progressed beyond the last specified
-            (key.compare(0, keyPrefix_.length(), keyPrefix_) != 0));  // Or we are done if the keyPrefix is changing
+// TODO(dkorolev): Chat with Brian. I have kept only the HasData() method in the source file,
+// to me this looks as the most readable and the least error-prone solution.
+bool TailProduce::DbMLevelDbIterator::HasData() const {
+    return it_->Valid() && (endKey_.empty() || it_->key().ToString() < endKey_);
 }

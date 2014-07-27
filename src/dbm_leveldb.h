@@ -9,27 +9,29 @@
 
 namespace TailProduce {
     class DbMLevelDb {
-        class Iterator;
-
       public:
+        // TODO(dkorolev): This can certainly be simplified. Chat with Brian.
+        typedef std::unique_ptr<DbMLevelDbIterator> StorageIteratorInnerType;
+        typedef DbMIterator<StorageIteratorInnerType> StorageIterator;
+
         DbMLevelDb(std::string const& dbname = "/tmp/tailproducedb");
         ::TailProduce::Storage::VALUE_TYPE GetRecord(::TailProduce::Storage::KEY_TYPE const& key);
         void AdminPutRecord(::TailProduce::Storage::KEY_TYPE const& key,
                             ::TailProduce::Storage::VALUE_TYPE const& value);
         void PutRecord(::TailProduce::Storage::KEY_TYPE const& key, ::TailProduce::Storage::VALUE_TYPE const& value);
-        void DeleteRecord(::TailProduce::Storage::KEY_TYPE const& key);
+        bool HasRecord(::TailProduce::Storage::KEY_TYPE const& key);
 
-        DbMIterator<std::shared_ptr<DbMLevelDbIterator>> GetIterator(
-            ::TailProduce::Storage::KEY_TYPE const& keyPrefix,
+        // TODO(dkorolev): Add a generic test for DeleteRecord(). So far, removed it.
+        void UNUSED_DeleteRecord(::TailProduce::Storage::KEY_TYPE const& key);
+
+        StorageIterator CreateStorageIterator(
             ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
             ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE()) {
-            std::shared_ptr<DbMLevelDbIterator> it(new DbMLevelDbIterator(db_, keyPrefix, startKey, endKey));
-            return DbMIterator<std::shared_ptr<DbMLevelDbIterator>>(it);
+            return StorageIterator(StorageIteratorInnerType(new DbMLevelDbIterator(*db_.get(), startKey, endKey)));
         }
 
       private:
-        std::shared_ptr<leveldb::DB> db_;
-        std::string dbname_;
+        std::unique_ptr<leveldb::DB> db_;
     };
 };
 
