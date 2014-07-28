@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "mocks/data_storage.h"
+#include "helpers/storages.h"
 
 using ::TailProduce::bytes;
 using ::TailProduce::antibytes;

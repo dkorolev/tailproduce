@@ -27,8 +27,8 @@
 
 #include "../../src/tailproduce.h"
 
-#include "mocks/data_storage.h"
-#include "mocks/test_client.h"
+#include "helpers/storages.h"
+#include "helpers/test_client.h"
 
 using ::TailProduce::bytes;
 using ::TailProduce::antibytes;

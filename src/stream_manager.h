@@ -22,12 +22,12 @@ namespace TailProduce {
                                                                T_STORAGE& storage) {
             ::TailProduce::Storage::VALUE_TYPE storage_value;
             try {
-                storage.Get(key_builder.head_storage_key, storage_value);
+                // TODO(dkorolev): Ask Brian whether ParseStorageKey() should accept both strings and byte arrays?
+                return T_STORAGE_KEY_BUILDER::ParseStorageKey(antibytes(storage.Get(key_builder.head_storage_key)));
             } catch (const StorageException&) {
                 VLOG(3) << "throw StreamDoesNotExistException();";
                 throw StreamDoesNotExistException();
             }
-            return T_STORAGE_KEY_BUILDER::ParseStorageKey(antibytes(storage_value));
         }
     };
 

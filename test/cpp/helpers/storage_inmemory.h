@@ -1,5 +1,5 @@
-#ifndef TAILPRODUCE_MOCKS_DATA_STORAGE_H
-#define TAILPRODUCE_MOCKS_DATA_STORAGE_H
+#ifndef TAILPRODUCE_TEST_HELPERS_STORAGE_INMEMORY_H
+#define TAILPRODUCE_TEST_HELPERS_STORAGE_INMEMORY_H
 
 #include <vector>
 #include <map>
@@ -68,7 +68,7 @@ class InMemoryTestDataStorage : ::TailProduce::Storage {
         return cit != data_.end();
     }
 
-    void Get(const KEY_TYPE& key, VALUE_TYPE& value) const {
+    VALUE_TYPE Get(const KEY_TYPE& key) const {
         if (key.empty()) {
             VLOG(3) << "Attempted to Get() an entry with an empty key.";
             VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -76,20 +76,13 @@ class InMemoryTestDataStorage : ::TailProduce::Storage {
         }
         const auto cit = data_.find(key);
         if (cit != data_.end()) {
-            value = cit->second;
+            VLOG(3) << "InMemoryTestDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
+                    << ::TailProduce::antibytes(cit->second) << "'.";
+            return cit->second;
         } else {
             VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
-        VLOG(3) << "InMemoryTestDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
-                << ::TailProduce::antibytes(value) << "'.";
-    }
-
-    // TODO(dkorolev): Read more about move semantics of C++ and eliminate a potentially unoptimized copy.
-    VALUE_TYPE Get(const KEY_TYPE& key) const {
-        VALUE_TYPE value;
-        Get(key, value);
-        return value;
     }
 
     struct StorageIterator {
@@ -145,43 +138,4 @@ class InMemoryTestDataStorage : ::TailProduce::Storage {
     MAP_TYPE data_;
 };
 
-// LevelDB test wrapper available as well.
-// TODO(dkorolev): Make sure what is the best way to unify it. It should probably be outside this file.
-
-#include <boost/filesystem.hpp>
-
-#include "../../src/tailproduce.h"
-#include "../../src/helpers.h"
-
-#include "../../src/dbm_leveldb.h"
-#include "../../src/dbm_leveldb_iterator.h"
-
-const std::string LEVELDB_TEST_PATH = "../leveldbTest";
-
-struct LevelDBBeforeTestDeleter {
-    explicit LevelDBBeforeTestDeleter(const std::string& pathname) {
-        boost::filesystem::remove_all(pathname);
-    }
-};
-
-struct LevelDBCreator {
-    explicit LevelDBCreator(const std::string& pathname) : db_(pathname) {
-    }
-    ::TailProduce::DbMLevelDb db_;
-};
-
-typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBStorageManager;
-struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBCreator, LevelDBStorageManager {
-    LevelDBTestDataStorage()
-        : LevelDBBeforeTestDeleter(LEVELDB_TEST_PATH),
-          LevelDBCreator(LEVELDB_TEST_PATH),
-          LevelDBStorageManager(db_) {
-    }
-};
-
-typedef ::testing::Types<InMemoryTestDataStorage, LevelDBTestDataStorage> TestDataStorageImplementationsTypeList;
-
-typedef ::testing::Types<::TailProduce::StreamManager<InMemoryTestDataStorage>>
-    TestStreamManagerImplementationsTypeList;
-
-#endif  // TAILPRODUCE_MOCKS_DATA_STORAGE_H
+#endif  // TAILPRODUCE_TEST_HELPERS_STORAGE_INMEMORY_H

@@ -9,7 +9,7 @@
 
 #include "../../src/tailproduce.h"
 
-#include "mocks/data_storage.h"
+#include "helpers/storages.h"
 
 /*
 
