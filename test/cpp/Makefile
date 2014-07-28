@@ -1,6 +1,12 @@
-CPP=clang++
+CPP=g++
 
-CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/
+# -fprofile-arcs -ftest-coverage are for gcov
+# Extra requirements:
+# * need to run the binary from the same directory as the source files
+# * need to have header files available under the same relative paths
+# * need to run gcov -l for each .cc file
+
+CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/ -fprofile-arcs -ftest-coverage
 
 LDFLAGS=-pthread -lgflags -lglog -lboost_system -lboost_filesystem ../../leveldb/libleveldb.a -lsnappy
 
@@ -25,6 +31,7 @@ all: build ${EXE}
 
 build:
 	mkdir -p build
+	for i in *.cc ; do ln -sf $$PWD/$i $$PWD/build/$i ; done  # For gcov.
 
 build/%.o: %.cc
 	${CPP} ${CPPFLAGS} -o $@ -c $<
