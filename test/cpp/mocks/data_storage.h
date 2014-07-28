@@ -10,7 +10,7 @@
 
 #include "../../../src/tailproduce.h"
 
-// INTERNAL_MockDataStorage supports the following functionality:
+// InMemoryTestDataStorage supports the following functionality:
 //
 // 1) Store data as binary key-value pairs.
 //    The design decision is to use std::string-s for keys and std::vector<uint8_t>-s for values.
@@ -24,12 +24,12 @@
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
-class INTERNAL_MockDataStorage : ::TailProduce::Storage {
+class InMemoryTestDataStorage : ::TailProduce::Storage {
   public:
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
-        VLOG(3) << "INTERNAL_MockDataStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
+        VLOG(3) << "InMemoryTestDataStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
                 << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
             VLOG(3) << "Attempted to Set() an entry with an empty key.";
@@ -81,7 +81,7 @@ class INTERNAL_MockDataStorage : ::TailProduce::Storage {
             VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
-        VLOG(3) << "INTERNAL_MockDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
+        VLOG(3) << "InMemoryTestDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
                 << ::TailProduce::antibytes(value) << "'.";
     }
 
@@ -93,7 +93,7 @@ class INTERNAL_MockDataStorage : ::TailProduce::Storage {
     }
 
     struct StorageIterator {
-        StorageIterator(INTERNAL_MockDataStorage& master,
+        StorageIterator(InMemoryTestDataStorage& master,
                         const KEY_TYPE& begin = KEY_TYPE(),
                         const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
@@ -179,9 +179,9 @@ struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBCreator, LevelD
     }
 };
 
-typedef ::testing::Types<INTERNAL_MockDataStorage, LevelDBTestDataStorage> TestDataStorageImplementationsTypeList;
+typedef ::testing::Types<InMemoryTestDataStorage, LevelDBTestDataStorage> TestDataStorageImplementationsTypeList;
 
-typedef ::testing::Types<::TailProduce::StreamManager<INTERNAL_MockDataStorage>>
+typedef ::testing::Types<::TailProduce::StreamManager<InMemoryTestDataStorage>>
     TestStreamManagerImplementationsTypeList;
 
 #endif  // TAILPRODUCE_MOCKS_DATA_STORAGE_H

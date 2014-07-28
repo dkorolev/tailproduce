@@ -2,44 +2,10 @@
 
 #include "mocks/data_storage.h"
 
-/*
-#include <boost/filesystem.hpp>
-#include "../../src/tailproduce.h"
-#include "../../src/helpers.h"
-
-#include <glog/logging.h>
-
-// TODO(dkorolev): Ask Brian whether we should unify this.
-#include "../../src/dbm_leveldb.h"
-#include "../../src/dbm_leveldb_iterator.h"
-
-#include "mocks/data_storage.h"
-
-*/
 using ::TailProduce::bytes;
 using ::TailProduce::antibytes;
 
 template <typename T> class DataStorageTest : public ::testing::Test {};
-/*
-
-struct LevelDBBeforeTestDeleter {
-    explicit LevelDBBeforeTestDeleter(const std::string& pathname) {
-        boost::filesystem::remove_all(pathname);
-    }
-};
-
-typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBImpl;
-struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBImpl {
-    const std::string pathname_ = "../leveldbTest";
-    ::TailProduce::DbMLevelDb db_;
-    LevelDBTestDataStorage() : LevelDBBeforeTestDeleter(pathname_), db_(pathname_), LevelDBImpl(db_) {
-    }
-};
-
-//typedef ::testing::Types<MockDataStorage, LevelDBTestDataStorage> DataStorageImplementations;
-//typedef ::testing::Types<MockDataStorage> DataStorageImplementations;
-*/
-
 TYPED_TEST_CASE(DataStorageTest, TestDataStorageImplementationsTypeList);
 
 // TODO(dkorolev): Add similar tests to other files.

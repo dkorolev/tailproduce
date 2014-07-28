@@ -9,7 +9,6 @@
 
 #include "../../src/tailproduce.h"
 
-//#include "mocks/stream_manager.h"
 #include "mocks/data_storage.h"
 
 /*
