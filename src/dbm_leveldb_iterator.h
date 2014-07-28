@@ -11,6 +11,8 @@
 namespace TailProduce {
     class DbMLevelDbIterator {
       public:
+        typedef leveldb::DB allowed_constructor_type;
+
         DbMLevelDbIterator(leveldb::DB& db,
                            ::TailProduce::Storage::KEY_TYPE const& startKey,
                            ::TailProduce::Storage::KEY_TYPE const& endKey);

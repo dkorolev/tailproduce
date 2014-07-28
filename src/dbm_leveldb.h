@@ -10,9 +10,7 @@
 namespace TailProduce {
     class DbMLevelDb {
       public:
-        // TODO(dkorolev): This can certainly be simplified. Chat with Brian.
-        typedef std::unique_ptr<DbMLevelDbIterator> StorageIteratorInnerType;
-        typedef DbMIterator<StorageIteratorInnerType> StorageIterator;
+        typedef DbMIterator<DbMLevelDbIterator> StorageIterator;
 
         DbMLevelDb(std::string const& dbname = "/tmp/tailproducedb");
         ::TailProduce::Storage::VALUE_TYPE GetRecord(::TailProduce::Storage::KEY_TYPE const& key);
@@ -27,7 +25,13 @@ namespace TailProduce {
         StorageIterator CreateStorageIterator(
             ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
             ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE()) {
-            return StorageIterator(StorageIteratorInnerType(new DbMLevelDbIterator(*db_.get(), startKey, endKey)));
+            return StorageIterator(*db_.get(), startKey, endKey);
+        }
+
+        StorageIterator* CreateNewStorageIterator(
+            ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
+            ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE()) {
+            return new StorageIterator(*db_.get(), startKey, endKey);
         }
 
       private:

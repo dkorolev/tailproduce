@@ -64,7 +64,7 @@ namespace TailProduce {
                 return false;
             } else {
                 if (!iterator) {
-                    iterator.reset(new iterator_type(storage, cursor_key, stream.key_builder.end_stream_key));
+                    iterator.reset(storage.CreateNewStorageIterator(cursor_key, stream.key_builder.end_stream_key));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }

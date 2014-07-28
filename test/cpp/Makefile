@@ -12,7 +12,7 @@ EXE=build/run_all_tests
 TEST_EXE_FLAGS=--gtest_death_test_style=threadsafe --question="six by nine" --answer=42
 
 # Uncomment the below line and replace the test name to debug a specific test.
-# TEST_EXE_FLAGS+= --gtest_filter=DataStorageTest/1.AddsEntries --logtostderr -v 3
+# TEST_EXE_FLAGS+= --gtest_filter=StreamManagerTest/1.UserFriendlySyntaxCompiles --logtostderr -v 3
 
 .PHONY: all test clean
 

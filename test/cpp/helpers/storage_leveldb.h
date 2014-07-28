@@ -26,8 +26,8 @@ struct LevelDBCreator {
 };
 
 typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBStorageManager;
-struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBCreator, LevelDBStorageManager {
-    LevelDBTestDataStorage()
+struct LevelDBTestStorageManager : LevelDBBeforeTestDeleter, LevelDBCreator, LevelDBStorageManager {
+    LevelDBTestStorageManager()
         : LevelDBBeforeTestDeleter(LEVELDB_TEST_PATH),
           LevelDBCreator(LEVELDB_TEST_PATH),
           LevelDBStorageManager(db_) {

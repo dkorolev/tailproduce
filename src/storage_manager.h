@@ -74,6 +74,11 @@ namespace TailProduce {
         StorageIterator CreateStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
             return dbm_.CreateStorageIterator(begin, end);
         }
+
+        StorageIterator* CreateNewStorageIterator(const KEY_TYPE& begin = KEY_TYPE(),
+                                                  const KEY_TYPE& end = KEY_TYPE()) {
+            return dbm_.CreateNewStorageIterator(begin, end);
+        }
     };
 };
 

@@ -12,6 +12,14 @@ namespace TailProduce {
     template <typename It> class DbMIterator {
       public:
         DbMIterator(DbMIterator&& rhs) = default;
+
+        // TODO(dkorolev): Discuss with Brian. It is a hack, but it's the best one I could think of now.
+        DbMIterator(typename It::allowed_constructor_type& magically_proxied_db,
+                    ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
+                    ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE())
+            : it_(new It(magically_proxied_db, startKey, endKey)) {
+        }
+
         explicit DbMIterator(It&& val) {
             // Avoid duplicating the iterator object. In practice, as of now, it enforces the use of unique_ptr<>.
             // TODO(dkorolev): Do we have to keep it this way? Perhaps remove the `DbMIterator` layer of abstraction?
@@ -44,7 +52,7 @@ namespace TailProduce {
         }
 
       private:
-        It it_;
+        std::unique_ptr<It> it_;
         DbMIterator() = delete;
         DbMIterator(DbMIterator const&) = delete;  // Use move semantics instead.
         DbMIterator(const It& val) = delete;       // Use move semantics instead.
