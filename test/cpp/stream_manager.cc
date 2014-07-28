@@ -399,11 +399,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 }
 
 template <typename T> class StreamManagerTest : public ::testing::Test {};
-
-// TODO(dkorolev): Add LevelDB data storage along with the mock one.
-//typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
-//TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
-TYPED_TEST_CASE(StreamManagerTest, TestStreamManagerImplementationsImplementationsTypeList);
+TYPED_TEST_CASE(StreamManagerTest, TestStreamManagerImplementationsTypeList);
 
 // Runs the tests against the static framework defined by macros.
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
@@ -477,10 +473,10 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                   name(stream_name),
                   key_builder(name),
                   head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<order_key_type,
-                                                                             key_builder_type,
-                                                                             storage_type>(name,
-                                                                                           key_builder,
-                                                                                           manager->storage)) {
+                                                                                 key_builder_type,
+                                                                                 storage_type>(name,
+                                                                                               key_builder,
+                                                                                               manager->storage)) {
                 manager->streams_declared_.insert("test");
             }
         };

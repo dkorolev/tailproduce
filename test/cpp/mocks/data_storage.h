@@ -156,22 +156,32 @@ class INTERNAL_MockDataStorage : ::TailProduce::Storage {
 #include "../../src/dbm_leveldb.h"
 #include "../../src/dbm_leveldb_iterator.h"
 
+const std::string LEVELDB_TEST_PATH = "../leveldbTest";
+
 struct LevelDBBeforeTestDeleter {
     explicit LevelDBBeforeTestDeleter(const std::string& pathname) {
         boost::filesystem::remove_all(pathname);
     }
 };
 
-typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBImpl;
-struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBImpl {
-    const std::string pathname_ = "../leveldbTest";
+struct LevelDBCreator {
+    explicit LevelDBCreator(const std::string& pathname) : db_(pathname) {
+    }
     ::TailProduce::DbMLevelDb db_;
-    LevelDBTestDataStorage() : LevelDBBeforeTestDeleter(pathname_), db_(pathname_), LevelDBImpl(db_) {
+};
+
+typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBStorageManager;
+struct LevelDBTestDataStorage : LevelDBBeforeTestDeleter, LevelDBCreator, LevelDBStorageManager {
+    LevelDBTestDataStorage()
+        : LevelDBBeforeTestDeleter(LEVELDB_TEST_PATH),
+          LevelDBCreator(LEVELDB_TEST_PATH),
+          LevelDBStorageManager(db_) {
     }
 };
 
-//typedef ::testing::Types<INTERNAL_MockDataStorage, LevelDBTestDataStorage> TestDataStorageImplementationsTypeList;
-typedef ::testing::Types<INTERNAL_MockDataStorage> TestDataStorageImplementationsTypeList;
-typedef ::testing::Types<::TailProduce::StreamManager<INTERNAL_MockDataStorage>> TestStreamManagerImplementationsImplementationsTypeList;
+typedef ::testing::Types<INTERNAL_MockDataStorage, LevelDBTestDataStorage> TestDataStorageImplementationsTypeList;
+
+typedef ::testing::Types<::TailProduce::StreamManager<INTERNAL_MockDataStorage>>
+    TestStreamManagerImplementationsTypeList;
 
 #endif  // TAILPRODUCE_MOCKS_DATA_STORAGE_H

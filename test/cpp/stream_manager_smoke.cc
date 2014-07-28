@@ -35,12 +35,12 @@ struct Aggregator {
 };
 
 TEST(StreamManagerSmokeTest, SmokeTest) {
-    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<MockDataStorage>);
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<INTERNAL_MockDataStorage>);
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    MockDataStorage storage;
+    INTERNAL_MockDataStorage storage;
 
     {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
@@ -191,12 +191,12 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 }
 
 TEST(StreamManagerSmokeTest, DataInjected) {
-    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, StreamManager<MockDataStorage>);
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<INTERNAL_MockDataStorage>);
     TAILPRODUCE_STREAM(foo, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_PUBLISHER(foo);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    MockDataStorage storage;
+    INTERNAL_MockDataStorage storage;
 
     {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.

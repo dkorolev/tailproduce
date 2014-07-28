@@ -31,7 +31,7 @@ namespace TailProduce {
         }
     };
 
-    template<typename T_STORAGE_MANAGER> struct StreamManager : StreamManagerBase {
+    template <typename T_STORAGE_MANAGER> struct StreamManager : StreamManagerBase {
         typedef T_STORAGE_MANAGER storage_type;
         T_STORAGE_MANAGER storage;
     };
