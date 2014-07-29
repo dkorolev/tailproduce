@@ -10,7 +10,7 @@ namespace TailProduce {
             (cereal::JSONOutputArchive(os))(entry);
             os << std::endl;
         }
-        template <typename T_PROCESSOR> static void DeSerializeAndProcessEntry(std::istream& is, T_PROCESSOR processor) {
+        template <typename T_PROCESSOR> static void DeSerializeAndProcessEntry(std::istream& is, T_PROCESSOR& processor) {
             T entry;
             cereal::JSONInputArchive ar(is);
             ar(entry);

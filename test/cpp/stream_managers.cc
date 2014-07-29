@@ -37,6 +37,9 @@ using ::TailProduce::StreamManagerParams;
 // The actual test is a templated RUN_TESTS() function.
 // It is used to test both the hand-crafted objects structure and the one created by a sequence of macros.
 template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
+    // A variable to hold the lambda is required in order to pass a reference to ProcessEntrySync().
+    std::function<void (const SimpleEntry&)> lambda;
+
     {
         VLOG(2) << "Test that STREAM_MANAGER throws an exception when attempted to be created based on the storage "
                    "that does not contain a definition of the `test` stream.";
@@ -86,12 +89,12 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         std::string s = os.str();
         EXPECT_EQ("{\n    \"value0\": {\n        \"ikey\": 1,\n        \"data\": \"Test\"\n    }\n}\n", s);
         {
-            SimpleEntry restored;
-            std::istringstream is(s);
-            SimpleEntry::DeSerializeAndProcessEntry(is, [](const SimpleEntry& restored) {
+            auto lambda = [](const SimpleEntry& restored) {
                 EXPECT_EQ(1, restored.ikey);
                 EXPECT_EQ("Test", restored.data);
-            });
+            };
+            std::istringstream is(s);
+            SimpleEntry::DeSerializeAndProcessEntry(is, lambda);
         }
         VLOG(2) << "Done.";
     }
@@ -145,13 +148,13 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
             size_t seen = 0;
             std::string last_as_string;
-            auto test_listener_existence_scope =
-                streams_manager.new_scoped_test_listener([&seen, &last_as_string](const SimpleEntry& entry) {
-                    ++seen;
-                    std::ostringstream os;
-                    os << entry.ikey << ':' << entry.data;
-                    last_as_string = os.str();
-                });
+            auto lambda = [&seen, &last_as_string](const SimpleEntry& entry) {
+                ++seen;
+                std::ostringstream os;
+                os << entry.ikey << ':' << entry.data;
+                last_as_string = os.str();
+            };
+            auto test_listener_existence_scope = streams_manager.new_scoped_test_listener(lambda);
             EXPECT_EQ(0, seen);
             EXPECT_EQ("", last_as_string);
             typename STREAM_MANAGER::test_type::head_pair_type head;
@@ -310,14 +313,14 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             streams_manager.test, SimpleOrderKey(2), SimpleOrderKey(4));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(2, entry.ikey);
             EXPECT_EQ("two", entry.data);
         });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(3, entry.ikey);
             EXPECT_EQ("three", entry.data);
         });
@@ -349,21 +352,21 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             streams_manager.test, std::make_pair(SimpleOrderKey(42), 2), std::make_pair(SimpleOrderKey(42), 5));
         ASSERT_TRUE(!listener.ReachedEnd());
         ASSERT_TRUE(listener.HasData());
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(42, entry.ikey);
             EXPECT_EQ("i2", entry.data);
         });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(42, entry.ikey);
             EXPECT_EQ("i3", entry.data);
         });
         listener.AdvanceToNextEntry();
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(42, entry.ikey);
             EXPECT_EQ("i4", entry.data);
         });
@@ -392,7 +395,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(10, "ten"));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(10, entry.ikey);
             EXPECT_EQ("ten", entry.data);
         });
@@ -403,7 +406,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(15, "fifteen"));
         ASSERT_TRUE(listener.HasData());
         ASSERT_TRUE(!listener.ReachedEnd());
-        listener.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(15, entry.ikey);
             EXPECT_EQ("fifteen", entry.data);
         });
@@ -414,7 +417,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(20, "twenty: ignored as part the non-included end the of range"));
         ASSERT_TRUE(!listener.HasData());
         ASSERT_TRUE(listener.ReachedEnd());
-        ASSERT_THROW(listener.ProcessEntrySync([](SimpleEntry) {}), ::TailProduce::ListenerHasNoDataToRead);
+        ASSERT_THROW(listener.ProcessEntrySync(lambda = [](SimpleEntry) {}), ::TailProduce::ListenerHasNoDataToRead);
         ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
 
         VLOG(2) << "Done.";

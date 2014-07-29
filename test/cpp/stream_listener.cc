@@ -11,25 +11,17 @@
 using ::TailProduce::bytes;
 using ::TailProduce::StreamManagerParams;
 
-// Keep in mind that Stats and Aggregator must be two different classes,
-// since an instance of Aggregator will be cloned while being passed to the listener.
-struct Stats {
+struct StatsAggregator {
     size_t count = 0;
     std::string data = "";
-};
-
-struct Aggregator {
-    Stats& stats;
-    explicit Aggregator(Stats& stats) : stats(stats) {
-    }
     void operator()(const SimpleEntry& entry) {
         std::ostringstream os;
-        os << '[' << stats.count << "]:{" << entry.ikey << ",'" << entry.data << "'}";
-        if (stats.count) {
-            stats.data.append(",");
+        os << '[' << count << "]:{" << entry.ikey << ",'" << entry.data << "'}";
+        if (count) {
+            data.append(",");
         }
-        stats.data.append(os.str());
-        ++stats.count;
+        data.append(os.str());
+        ++count;
     }
 };
 
@@ -41,6 +33,9 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
     InMemoryTestStorageManager storage;
 
+    // A variable to hold the lambda is required in order to pass a reference to ProcessEntrySync().
+    std::function<void(const SimpleEntry&)> lambda;
+
     {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
         Impl streams_manager(storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
@@ -50,8 +45,8 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.
         Impl streams_manager(storage, StreamManagerParams());
 
-        Stats stats;
-        auto test_listener_existence_scope = streams_manager.new_scoped_test_listener(Aggregator(stats));
+        StatsAggregator stats;
+        auto test_listener_existence_scope = streams_manager.new_scoped_test_listener(stats);
 
         SimpleEntry entry;
 
@@ -76,12 +71,12 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
-        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_all.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(1, entry.ikey);
             EXPECT_EQ("one", entry.data);
         });
         listener_all.AdvanceToNextEntry();
-        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_all.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(2, entry.ikey);
             EXPECT_EQ("two", entry.data);
         });
@@ -97,12 +92,12 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
-        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_all.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(3, entry.ikey);
             EXPECT_EQ("three", entry.data);
         });
         listener_all.AdvanceToNextEntry();
-        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_all.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(4, entry.ikey);
             EXPECT_EQ("four", entry.data);
         });
@@ -111,12 +106,12 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
-        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_from_three.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(3, entry.ikey);
             EXPECT_EQ("three", entry.data);
         });
         listener_from_three.AdvanceToNextEntry();
-        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_from_three.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(4, entry.ikey);
             EXPECT_EQ("four", entry.data);
         });
@@ -125,12 +120,12 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_from_three_to_five_not_inclusive.HasData());
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.ReachedEnd());
-        listener_from_three_to_five_not_inclusive.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_from_three_to_five_not_inclusive.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(3, entry.ikey);
             EXPECT_EQ("three", entry.data);
         });
         listener_from_three_to_five_not_inclusive.AdvanceToNextEntry();
-        listener_from_three_to_five_not_inclusive.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_from_three_to_five_not_inclusive.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(4, entry.ikey);
             EXPECT_EQ("four", entry.data);
         });
@@ -143,17 +138,17 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
-        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_all.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(5, entry.ikey);
             EXPECT_EQ("five", entry.data);
         });
         listener_all.AdvanceToNextEntry();
-        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_all.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(6, entry.ikey);
             EXPECT_EQ("six", entry.data);
         });
         listener_all.AdvanceToNextEntry();
-        listener_all.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_all.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(7, entry.ikey);
             EXPECT_EQ(("seven"), entry.data);
         });
@@ -162,17 +157,17 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         ASSERT_TRUE(listener_from_three.HasData());
         ASSERT_FALSE(listener_from_three.ReachedEnd());
-        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_from_three.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(5, entry.ikey);
             EXPECT_EQ(("five"), entry.data);
         });
         listener_from_three.AdvanceToNextEntry();
-        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_from_three.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(6, entry.ikey);
             EXPECT_EQ(("six"), entry.data);
         });
         listener_from_three.AdvanceToNextEntry();
-        listener_from_three.ProcessEntrySync([](const SimpleEntry& entry) {
+        listener_from_three.ProcessEntrySync(lambda = [](const SimpleEntry& entry) {
             EXPECT_EQ(7, entry.ikey);
             EXPECT_EQ(("seven"), entry.data);
         });
@@ -208,9 +203,9 @@ TEST(StreamManagerSmokeTest, DataInjected) {
     {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.
         Impl streams_manager(storage, StreamManagerParams());
-        Stats stats;
+        StatsAggregator stats;
         EXPECT_EQ(0, stats.count);
-        auto foo_listener_existence_scope = streams_manager.new_scoped_foo_listener(Aggregator(stats));
+        auto foo_listener_existence_scope = streams_manager.new_scoped_foo_listener(stats);
         EXPECT_EQ(1, stats.count);
         EXPECT_EQ("[0]:{42,'Yay!'}", stats.data);
     }

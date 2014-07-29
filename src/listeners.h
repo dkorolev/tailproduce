@@ -98,8 +98,7 @@ namespace TailProduce {
         }
 
         // ProcessEntrySync() deserealizes the entry and calls the supplied method of the respective type.
-        // TODO(dkorolev): Support polymorphic types.
-        template <typename T_PROCESSOR> void ProcessEntrySync(T_PROCESSOR processor, bool require_data = true) {
+        template <typename T_PROCESSOR> void ProcessEntrySync(T_PROCESSOR& processor, bool require_data = true) {
             if (!HasData()) {
                 if (require_data) {
                     VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
@@ -159,7 +158,7 @@ namespace TailProduce {
         }
 
         template <typename T_PROCESSOR> struct AsyncListener : ::TailProduce::Subscriber {
-            AsyncListener(const T& stream, T_PROCESSOR processor)
+            AsyncListener(const T& stream, T_PROCESSOR& processor)
                 : impl(stream), processor(processor), subscribe(this, stream.subscriptions) {
                 // TODO(dkorolev): Retire this, see the TODO(dkorolev) right above RunFakeEventLoop().
                 RunFakeEventLoop();
@@ -186,7 +185,7 @@ namespace TailProduce {
             }
 
             INTERNAL_UnsafeListener<T> impl;
-            T_PROCESSOR processor;
+            T_PROCESSOR& processor;
             ::TailProduce::SubscribeWhileInScope<::TailProduce::SubscriptionsManager> subscribe;
 
             AsyncListener() = delete;
@@ -196,7 +195,7 @@ namespace TailProduce {
         };
 
         template <typename T_PROCESSOR>
-        std::unique_ptr<AsyncListener<T_PROCESSOR>> operator()(T_PROCESSOR processor) {
+        std::unique_ptr<AsyncListener<T_PROCESSOR>> operator()(T_PROCESSOR& processor) {
             return std::unique_ptr<AsyncListener<T_PROCESSOR>>(new AsyncListener<T_PROCESSOR>(stream, processor));
         }
 
