@@ -5,6 +5,9 @@ CPP=g++
 # * need to run the binary from the same directory as the source files
 # * need to have header files available under the same relative paths
 # * need to run gcov -l for each .cc file
+# * install lcov 1.11
+# * geninfo . --output-file coverage.info
+# * genhtml coverage.info --output-directory out
 
 CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/ -fprofile-arcs -ftest-coverage
 
