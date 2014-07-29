@@ -1,4 +1,4 @@
-CPP=g++
+CPP=clang++
 
 # -fprofile-arcs -ftest-coverage are for gcov
 # Extra requirements:
@@ -9,7 +9,7 @@ CPP=g++
 # * geninfo . --output-file coverage.info
 # * genhtml coverage.info --output-directory out
 
-CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/ -fprofile-arcs -ftest-coverage
+CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/ # -fprofile-arcs -ftest-coverage
 
 LDFLAGS=-pthread -lgflags -lglog -lboost_system -lboost_filesystem ../../leveldb/libleveldb.a -lsnappy
 
@@ -34,7 +34,7 @@ all: build ${EXE}
 
 build:
 	mkdir -p build
-	for i in *.cc ; do ln -sf $$PWD/$i $$PWD/build/$i ; done  # For gcov.
+	# for i in *.cc ; do ln -sf $$PWD/$i $$PWD/build/$i ; done  # For gcov.
 
 build/%.o: %.cc
 	${CPP} ${CPPFLAGS} -o $@ -c $<
