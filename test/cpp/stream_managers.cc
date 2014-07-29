@@ -88,9 +88,10 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         {
             SimpleEntry restored;
             std::istringstream is(s);
-            SimpleEntry::DeSerializeEntry(is, restored);
-            EXPECT_EQ(1, restored.ikey);
-            EXPECT_EQ("Test", restored.data);
+            SimpleEntry::DeSerializeAndProcessEntry(is, [](const SimpleEntry& restored) {
+                EXPECT_EQ(1, restored.ikey);
+                EXPECT_EQ("Test", restored.data);
+            });
         }
         VLOG(2) << "Done.";
     }
