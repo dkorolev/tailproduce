@@ -184,3 +184,26 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "}\n",
         antibytes(storage.Get("d:polymorphic_stream:003:0000000000")));
 }
+
+TYPED_TEST(PolymorphicStreamTest, DeSerializesEntriesWithTypes) {
+    typename Setup<TypeParam>::Storage storage;
+    typename Setup<TypeParam>::PolymorphicStreamsManager streams_manager(
+        storage, StreamManagerParams().CreateStream("polymorphic_stream", IntOrderKey(0)));
+    struct Client {
+        std::ostringstream os;
+        void operator()(const BaseEntry& entry) {
+            os << "BaseEntry(" << entry.k << ")\n";
+        }
+        void operator()(const DerivedEntryA& entry) {
+            os << "DerivedEntryA(" << entry.k << ", '" << entry.c << "')\n";
+        }
+        void operator()(const DerivedEntryB& entry) {
+            os << "DerivedEntryB(" << entry.k << ", ''" << entry.s << "'')\n";
+        }
+    };
+    Client client;
+    auto foo_listener_existence_scope = streams_manager.new_scoped_polymorphic_stream_listener(client);
+    ASSERT_EQ("", client.os.str());
+    PublishTestEntries(streams_manager.polymorphic_stream_publisher);
+    EXPECT_EQ("BaseEntry(1)\nDerivedEntryA(2, 'A')\nDerivedEntryB(3, ''foo'')\n", client.os.str());
+}
