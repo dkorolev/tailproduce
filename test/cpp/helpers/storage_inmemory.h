@@ -1,15 +1,16 @@
-#ifndef TAILPRODUCE_MOCKS_DATA_STORAGE_H
-#define TAILPRODUCE_MOCKS_DATA_STORAGE_H
+#ifndef TAILPRODUCE_TEST_HELPERS_STORAGE_INMEMORY_H
+#define TAILPRODUCE_TEST_HELPERS_STORAGE_INMEMORY_H
 
 #include <vector>
 #include <map>
 #include <string>
 
+#include <gtest/gtest.h>
 #include <glog/logging.h>
 
 #include "../../../src/tailproduce.h"
 
-// MockDataStorage supports the following functionality:
+// InMemoryTestStorageManager supports the following functionality:
 //
 // 1) Store data as binary key-value pairs.
 //    The design decision is to use std::string-s for keys and std::vector<uint8_t>-s for values.
@@ -23,12 +24,12 @@
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
-class MockDataStorage : ::TailProduce::Storage {
+class InMemoryTestStorageManager : ::TailProduce::Storage {
   public:
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
-        VLOG(3) << "MockDataStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
+        VLOG(3) << "InMemoryTestStorageManager::Set('" << key << "', '" << ::TailProduce::antibytes(value)
                 << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
             VLOG(3) << "Attempted to Set() an entry with an empty key.";
@@ -57,7 +58,7 @@ class MockDataStorage : ::TailProduce::Storage {
         Set(key, value, true);
     }
 
-    bool Has(const KEY_TYPE& key) {
+    bool Has(const KEY_TYPE& key) const {
         if (key.empty()) {
             VLOG(3) << "Attempted to Has() with an empty key.";
             VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -67,7 +68,7 @@ class MockDataStorage : ::TailProduce::Storage {
         return cit != data_.end();
     }
 
-    void Get(const KEY_TYPE& key, VALUE_TYPE& value) const {
+    VALUE_TYPE Get(const KEY_TYPE& key) const {
         if (key.empty()) {
             VLOG(3) << "Attempted to Get() an entry with an empty key.";
             VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -75,26 +76,22 @@ class MockDataStorage : ::TailProduce::Storage {
         }
         const auto cit = data_.find(key);
         if (cit != data_.end()) {
-            value = cit->second;
+            VLOG(3) << "InMemoryTestStorageManager::Get('" << ::TailProduce::antibytes(key) << ") == '"
+                    << ::TailProduce::antibytes(cit->second) << "'.";
+            return cit->second;
         } else {
             VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
-        VLOG(3) << "MockDataStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
-                << ::TailProduce::antibytes(value) << "'.";
     }
 
-    // TODO(dkorolev): Read more about move semantics of C++ and eliminate a potentially unoptimized copy.
-    VALUE_TYPE Get(const KEY_TYPE& key) const {
-        VALUE_TYPE value;
-        Get(key, value);
-        return value;
-    }
-
-    struct Iterator {
-        Iterator(MockDataStorage& master, const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE())
+    struct StorageIterator {
+        StorageIterator(InMemoryTestStorageManager& master,
+                        const KEY_TYPE& begin = KEY_TYPE(),
+                        const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
         }
+        StorageIterator(StorageIterator&&) = default;
 
         bool Valid() const {
             return cit_ != data_.end() && (end_.empty() || cit_->first < end_);
@@ -128,14 +125,21 @@ class MockDataStorage : ::TailProduce::Storage {
         KEY_TYPE end_;
         typename MAP_TYPE::const_iterator cit_;
 
-        Iterator() = delete;
-        Iterator(const Iterator&) = delete;
-        Iterator(Iterator&&) = delete;
-        void operator=(const Iterator&) = delete;
+        StorageIterator() = delete;
+        StorageIterator(const StorageIterator&) = delete;
+        void operator=(const StorageIterator&) = delete;
     };
+
+    StorageIterator CreateStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
+        return StorageIterator(*this, begin, end);
+    }
+
+    StorageIterator* CreateNewStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
+        return new StorageIterator(*this, begin, end);
+    }
 
   private:
     MAP_TYPE data_;
 };
 
-#endif  // TAILPRODUCE_MOCKS_DATA_STORAGE_H
+#endif  // TAILPRODUCE_TEST_HELPERS_STORAGE_INMEMORY_H

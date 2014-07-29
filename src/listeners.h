@@ -64,7 +64,7 @@ namespace TailProduce {
                 return false;
             } else {
                 if (!iterator) {
-                    iterator.reset(new iterator_type(storage, cursor_key, stream.key_builder.end_stream_key));
+                    iterator.reset(storage.CreateNewStorageIterator(cursor_key, stream.key_builder.end_stream_key));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }
@@ -160,7 +160,7 @@ namespace TailProduce {
 
       private:
         typedef typename T::storage_type storage_type;
-        typedef typename T::storage_type::Iterator iterator_type;
+        typedef typename T::storage_type::StorageIterator iterator_type;
         const T& stream;
         storage_type& storage;
         ::TailProduce::Storage::KEY_TYPE cursor_key;

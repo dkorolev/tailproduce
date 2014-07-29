@@ -3,26 +3,31 @@
 
 #include <string>
 #include <memory>
+
 #include "leveldb/db.h"
+
 #include "storage.h"
 
 namespace TailProduce {
     class DbMLevelDbIterator {
       public:
-        DbMLevelDbIterator(std::shared_ptr<leveldb::DB> db,
-                           ::TailProduce::Storage::KEY_TYPE const& keyPrefix,
+        typedef leveldb::DB allowed_constructor_type;
+
+        DbMLevelDbIterator(leveldb::DB& db,
                            ::TailProduce::Storage::KEY_TYPE const& startKey,
                            ::TailProduce::Storage::KEY_TYPE const& endKey);
         void Next();
         ::TailProduce::Storage::KEY_TYPE Key() const;
         ::TailProduce::Storage::VALUE_TYPE Value() const;
-        bool Done();
-        bool IsValid() const;
+        bool HasData() const;
+        bool Done() const {
+            return !HasData();
+        }
 
       private:
-        ::TailProduce::Storage::KEY_TYPE keyPrefix_;
         ::TailProduce::Storage::KEY_TYPE endKey_;
-        std::shared_ptr<leveldb::DB> db_;
+        // `db_` is owned by the creator of the iterator. The iterator is invalidated if DB gets deleted.
+        leveldb::DB& db_;
         std::unique_ptr<leveldb::Iterator> it_;
 
         DbMLevelDbIterator() = delete;

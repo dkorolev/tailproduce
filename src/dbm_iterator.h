@@ -3,15 +3,35 @@
 
 // Iterator class that wraps around what ever Data Base Module Iterator we have
 
+#include "tpexceptions.h"
 #include "storage.h"
+
+#include <glog/logging.h>
 
 namespace TailProduce {
     template <typename It> class DbMIterator {
       public:
-        DbMIterator(DbMIterator&&) = default;  // TODO: understand how a shared_ptr responds with move dynamics??
-        DbMIterator(It val) : it_(val) {
+        DbMIterator(DbMIterator&& rhs) = default;
+
+        // TODO(dkorolev): Discuss with Brian. It is a hack, but it's the best one I could think of now.
+        DbMIterator(typename It::allowed_constructor_type& magically_proxied_db,
+                    ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
+                    ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE())
+            : it_(new It(magically_proxied_db, startKey, endKey)) {
+        }
+
+        explicit DbMIterator(It&& val) {
+            // Avoid duplicating the iterator object. In practice, as of now, it enforces the use of unique_ptr<>.
+            // TODO(dkorolev): Do we have to keep it this way? Perhaps remove the `DbMIterator` layer of abstraction?
+            using std::swap;
+            swap(it_, val);
         }
         void Next() {
+            if (Done()) {
+                VLOG(3) << "Attempted to Next() an iterator for which Done() is true.";
+                VLOG(3) << "throw ::TailProduce::StorageIteratorOutOfBoundsException();";
+                throw ::TailProduce::StorageIteratorOutOfBoundsException();
+            }
             it_->Next();
         }
 
@@ -32,10 +52,11 @@ namespace TailProduce {
         }
 
       private:
-        It it_;
+        std::unique_ptr<It> it_;
         DbMIterator() = delete;
-        DbMIterator(DbMIterator const&) = delete;
-        DbMIterator& operator=(DbMIterator const&) = delete;
+        DbMIterator(DbMIterator const&) = delete;  // Use move semantics instead.
+        DbMIterator(const It& val) = delete;       // Use move semantics instead.
+        void operator=(DbMIterator const&) = delete;
     };
 };
 

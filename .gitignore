@@ -7,8 +7,8 @@ leveldb-1.15.0/
 
 cereal/
 .exrc
-**/core
 
+test/cpp/core
 test/leveldbTest/
 
 **/.*.swp

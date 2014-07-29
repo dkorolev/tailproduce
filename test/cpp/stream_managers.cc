@@ -27,9 +27,8 @@
 
 #include "../../src/tailproduce.h"
 
-#include "mocks/stream_manager.h"
-#include "mocks/data_storage.h"
-#include "mocks/test_client.h"
+#include "helpers/storages.h"
+#include "helpers/test_client.h"
 
 using ::TailProduce::bytes;
 using ::TailProduce::antibytes;
@@ -39,43 +38,48 @@ using ::TailProduce::StreamManagerParams;
 // It is used to test both the hand-crafted objects structure and the one created by a sequence of macros.
 template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
     {
-        // Test that STREAM_MANAGER throws an exception when attempted to be created
-        // based on the storage that does not contain a definition of the `test` stream.
+        VLOG(2) << "Test that STREAM_MANAGER throws an exception when attempted to be created based on the storage "
+                   "that does not contain a definition of the `test` stream.";
         STORAGE local_storage;
         std::unique_ptr<STREAM_MANAGER> p;
         ASSERT_THROW(p.reset(new STREAM_MANAGER(local_storage, StreamManagerParams())),
                      ::TailProduce::StreamDoesNotExistException);
+        VLOG(2) << "Done.";
     }
 
     {
-        // Test that STREAM_MANAGER throws an exception when attempted to be created
-        // based on the storage that contains a malformed definition of the `test` stream.
+        VLOG(2) << "Test that STREAM_MANAGER throws an exception when attempted to be created based on the storage "
+                   "that contains a malformed definition of the `test` stream.";
         STORAGE local_storage;
         local_storage.Set("s:test", bytes("foo"));
         std::unique_ptr<STREAM_MANAGER> p;
         ASSERT_THROW(p.reset(new STREAM_MANAGER(local_storage, StreamManagerParams())),
                      ::TailProduce::MalformedStorageHeadException);
+        VLOG(2) << "Done.";
     }
 
     {
-        // Test that STREAM_MANAGER can be created once the storage
-        // is externally set to contain the proper definition of the `test` stream.
+        VLOG(2) << "Test that STREAM_MANAGER can be created once the storage is externally set to contain the "
+                   "proper definition of the `test` stream.";
         STORAGE local_storage;
         local_storage.Set("s:test", bytes("0000000000:0000000000"));
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams());
+        VLOG(2) << "Done.";
     }
 
     {
-        // Test that STREAM_MANAGER initializes the storage from the parameters provided in StreamManagerParams().
+        VLOG(2) << "Test that STREAM_MANAGER initializes the storage from the parameters provided in "
+                   "StreamManagerParams().";
         STORAGE local_storage;
         ASSERT_FALSE(local_storage.Has("s:test"));
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
         ASSERT_TRUE(local_storage.Has("s:test"));
         ASSERT_EQ("0000000000:0000000000", antibytes(local_storage.Get("s:test")));
+        VLOG(2) << "Done.";
     }
 
     {
-        // Test that entries can be serialized and de-serialized.
+        VLOG(2) << "Test that entries can be serialized and de-serialized.";
         SimpleEntry entry(1, "Test");
         std::ostringstream os;
         SimpleEntry::SerializeEntry(os, entry);
@@ -88,10 +92,11 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             EXPECT_EQ(1, restored.ikey);
             EXPECT_EQ("Test", restored.data);
         }
+        VLOG(2) << "Done.";
     }
 
     {
-        // Test that the order key can be serialized and de-serialized to and from fixed size byte arrays.
+        VLOG(2) << "Test that the order key can be serialized and de-serialized to and from fixed size byte arrays.";
         SimpleEntry entry(42, "The Answer");
         SimpleOrderKey order_key =
             ::TailProduce::OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry>::ExtractOrderKey(entry);
@@ -103,158 +108,171 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
             deserialized_order_key.DeSerializeOrderKey(serialized_key);
             EXPECT_EQ(42, deserialized_order_key.ikey);
         }
-    }
-
-    STORAGE storage;
-    storage.Set("s:test", bytes("0000000000:0000000000"));
-
-    {
-        // Test stream manager setup. The `test` stream should exist and be statically typed.
-        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
-
-        auto entry = streams_manager.registry().Get("test");
-        EXPECT_EQ("test", entry.name);
-        EXPECT_EQ("SimpleEntry", entry.entry_type);
-        EXPECT_EQ("SimpleOrderKey", entry.order_key_type);
-        using Stream = ::TailProduce::Stream<SimpleOrderKey>;
-        EXPECT_TRUE(entry.impl == static_cast<Stream*>(&streams_manager.test.stream));
-        EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
-        EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
+        VLOG(2) << "Done.";
     }
 
     {
-        // Test HEAD updates.
-        STREAM_MANAGER streams_manager(storage, StreamManagerParams());
+        // IMPORTANT: Keep this `storage` scoped!
+        // Otherwise it would interfere with `local_storage`, which is fine for in-memory test storage,
+        // but is *NOT* fine with LevelDB-based one.
 
-        // Start from zero.
-        typename STREAM_MANAGER::test_type::INTERNAL_unsafe_listener_type listener(streams_manager.test);
+        STORAGE storage;
+        storage.Set("s:test", bytes("0000000000:0000000000"));
 
-        size_t seen = 0;
-        std::string last_as_string;
-        auto test_listener_existence_scope =
-            streams_manager.new_scoped_test_listener([&seen, &last_as_string](const SimpleEntry& entry) {
-                ++seen;
-                std::ostringstream os;
-                os << entry.ikey << ':' << entry.data;
-                last_as_string = os.str();
-            });
-        EXPECT_EQ(0, seen);
-        EXPECT_EQ("", last_as_string);
-        typename STREAM_MANAGER::test_type::head_pair_type head;
-
-        head = listener.GetHead();
-        EXPECT_EQ(0, head.first.ikey);
-        EXPECT_EQ(0, head.second);
-
-        // Instantiating a publisher does not change HEAD.
         {
-            auto& publisher = streams_manager.test_publisher;
-            head = publisher.GetHead();
+            VLOG(2) << "Test stream manager setup. The `test` stream should exist and be statically typed.";
+            STREAM_MANAGER streams_manager(storage, StreamManagerParams());
+
+            auto entry = streams_manager.registry().Get("test");
+            EXPECT_EQ("test", entry.name);
+            EXPECT_EQ("SimpleEntry", entry.entry_type);
+            EXPECT_EQ("SimpleOrderKey", entry.order_key_type);
+            using Stream = ::TailProduce::Stream<SimpleOrderKey>;
+            EXPECT_TRUE(entry.impl == static_cast<Stream*>(&streams_manager.test.stream));
+            EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
+            EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
+            VLOG(2) << "Done.";
+        }
+
+        {
+            VLOG(2) << "Test HEAD updates.";
+
+            STREAM_MANAGER streams_manager(storage, StreamManagerParams());
+
+            // Start from zero.
+            typename STREAM_MANAGER::test_type::INTERNAL_unsafe_listener_type listener(streams_manager.test);
+
+            size_t seen = 0;
+            std::string last_as_string;
+            auto test_listener_existence_scope =
+                streams_manager.new_scoped_test_listener([&seen, &last_as_string](const SimpleEntry& entry) {
+                    ++seen;
+                    std::ostringstream os;
+                    os << entry.ikey << ':' << entry.data;
+                    last_as_string = os.str();
+                });
+            EXPECT_EQ(0, seen);
+            EXPECT_EQ("", last_as_string);
+            typename STREAM_MANAGER::test_type::head_pair_type head;
+
+            head = listener.GetHead();
             EXPECT_EQ(0, head.first.ikey);
             EXPECT_EQ(0, head.second);
-            head = listener.GetHead();
-            EXPECT_EQ(0, head.first.ikey);
-            EXPECT_EQ(0, head.second);
-        }
 
-        // Push() and PushHead() change HEAD.
-        // Secondary keys are incremented automatically.
-        {
-            auto& publisher = streams_manager.test_publisher;
+            // Instantiating a publisher does not change HEAD.
+            {
+                auto& publisher = streams_manager.test_publisher;
+                head = publisher.GetHead();
+                EXPECT_EQ(0, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+                head = listener.GetHead();
+                EXPECT_EQ(0, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+            }
 
-            publisher.Push(SimpleEntry(1, "foo"));
-            head = publisher.GetHead();
-            EXPECT_EQ(1, head.first.ikey);
-            EXPECT_EQ(0, head.second);
-            head = listener.GetHead();
-            EXPECT_EQ(1, head.first.ikey);
-            EXPECT_EQ(0, head.second);
-            EXPECT_EQ(bytes("0000000001:0000000000"), storage.Get("s:test"));
-            EXPECT_EQ(1, seen);
-            EXPECT_EQ("1:foo", last_as_string);
+            // Push() and PushHead() change HEAD.
+            // Secondary keys are incremented automatically.
+            {
+                auto& publisher = streams_manager.test_publisher;
 
-            publisher.Push(SimpleEntry(1, "bar"));
-            head = publisher.GetHead();
-            EXPECT_EQ(1, head.first.ikey);
-            EXPECT_EQ(1, head.second);
-            head = listener.GetHead();
-            EXPECT_EQ(1, head.first.ikey);
-            EXPECT_EQ(1, head.second);
-            EXPECT_EQ(bytes("0000000001:0000000001"), storage.Get("s:test"));
-            EXPECT_EQ(2, seen);
-            EXPECT_EQ("1:bar", last_as_string);
+                publisher.Push(SimpleEntry(1, "foo"));
+                head = publisher.GetHead();
+                EXPECT_EQ(1, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+                head = listener.GetHead();
+                EXPECT_EQ(1, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+                EXPECT_EQ(bytes("0000000001:0000000000"), storage.Get("s:test"));
+                EXPECT_EQ(1, seen);
+                EXPECT_EQ("1:foo", last_as_string);
 
-            publisher.PushHead(SimpleOrderKey(2));
-            head = publisher.GetHead();
-            EXPECT_EQ(2, head.first.ikey);
-            EXPECT_EQ(0, head.second);
-            head = listener.GetHead();
-            EXPECT_EQ(2, head.first.ikey);
-            EXPECT_EQ(0, head.second);
-            EXPECT_EQ(bytes("0000000002:0000000000"), storage.Get("s:test"));
-            EXPECT_EQ(2, seen);
-            EXPECT_EQ("1:bar", last_as_string);
+                publisher.Push(SimpleEntry(1, "bar"));
+                head = publisher.GetHead();
+                EXPECT_EQ(1, head.first.ikey);
+                EXPECT_EQ(1, head.second);
+                head = listener.GetHead();
+                EXPECT_EQ(1, head.first.ikey);
+                EXPECT_EQ(1, head.second);
+                EXPECT_EQ(bytes("0000000001:0000000001"), storage.Get("s:test"));
+                EXPECT_EQ(2, seen);
+                EXPECT_EQ("1:bar", last_as_string);
 
-            publisher.PushHead(SimpleOrderKey(2));
-            head = publisher.GetHead();
-            EXPECT_EQ(2, head.first.ikey);
-            EXPECT_EQ(1, head.second);
-            head = listener.GetHead();
-            EXPECT_EQ(2, head.first.ikey);
-            EXPECT_EQ(1, head.second);
-            EXPECT_EQ(bytes("0000000002:0000000001"), storage.Get("s:test"));
-            EXPECT_EQ(2, seen);
-            EXPECT_EQ("1:bar", last_as_string);
+                publisher.PushHead(SimpleOrderKey(2));
+                head = publisher.GetHead();
+                EXPECT_EQ(2, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+                head = listener.GetHead();
+                EXPECT_EQ(2, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+                EXPECT_EQ(bytes("0000000002:0000000000"), storage.Get("s:test"));
+                EXPECT_EQ(2, seen);
+                EXPECT_EQ("1:bar", last_as_string);
 
-            publisher.Push(SimpleEntry(100, "async"));
-            EXPECT_EQ(3, seen);
-            EXPECT_EQ("100:async", last_as_string);
-            publisher.Push(SimpleEntry(101, "is ok"));
-            EXPECT_EQ(4, seen);
-            EXPECT_EQ("101:is ok", last_as_string);
-        }
+                publisher.PushHead(SimpleOrderKey(2));
+                head = publisher.GetHead();
+                EXPECT_EQ(2, head.first.ikey);
+                EXPECT_EQ(1, head.second);
+                head = listener.GetHead();
+                EXPECT_EQ(2, head.first.ikey);
+                EXPECT_EQ(1, head.second);
+                EXPECT_EQ(bytes("0000000002:0000000001"), storage.Get("s:test"));
+                EXPECT_EQ(2, seen);
+                EXPECT_EQ("1:bar", last_as_string);
 
-        /*
-        // TODO(dkorolev): Move this test to a dedicated, Publisher-centric test case.
-        // Instantiating a publisher starting from a fixed HEAD moves HEAD there.
-        {
-            typename STREAM_MANAGER::test_type::publisher_type publisher(streams_manager.test, SimpleOrderKey(10));
-            head = publisher.GetHead();
-            EXPECT_EQ(10, head.first.ikey);
-            EXPECT_EQ(0, head.second);
-            head = listener.GetHead();
-            EXPECT_EQ(10, head.first.ikey);
-            EXPECT_EQ(0, head.second);
-            EXPECT_EQ(bytes("0000000010:0000000000"), storage.Get("s:test"));
-        }
-        */
+                publisher.Push(SimpleEntry(100, "async"));
+                EXPECT_EQ(3, seen);
+                EXPECT_EQ("100:async", last_as_string);
+                publisher.Push(SimpleEntry(101, "is ok"));
+                EXPECT_EQ(4, seen);
+                EXPECT_EQ("101:is ok", last_as_string);
+            }
 
-        // Throws an exception attempting to move HEAD backwards when doing Push().
-        {
-            auto& publisher = streams_manager.test_publisher;
-            ASSERT_THROW(publisher.Push(SimpleEntry(0, "boom")), ::TailProduce::OrderKeysGoBackwardsException);
-        }
-
-        // Throws an exception attempting to move HEAD backwards when doing PushHead().
-        {
-            auto& publisher = streams_manager.test_publisher;
-            ASSERT_THROW(publisher.PushHead(SimpleOrderKey(0)), ::TailProduce::OrderKeysGoBackwardsException);
-        }
-
-        /*
-        // Throws an exception attempting to start a publisher starting on the order key before the most recent one.
-        {
+            /*
             // TODO(dkorolev): Move this test to a dedicated, Publisher-centric test case.
-            typedef typename STREAM_MANAGER::test_type::publisher_type T;
-            std::unique_ptr<T> p;
-            ASSERT_THROW(p.reset(new T(streams_manager.test, SimpleOrderKey(0))),
-                         ::TailProduce::OrderKeysGoBackwardsException);
+            // Instantiating a publisher starting from a fixed HEAD moves HEAD there.
+            {
+                typename STREAM_MANAGER::test_type::publisher_type publisher(streams_manager.test,
+            SimpleOrderKey(10));
+                head = publisher.GetHead();
+                EXPECT_EQ(10, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+                head = listener.GetHead();
+                EXPECT_EQ(10, head.first.ikey);
+                EXPECT_EQ(0, head.second);
+                EXPECT_EQ(bytes("0000000010:0000000000"), storage.Get("s:test"));
+            }
+            */
+
+            // Throws an exception attempting to move HEAD backwards when doing Push().
+            {
+                auto& publisher = streams_manager.test_publisher;
+                ASSERT_THROW(publisher.Push(SimpleEntry(0, "boom")), ::TailProduce::OrderKeysGoBackwardsException);
+            }
+
+            // Throws an exception attempting to move HEAD backwards when doing PushHead().
+            {
+                auto& publisher = streams_manager.test_publisher;
+                ASSERT_THROW(publisher.PushHead(SimpleOrderKey(0)), ::TailProduce::OrderKeysGoBackwardsException);
+            }
+
+            /*
+            // Throws an exception attempting to start a publisher starting on the order key before the most recent
+            one.
+            {
+                // TODO(dkorolev): Move this test to a dedicated, Publisher-centric test case.
+                typedef typename STREAM_MANAGER::test_type::publisher_type T;
+                std::unique_ptr<T> p;
+                ASSERT_THROW(p.reset(new T(streams_manager.test, SimpleOrderKey(0))),
+                             ::TailProduce::OrderKeysGoBackwardsException);
+            }
+            */
+            VLOG(2) << "Done.";
         }
-        */
     }
 
     {
-        // Test storage schema.
+        VLOG(2) << "Test storage schema.";
+
         STORAGE local_storage;
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
 
@@ -270,10 +288,12 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                   local_storage.Get("d:test:0000000002:0000000000"));
         EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"ikey\": 3,\n        \"data\": \"three\"\n    }\n}\n"),
                   local_storage.Get("d:test:0000000003:0000000000"));
+        VLOG(2) << "Done.";
     }
 
     {
-        // Listener test: bounded, pre-initialized with data.
+        VLOG(2) << "Listener test: bounded, pre-initialized with data.";
+
         STORAGE local_storage;
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
 
@@ -304,10 +324,13 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         EXPECT_FALSE(listener.HasData());
         EXPECT_TRUE(listener.ReachedEnd());
         ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
+
+        VLOG(2) << "Done.";
     }
 
     {
-        // Listener test: bounded, pre-initialized with data, involving secondary keys.
+        VLOG(2) << "Listener test: bounded, pre-initialized with data, involving secondary keys.";
+
         STORAGE local_storage;
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
 
@@ -347,10 +370,12 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         EXPECT_FALSE(listener.HasData());
         EXPECT_TRUE(listener.ReachedEnd());
         ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
+
+        VLOG(2) << "Done.";
     }
 
     {
-        // Listener test: appended on-the-fly, bounded.
+        VLOG(2) << "Listener test: appended on-the-fly, bounded.";
         STORAGE local_storage;
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
 
@@ -390,6 +415,8 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         ASSERT_TRUE(listener.ReachedEnd());
         ASSERT_THROW(listener.ProcessEntrySync([](SimpleEntry) {}), ::TailProduce::ListenerHasNoDataToRead);
         ASSERT_THROW(listener.AdvanceToNextEntry(), ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable);
+
+        VLOG(2) << "Done.";
     }
 
     {
@@ -399,10 +426,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 }
 
 template <typename T> class StreamManagerTest : public ::testing::Test {};
-
-// TODO(dkorolev): Add LevelDB data storage along with the mock one.
-typedef ::testing::Types<MockStreamManager<MockDataStorage>> DataStorageImplementations;
-TYPED_TEST_CASE(StreamManagerTest, DataStorageImplementations);
+TYPED_TEST_CASE(StreamManagerTest, TestStreamManagerImplementationsTypeList);
 
 // Runs the tests against the static framework defined by macros.
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
@@ -438,9 +462,9 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         void operator=(const StreamManagerImpl&) = delete;
 
       private:
-        using TSM = ::TailProduce::StreamManager;
+        using TSM = ::TailProduce::StreamManagerBase;
         static_assert(std::is_base_of<TSM, TypeParam>::value,
-                      "StreamManagerImpl: TypeParam should be derived from StreamManager.");
+                      "StreamManagerImpl: TypeParam should be derived from StreamManagerBase.");
         using TS = ::TailProduce::Storage;
         static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value,
                       "StreamManagerImpl: TypeParam::storage_type should be derived from Storage.");
@@ -475,11 +499,11 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                   stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name),
                   name(stream_name),
                   key_builder(name),
-                  head(::TailProduce::StreamManager::template FetchHeadOrDie<order_key_type,
-                                                                             key_builder_type,
-                                                                             storage_type>(name,
-                                                                                           key_builder,
-                                                                                           manager->storage)) {
+                  head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<order_key_type,
+                                                                                 key_builder_type,
+                                                                                 storage_type>(name,
+                                                                                               key_builder,
+                                                                                               manager->storage)) {
                 manager->streams_declared_.insert("test");
             }
         };

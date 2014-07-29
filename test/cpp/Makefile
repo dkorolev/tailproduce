@@ -9,11 +9,16 @@ OBJ=$(SRC:%.cc=build/%.o)
 GTEST_OBJ=/usr/src/gtest/libgtest.a
 EXE=build/run_all_tests
 
+TEST_EXE_FLAGS=--gtest_death_test_style=threadsafe --question="six by nine" --answer=42
+
+# Uncomment the below line and replace the test name to debug a specific test.
+# TEST_EXE_FLAGS+= --gtest_filter=StreamManagerTest/1.UserFriendlySyntaxCompiles --logtostderr -v 3
+
 .PHONY: all test clean
 
 test: all
 	rm -fr ../leveldbTest
-	./${EXE} --gtest_death_test_style=threadsafe --question="six by nine" --answer=42
+	./${EXE} ${TEST_EXE_FLAGS}
 	rm -fr ../leveldbTest
 
 all: build ${EXE}

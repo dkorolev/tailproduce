@@ -5,9 +5,8 @@
 
 #include "../../src/tailproduce.h"
 
-#include "mocks/stream_manager.h"
-#include "mocks/data_storage.h"
-#include "mocks/test_client.h"
+#include "helpers/storages.h"
+#include "helpers/test_client.h"
 
 using ::TailProduce::bytes;
 using ::TailProduce::StreamManagerParams;
@@ -35,12 +34,12 @@ struct Aggregator {
 };
 
 TEST(StreamManagerSmokeTest, SmokeTest) {
-    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<InMemoryTestStorageManager>);
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    MockDataStorage storage;
+    InMemoryTestStorageManager storage;
 
     {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
@@ -191,12 +190,12 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 }
 
 TEST(StreamManagerSmokeTest, DataInjected) {
-    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, MockStreamManager<MockDataStorage>);
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<InMemoryTestStorageManager>);
     TAILPRODUCE_STREAM(foo, SimpleEntry, SimpleOrderKey);
     TAILPRODUCE_PUBLISHER(foo);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    MockDataStorage storage;
+    InMemoryTestStorageManager storage;
 
     {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
