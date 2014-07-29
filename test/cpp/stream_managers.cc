@@ -38,7 +38,7 @@ using ::TailProduce::StreamManagerParams;
 // It is used to test both the hand-crafted objects structure and the one created by a sequence of macros.
 template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
     // A variable to hold the lambda is required in order to pass a reference to ProcessEntrySync().
-    std::function<void (const SimpleEntry&)> lambda;
+    std::function<void(const SimpleEntry&)> lambda;
 
     {
         VLOG(2) << "Test that STREAM_MANAGER throws an exception when attempted to be created based on the storage "
