@@ -45,7 +45,10 @@ struct IntOrderKey : ::TailProduce::OrderKey {
     }
 };
 
-struct BaseEntry : ::TailProduce::Entry, ::TailProduce::PolymorphicCerealJSONSerializable<BaseEntry> {
+struct DerivedEntryA;
+struct DerivedEntryB;
+struct BaseEntry : ::TailProduce::Entry,
+                   ::TailProduce::PolymorphicCerealJSONSerializable<BaseEntry, DerivedEntryA, DerivedEntryB> {
     BaseEntry() = default;
     virtual ~BaseEntry() {
     }
@@ -58,12 +61,44 @@ struct BaseEntry : ::TailProduce::Entry, ::TailProduce::PolymorphicCerealJSONSer
 
     uint32_t k;
 
-  private:
+  protected:
     friend class cereal::access;
     template <class A> void serialize(A& ar) {
         ar(CEREAL_NVP(k));
     }
 };
+
+struct DerivedEntryA : BaseEntry {
+    char c;
+    DerivedEntryA() = default;
+    DerivedEntryA(uint32_t k, char c) : BaseEntry(k), c(c) {
+    }
+
+  private:
+    friend class cereal::access;
+    template <class A> void serialize(A& ar) {
+        BaseEntry::serialize(ar);
+        ar(CEREAL_NVP(c));
+    }
+};
+
+struct DerivedEntryB : BaseEntry {
+    std::string s;
+    DerivedEntryB() = default;
+    DerivedEntryB(uint32_t k, const std::string& s) : BaseEntry(k), s(s) {
+    }
+
+  private:
+    friend class cereal::access;
+    template <class A> void serialize(A& ar) {
+        BaseEntry::serialize(ar);
+        ar(CEREAL_NVP(s));
+    }
+};
+
+CEREAL_REGISTER_TYPE(BaseEntry);
+CEREAL_REGISTER_TYPE(DerivedEntryA);
+CEREAL_REGISTER_TYPE(DerivedEntryB);
 
 namespace TailProduce {
     template <> struct OrderKeyExtractorImpl<IntOrderKey, BaseEntry> {
@@ -96,6 +131,8 @@ TYPED_TEST(PolymorphicStreamTest, InitializesStream) {
 
 template <typename T> void PublishTestEntries(T& publisher) {
     publisher.Push(BaseEntry(1));
+    publisher.Push(DerivedEntryA(2, 'A'));
+    publisher.Push(DerivedEntryB(3, "foo"));
 }
 
 TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
@@ -116,4 +153,34 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "    }\n"
         "}\n",
         antibytes(storage.Get("d:polymorphic_stream:001:0000000000")));
+    ASSERT_EQ(
+        "{\n"
+        "    \"value0\": {\n"
+        "        \"polymorphic_id\": 2147483649,\n"
+        "        \"polymorphic_name\": \"DerivedEntryA\",\n"
+        "        \"ptr_wrapper\": {\n"
+        "            \"id\": 2147483649,\n"
+        "            \"data\": {\n"
+        "                \"k\": 2,\n"
+        "                \"c\": 65\n"
+        "            }\n"
+        "        }\n"
+        "    }\n"
+        "}\n",
+        antibytes(storage.Get("d:polymorphic_stream:002:0000000000")));
+    ASSERT_EQ(
+        "{\n"
+        "    \"value0\": {\n"
+        "        \"polymorphic_id\": 2147483649,\n"
+        "        \"polymorphic_name\": \"DerivedEntryB\",\n"
+        "        \"ptr_wrapper\": {\n"
+        "            \"id\": 2147483649,\n"
+        "            \"data\": {\n"
+        "                \"k\": 3,\n"
+        "                \"s\": \"foo\"\n"
+        "            }\n"
+        "        }\n"
+        "    }\n"
+        "}\n",
+        antibytes(storage.Get("d:polymorphic_stream:003:0000000000")));
 }

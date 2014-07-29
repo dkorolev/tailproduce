@@ -32,6 +32,7 @@ namespace TailProduce {
             : Exception("StreamHasNoWriterDefinedException: '" + name + "'.") {
         }
     };
+    struct UnrecognizedPolymorphicType : Exception {};
 };
 
 #endif
