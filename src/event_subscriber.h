@@ -2,6 +2,7 @@
 #define EVENT_SUBSCRIBER_H
 
 #include <cassert>
+#include <set>
 
 namespace TailProduce {
     struct Subscriber {
