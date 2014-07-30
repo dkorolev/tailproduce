@@ -1,7 +1,7 @@
 #ifndef DISPATCHER_H
 #define DISPATCHER_H
 
-#include "tpexceptions.h"
+#include "tp_exceptions.h"
 
 namespace TailProduce {
     template <typename T_BASE, typename T_DERIVED, typename... T_TAIL> class RuntimeDispatcher {

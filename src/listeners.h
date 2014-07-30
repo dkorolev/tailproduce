@@ -2,8 +2,11 @@
 #define UNSAFELISTENERS_H
 
 #include <memory>
+
 #include "stream.h"
+#include "storage.h"
 #include "event_subscriber.h"
+#include "tp_exceptions.h"
 
 namespace TailProduce {
     // TODO(dkorolev): Rename this class.

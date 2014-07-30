@@ -8,13 +8,20 @@ LIB=lib/libtailproduce.a
 
 .PHONY: all clean
 
-all: build ${LIB}
+all: build ${LIB} build/individual_files_compile_ok
 
 build:
 	mkdir -p build lib
 
 build/%.o: src/%.cc
 	${CPP} ${CPPFLAGS} -o $@ -c $<
+
+build/individual_files_compile_ok: src/*.h
+	rm -f build/individual_files/*
+	mkdir -p build/individual_files
+	for i in src/*.cc src/*.h ; do cp $$i build/individual_files/ ; done
+	for i in src/*.h ; do cp $$i build/individual_files/$$(basename $$i).cc ; done
+	for i in build/individual_files/*.cc ; do ${CPP} ${CPPFLAGS} -c $$i || exit 1 ; done && echo "OK" > $@
 
 $(LIB): $(OBJ)
 	ar rcs $(LIB) $(OBJ)

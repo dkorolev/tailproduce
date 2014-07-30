@@ -1,12 +1,14 @@
 #ifndef _DBM_ITERATOR_H
 #define _DBM_ITERATOR_H
 
-// Iterator class that wraps around what ever Data Base Module Iterator we have
-
-#include "tpexceptions.h"
-#include "storage.h"
+#include <memory>
 
 #include <glog/logging.h>
+
+// Iterator class that wraps around what ever Data Base Module Iterator we have
+
+#include "tp_exceptions.h"
+#include "storage.h"
 
 namespace TailProduce {
     template <typename It> class DbMIterator {

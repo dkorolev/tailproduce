@@ -1,6 +1,9 @@
 #ifndef TAILPRODUCE_EXCEPTIONS_H
 #define TAILPRODUCE_EXCEPTIONS_H
 
+#include <exception>
+#include <string>
+
 // TODO(dkorolev): Add descriptions to each exception, perhaps as part of their respective what()-s.
 
 namespace TailProduce {

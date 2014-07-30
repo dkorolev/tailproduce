@@ -9,7 +9,7 @@
 // TODO(dkorolev): Perhaps move all standard headers for TailProduce into this file?
 #include <algorithm>
 
-#include "tpexceptions.h"
+#include "tp_exceptions.h"
 
 #include "storage.h"
 #include "streams_registry.h"
