@@ -1,6 +1,8 @@
 #ifndef STREAM_PERSIST_H
 #define STREAM_PERSIST_H
 
+#error "Should not attempt to compile this file."
+
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/string.hpp>

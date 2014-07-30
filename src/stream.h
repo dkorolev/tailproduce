@@ -3,7 +3,7 @@
 
 #include <string>
 #include "streams_registry.h"
-#include "stream_persist.h"
+// #include "stream_persist.h"
 #include "config_values.h"
 
 namespace TailProduce {
@@ -33,9 +33,11 @@ namespace TailProduce {
             : Stream(registry, cv, sre.name, sre.entry_type, sre.order_key_type) {
         }
 
+        /*
         Stream(StreamsRegistry& registry, ConfigValues const& cv, StreamPersist const& sp)
             : Stream(registry, cv, sp.stream_name, sp.entry_type_name, sp.order_key_type_name) {
         }
+        */
 
         ORDER_KEY& GetOrderKey() {
             return orderKey_;
