@@ -10,7 +10,7 @@
 
 #include "../../../src/tailproduce.h"
 
-// InMemoryTestStorageManager supports the following functionality:
+// InMemoryTestStorage supports the following functionality:
 //
 // 1) Store data as binary key-value pairs.
 //    The design decision is to use std::string-s for keys and std::vector<uint8_t>-s for values.
@@ -24,12 +24,12 @@
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
-class InMemoryTestStorageManager : ::TailProduce::Storage {
+class InMemoryTestStorage : ::TailProduce::Storage {
   public:
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
     void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
-        VLOG(3) << "InMemoryTestStorageManager::Set('" << key << "', '" << ::TailProduce::antibytes(value)
+        VLOG(3) << "InMemoryTestStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
                 << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
             VLOG(3) << "Attempted to Set() an entry with an empty key.";
@@ -76,7 +76,7 @@ class InMemoryTestStorageManager : ::TailProduce::Storage {
         }
         const auto cit = data_.find(key);
         if (cit != data_.end()) {
-            VLOG(3) << "InMemoryTestStorageManager::Get('" << ::TailProduce::antibytes(key) << ") == '"
+            VLOG(3) << "InMemoryTestStorage::Get('" << ::TailProduce::antibytes(key) << ") == '"
                     << ::TailProduce::antibytes(cit->second) << "'.";
             return cit->second;
         } else {
@@ -86,7 +86,7 @@ class InMemoryTestStorageManager : ::TailProduce::Storage {
     }
 
     struct StorageIterator {
-        StorageIterator(InMemoryTestStorageManager& master,
+        StorageIterator(InMemoryTestStorage& master,
                         const KEY_TYPE& begin = KEY_TYPE(),
                         const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
@@ -130,12 +130,9 @@ class InMemoryTestStorageManager : ::TailProduce::Storage {
         void operator=(const StorageIterator&) = delete;
     };
 
-    StorageIterator CreateStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
-        return StorageIterator(*this, begin, end);
-    }
-
-    StorageIterator* CreateNewStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
-        return new StorageIterator(*this, begin, end);
+    std::unique_ptr<StorageIterator> CreateNewStorageIterator(const KEY_TYPE& begin = KEY_TYPE(),
+                                                              const KEY_TYPE& end = KEY_TYPE()) {
+        return std::unique_ptr<StorageIterator>(new StorageIterator(*this, begin, end));
     }
 
   private:

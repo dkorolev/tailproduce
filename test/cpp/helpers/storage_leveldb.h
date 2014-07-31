@@ -6,31 +6,25 @@
 #include <boost/filesystem.hpp>
 
 #include "../../src/tailproduce.h"
+#include "../../src/storage_leveldb.h"
 #include "../../src/bytes.h"
 
-#include "../../src/dbm_leveldb.h"
-#include "../../src/dbm_leveldb_iterator.h"
-
+typedef ::TailProduce::StorageLevelDB DB;
 const std::string LEVELDB_TEST_PATH = "../leveldbTest";
 
-struct LevelDBBeforeTestDeleter {
-    explicit LevelDBBeforeTestDeleter(const std::string& pathname) {
+struct DBBeforeTestDeleter {
+    explicit DBBeforeTestDeleter(const std::string& pathname) {
         boost::filesystem::remove_all(pathname);
     }
 };
 
-struct LevelDBCreator {
-    explicit LevelDBCreator(const std::string& pathname) : db_(pathname) {
+struct DBForTestCreator : DB {
+    explicit DBForTestCreator(const std::string& pathname) : DB(pathname) {
     }
-    ::TailProduce::DbMLevelDb db_;
 };
 
-typedef ::TailProduce::StorageManager<::TailProduce::DbMLevelDb> LevelDBStorageManager;
-struct LevelDBTestStorageManager : LevelDBBeforeTestDeleter, LevelDBCreator, LevelDBStorageManager {
-    LevelDBTestStorageManager()
-        : LevelDBBeforeTestDeleter(LEVELDB_TEST_PATH),
-          LevelDBCreator(LEVELDB_TEST_PATH),
-          LevelDBStorageManager(db_) {
+struct LevelDBTestStorage : DBBeforeTestDeleter, DBForTestCreator {
+    LevelDBTestStorage() : DBBeforeTestDeleter(LEVELDB_TEST_PATH), DBForTestCreator(LEVELDB_TEST_PATH) {
     }
 };
 

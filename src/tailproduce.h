@@ -18,7 +18,6 @@
 #include "stream_instance.h"
 #include "serialize.h"
 #include "stream_manager.h"
-#include "storage_manager.h"
 #include "storage_key_builder.h"
 #include "listeners.h"
 #include "publishers.h"
