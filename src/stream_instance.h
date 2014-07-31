@@ -3,7 +3,11 @@
 
 #include <string>
 #include <type_traits>
+
+#include "entry.h"
+#include "order_key.h"
 #include "streams_registry.h"
+#include "storage.h"
 #include "stream.h"
 #include "config_values.h"
 

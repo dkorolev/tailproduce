@@ -35,11 +35,11 @@ namespace TailProduce {
 
       private:
         // these are private to prevent anyone from accidentally changing them once thay are set
-        std::string streamsAdminPrefix;      // prefix used for streams administration
-        std::string streamsDataPrefix;       // prefix used for stream data writes
-        std::string streamsRegisterLocator;  // this is the locator (identifier) for the registered streams
-        std::string streamsLastKeyLocator;   // this is the locater key for the last key per stream
-        char connector;
+        const std::string streamsAdminPrefix;      // prefix used for streams administration
+        const std::string streamsDataPrefix;       // prefix used for stream data writes
+        const std::string streamsRegisterLocator;  // this is the locator (identifier) for the registered streams
+        const std::string streamsLastKeyLocator;   // this is the locater key for the last key per stream
+        const char connector;
     };
 };
 

@@ -1,7 +1,11 @@
 #ifndef STREAMMANAGER_H
 #define STREAMMANAGER_H
 
-#include "helpers.h"
+#include <glog/logging.h>
+
+#include "storage.h"
+#include "tp_exceptions.h"
+#include "bytes.h"
 
 namespace TailProduce {
 

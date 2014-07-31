@@ -3,6 +3,13 @@
 
 #include <string>
 
+#include <glog/logging.h>
+
+#include "storage.h"
+#include "entry.h"
+#include "order_key.h"
+#include "tp_exceptions.h"
+
 namespace TailProduce {
     // StorageKeyBuilder implements the BuildStorageKey function to convert
     // { stream name, typed order key, secondary key } into ::TailProduce::Storage::KEY_TYPE-s.

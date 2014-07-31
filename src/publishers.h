@@ -1,7 +1,17 @@
 #ifndef UNSAFEPUBLISHER_H
 #define UNSAFEPUBLISHER_H
 
+#include <glog/logging.h>
+
+#include <set>
+#include <vector>
+#include <algorithm>
 #include <sstream>
+
+#include "tp_exceptions.h"
+#include "entry.h"
+#include "bytes.h"
+#include "order_key.h"
 
 // TODO(dkorolev): Rename INTERNAL_UnsafePublisher once the transition is completed.
 

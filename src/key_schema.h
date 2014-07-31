@@ -5,7 +5,7 @@
 
 #include <vector>
 
-#include "helpers.h"
+#include "bytes.h"
 
 namespace TailProduce {
     struct KeySchema {

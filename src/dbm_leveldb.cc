@@ -3,7 +3,7 @@
 
 #include "storage.h"
 #include "dbm_leveldb.h"
-#include "tpexceptions.h"
+#include "tp_exceptions.h"
 
 TailProduce::DbMLevelDb::DbMLevelDb(std::string const& dbname) {
     leveldb::Options options;
