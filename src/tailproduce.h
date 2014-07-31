@@ -12,7 +12,6 @@
 #include "tp_exceptions.h"
 
 #include "storage.h"
-#include "streams_registry.h"
 #include "stream.h"
 #include "entry.h"
 #include "order_key.h"

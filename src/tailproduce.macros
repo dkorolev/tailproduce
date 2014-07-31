@@ -28,12 +28,10 @@
         using TS = ::TailProduce::Storage; \
         static_assert(std::is_base_of<TS, storage_type>::value, \
                       "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE::storage_type should be derived from Storage."); \
-        ::TailProduce::StreamsRegistry registry_;  \
         std::set<std::string> streams_declared_; \
         std::set<std::string> stream_publishers_declared_; \
       public: \
         typedef BASE captured_base; \
-        const ::TailProduce::StreamsRegistry& registry() const { return registry_; }
 
 #define TAILPRODUCE_STREAM(NAME, ENTRY_TYPE, ORDER_KEY_TYPE) \
         struct NAME##_type { \
@@ -59,7 +57,7 @@
                 const char* entry_type_name, \
                 const char* entry_order_key_name) \
               : manager(manager), \
-                stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name), \
+                stream(cv, stream_name, entry_type_name, entry_order_key_name), \
                 name(stream_name), \
                 key_builder(name), \
                 head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) { \
