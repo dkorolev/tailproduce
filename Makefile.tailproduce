@@ -23,9 +23,17 @@ build/%.o: src/%.cc
 build/individual_files_compile_ok: build cereal src/*.h src/*.cc
 	mkdir -p build/individual_files
 	ln -sf ${PWD}/cereal build/individual_files/cereal
-	for i in src/*.cc src/*.h src/*.macros ; do ln -sf ${PWD}/$$i build/individual_files/$$(basename $$i) ; done
-	for i in src/*.h ; do ln -sf ${PWD}/$$i build/individual_files/$$(basename $$i).cc ; done
-	for i in build/individual_files/*.cc ; do echo -n $$(basename $$i)': ' ; ${CPP} ${CPPFLAGS} -c $$i -o $$i.o || exit 1 ; echo 'OK' ; done && echo "OK" > $@
+	for i in src/*.cc src/*.h src/*.macros ; do \
+		ln -sf ${PWD}/$$i build/individual_files/$$(basename $$i) ; \
+	done
+	for i in src/*.h ; do \
+		ln -sf ${PWD}/$$i build/individual_files/$$(basename $$i).cc ; \
+	done
+	for i in build/individual_files/*.cc ; do \
+		echo -n $$(basename $$i)': ' ; \
+		${CPP} ${CPPFLAGS} -c $$i -o $$i.o || exit 1 ; \
+	 		echo 'OK' ; \
+	done && echo "OK" > $@
 
 $(LIB): $(OBJ)
 	ar rcs $(LIB) $(OBJ)
