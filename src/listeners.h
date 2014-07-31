@@ -69,7 +69,8 @@ namespace TailProduce {
                 return false;
             } else {
                 if (!iterator) {
-                    iterator.reset(storage.CreateNewStorageIterator(cursor_key, stream.key_builder.end_stream_key));
+                    iterator =
+                        std::move(storage.CreateNewStorageIterator(cursor_key, stream.key_builder.end_stream_key));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }

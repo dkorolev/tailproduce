@@ -4,11 +4,9 @@
 #include "storage_inmemory.h"
 #include "storage_leveldb.h"
 
-typedef ::testing::Types<InMemoryTestStorageManager, LevelDBTestStorageManager>
-    TestDataStorageImplementationsTypeList;
+typedef ::testing::Types<InMemoryTestStorage, LevelDBTestStorage> TestDataStorageImplementationsTypeList;
 
-typedef ::testing::Types<::TailProduce::StreamManager<InMemoryTestStorageManager>,
-                         ::TailProduce::StreamManager<LevelDBTestStorageManager>>
-    TestStreamManagerImplementationsTypeList;
+typedef ::testing::Types<::TailProduce::StreamManager<InMemoryTestStorage>,
+                         ::TailProduce::StreamManager<LevelDBTestStorage>> TestStreamManagerImplementationsTypeList;
 
 #endif  // TAILPRODUCE_TEST_HELPERS_STORAGES_H
