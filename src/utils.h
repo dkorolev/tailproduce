@@ -1,6 +1,8 @@
 #ifndef TAILPRODUCE_UTILS_H
 #define TAILPRODUCE_UTILS_H
 
+#if 0
+
 #include <string>
 #include <sstream>
 #include <memory>
@@ -11,7 +13,7 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/string.hpp>
 
-#include "helpers.h"
+#include "bytes.h"
 #include "stream.h"
 #include "dbm_iterator.h"
 #include "config_values.h"
@@ -54,5 +56,7 @@ namespace TailProduce {
         storage.AdminSet(skey, TailProduce::bytes(objStr));
     }
 };
+
+#endif
 
 #endif

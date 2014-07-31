@@ -8,7 +8,7 @@
 #include "stream.h"
 #include "dbm_leveldb.h"
 #include "storage_manager.h"
-#include "helpers.h"
+#include "bytes.h"
 
 namespace TailProduce {
 

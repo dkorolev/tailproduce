@@ -1,14 +1,16 @@
 CPP=clang++
-CPPFLAGS=-std=c++11 -g -I ./leveldb/include/
+CPPFLAGS=-std=c++11 -g -I . -I ./leveldb/include/
 LDFLAGS=
 
 SRC=$(wildcard src/*.cc)
 OBJ=$(SRC:src/%.cc=build/%.o)
 LIB=lib/libtailproduce.a
 
-.PHONY: all clean
+.PHONY: all clean check
 
-all: build ${LIB} build/individual_files_compile_ok
+all: build ${LIB}
+
+check: build/individual_files_compile_ok
 
 build:
 	mkdir -p build lib
@@ -16,12 +18,13 @@ build:
 build/%.o: src/%.cc
 	${CPP} ${CPPFLAGS} -o $@ -c $<
 
-build/individual_files_compile_ok: src/*.h
+build/individual_files_compile_ok: cereal src/*.h
 	rm -f build/individual_files/*
 	mkdir -p build/individual_files
-	for i in src/*.cc src/*.h ; do cp $$i build/individual_files/ ; done
+	ln -sf $(shell pwd)/cereal build/individual_files/cereal
+	for i in src/*.cc src/*.h src/*.macros ; do cp $$i build/individual_files/ ; done
 	for i in src/*.h ; do cp $$i build/individual_files/$$(basename $$i).cc ; done
-	for i in build/individual_files/*.cc ; do ${CPP} ${CPPFLAGS} -c $$i || exit 1 ; done && echo "OK" > $@
+	for i in build/individual_files/*.cc ; do echo -n $$(basename $$i)': ' ; ${CPP} ${CPPFLAGS} -c $$i -o $$i.o || exit 1 ; echo 'OK' ; done && echo "OK" > $@
 
 $(LIB): $(OBJ)
 	ar rcs $(LIB) $(OBJ)

@@ -1,6 +1,8 @@
 #ifndef STREAM_PERSIST_H
 #define STREAM_PERSIST_H
 
+#if 0
+
 #error "Should not attempt to compile this file."
 
 #include <cereal/cereal.hpp>
@@ -27,5 +29,7 @@ namespace TailProduce {
         }
     };
 };
+
+#endif
 
 #endif

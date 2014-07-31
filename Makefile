@@ -1,9 +1,12 @@
 LEVELDB_WITH_VERSION=leveldb-1.15.0
 
-.PHONY: test lib clean cleanall love indent
+.PHONY: test lib clean cleanall love indent check
 
 lib: leveldb/libleveldb.a
 	make -f Makefile.tailproduce
+
+check:
+	make -f Makefile.tailproduce check
 
 clean:
 	(make -f Makefile.tailproduce clean; cd test/cpp && make clean)
