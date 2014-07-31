@@ -7,7 +7,7 @@
 #include <boost/filesystem.hpp>
 
 #include "../../src/tailproduce.h"
-#include "../../src/helpers.h"
+#include "../../src/bytes.h"
 
 #include "../../src/storage_manager.h"
 #include "../../src/dbm_leveldb.h"

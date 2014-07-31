@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "../../src/helpers.h"
+#include "../../src/bytes.h"
 
 #include "../../src/byte_order.h"
 
