@@ -1,12 +1,14 @@
 LEVELDB_WITH_VERSION=leveldb-1.15.0
 
-.PHONY: test lib clean cleanall love indent check
+.PHONY: test deps lib clean cleanall love indent check
 
-lib: leveldb/libleveldb.a
+lib: deps
 	make -f Makefile.tailproduce
 
-check:
+check: deps
 	make -f Makefile.tailproduce check
+
+deps: leveldb/libleveldb.a cereal
 
 clean:
 	(make -f Makefile.tailproduce clean; cd test/cpp && make clean)
@@ -14,10 +16,8 @@ clean:
 cleanall: clean
 	rm -rf leveldb ${LEVELDB_WITH_VERSION} cereal
 
-test: leveldb/libleveldb.a cereal
-	(make -f Makefile.tailproduce; cd test/cpp && make test)
-
-love: lib test
+test: lib
+	(cd test/cpp && make test)
 
 indent:
 	find src/ test/ -regextype posix-egrep -regex ".*\.(cc|h)" | xargs clang-format-3.5 -i
