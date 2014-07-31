@@ -3,6 +3,8 @@
 
 #include <memory>
 
+#include <glog/logging.h>
+
 #include "stream.h"
 #include "storage.h"
 #include "event_subscriber.h"

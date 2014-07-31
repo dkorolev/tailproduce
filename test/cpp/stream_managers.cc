@@ -126,13 +126,6 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         {
             VLOG(2) << "Test stream manager setup. The `test` stream should exist and be statically typed.";
             STREAM_MANAGER streams_manager(storage, StreamManagerParams());
-
-            auto entry = streams_manager.registry().Get("test");
-            EXPECT_EQ("test", entry.name);
-            EXPECT_EQ("SimpleEntry", entry.entry_type);
-            EXPECT_EQ("SimpleOrderKey", entry.order_key_type);
-            using Stream = ::TailProduce::Stream<SimpleOrderKey>;
-            EXPECT_TRUE(entry.impl == static_cast<Stream*>(&streams_manager.test.stream));
             EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::entry_type>::value));
             EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::order_key_type>::value));
             VLOG(2) << "Done.";
@@ -472,14 +465,10 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         using TS = ::TailProduce::Storage;
         static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value,
                       "StreamManagerImpl: TypeParam::storage_type should be derived from Storage.");
-        ::TailProduce::StreamsRegistry registry_;
         std::set<std::string> streams_declared_;
         std::set<std::string> stream_publishers_declared_;
 
       public:
-        const ::TailProduce::StreamsRegistry& registry() const {
-            return registry_;
-        }
         struct test_type {
             typedef SimpleEntry entry_type;
             typedef SimpleOrderKey order_key_type;
@@ -500,7 +489,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
                       const char* entry_type_name,
                       const char* entry_order_key_name)
                 : manager(manager),
-                  stream(manager->registry_, cv, stream_name, entry_type_name, entry_order_key_name),
+                  stream(cv, stream_name, entry_type_name, entry_order_key_name),
                   name(stream_name),
                   key_builder(name),
                   head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<order_key_type,
