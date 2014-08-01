@@ -1,14 +1,7 @@
+PWD=$(shell pwd)
+
 CPP=clang++
 CPP_FOR_COVERAGE=g++
-
-# -fprofile-arcs -ftest-coverage are for gcov
-# Extra requirements:
-# * need to run the binary from the same directory as the source files
-# * need to have header files available under the same relative paths
-# * need to run gcov -l for each .cc file
-# * install lcov 1.11
-# * geninfo . --output-file coverage.info
-# * genhtml coverage.info --output-directory out
 
 CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/
 CPPFLAGS_WITH_COVERAGE=${CPPFLAGS} -fprofile-arcs -ftest-coverage
@@ -22,9 +15,6 @@ EXE=build/run_all_tests
 EXE_WITH_COVERAGE=build/run_all_tests_with_coverage
 
 TEST_EXE_FLAGS=--gtest_death_test_style=threadsafe --question="six by nine" --answer=42
-
-PWD=$(shell pwd)
-
 # Uncomment the below line and replace the test name to debug a specific test.
 # TEST_EXE_FLAGS+= --gtest_filter=StreamManagerTest/1.UserFriendlySyntaxCompiles --logtostderr -v 3
 
