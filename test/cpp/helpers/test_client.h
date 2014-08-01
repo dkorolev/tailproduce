@@ -50,7 +50,7 @@ struct SimpleOrderKey : ::TailProduce::OrderKey {
 // For this test they are { uint32, string } pairs.
 struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable<SimpleEntry> {
     SimpleEntry() = default;
-    SimpleEntry(uint32_t key, ::TailProduce::Storage::KEY_TYPE const& data) : ikey(key), data(data) {
+    SimpleEntry(uint32_t key, std::string const& data) : ikey(key), data(data) {
     }
 
     SimpleOrderKey ExtractSimpleOrderKey() const {
@@ -60,7 +60,7 @@ struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable
     // Used as order key, 1, 2, 3, etc.
     uint32_t ikey;
     // To test data extraction, "one", "two", "three", or anything else for the sake of this test.
-    ::TailProduce::Storage::KEY_TYPE data;
+    std::string data;
 
   private:
     friend class cereal::access;
