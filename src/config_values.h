@@ -30,7 +30,7 @@ namespace TailProduce {
         }
 
         std::string GetStreamsLastKey(std::string const& streamId) const {
-            return streamsAdminPrefix + connector + streamsLastKeyLocator + streamId;
+            return streamsAdminPrefix + connector + streamsLastKeyLocator + connector + streamId;
         }
 
       private:
