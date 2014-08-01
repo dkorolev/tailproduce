@@ -22,7 +22,7 @@ TEST(ArchIsLittleEndian, UInt64) {
     EXPECT_EQ(20, FixedSizeSerializer<uint64_t>::size_in_bytes);
     uint64_t magic = 1e19;
     magic += 42;
-    // Does not fit unsigned 64-bit.
+    // Does not fit signed 64-bit.
     EXPECT_EQ("10000000000000000042", FixedSizeSerializer<uint64_t>::PackToString(magic));
     EXPECT_EQ(magic, FixedSizeSerializer<uint64_t>::UnpackFromString("10000000000000000042"));
 }
