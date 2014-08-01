@@ -19,6 +19,9 @@ cleanall: clean
 test: lib
 	(cd test/cpp && make test)
 
+test_coverage: lib
+	(cd test/cpp && make coverage)
+
 indent:
 	find src/ test/ -regextype posix-egrep -regex ".*\.(cc|h)" | xargs clang-format-3.5 -i
 
