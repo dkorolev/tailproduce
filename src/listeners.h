@@ -70,7 +70,7 @@ namespace TailProduce {
             } else {
                 if (!iterator) {
                     iterator =
-                        std::move(storage.CreateNewStorageIterator(cursor_key, stream.key_builder.end_stream_key));
+                        std::move(storage.CreateStorageIterator(cursor_key, stream.key_builder.end_stream_key));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }
@@ -150,7 +150,7 @@ namespace TailProduce {
         const bool has_end_key;
         ::TailProduce::Storage::KEY_TYPE const end_key;
         mutable bool reached_end;
-        mutable std::unique_ptr<iterator_type> iterator;
+        mutable iterator_type iterator;
 
         INTERNAL_UnsafeListener() = delete;
         INTERNAL_UnsafeListener(const INTERNAL_UnsafeListener&) = delete;

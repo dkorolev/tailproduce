@@ -8,10 +8,10 @@ using ::TailProduce::antibytes;
 template <typename T> class DataStorageTest : public ::testing::Test {};
 TYPED_TEST_CASE(DataStorageTest, TestDataStorageImplementationsTypeList);
 
-// TODO(dkorolev): Add similar tests to other files.
 TYPED_TEST(DataStorageTest, HasRightBaseClass) {
-    typedef ::TailProduce::Storage S;
-    static_assert(std::is_base_of<S, TypeParam>::value, "Storage must inherit from ::TailProduce::Storage.");
+    typedef ::TailProduce::Storage::Internal::Interface SI;
+    static_assert(std::is_base_of<SI, TypeParam>::value,
+                  "Storage must inherit from ::TailProduce::Storage::Impl<T>.");
 }
 
 TYPED_TEST(DataStorageTest, AddsEntries) {
@@ -52,7 +52,7 @@ TYPED_TEST(DataStorageTest, SimpleIterator) {
     storage.Set("foo:1", bytes("one"));
     storage.Set("foo:2", bytes("two"));
     storage.Set("zzz:", bytes("will not get here"));
-    auto iterator = storage.CreateNewStorageIterator("foo:", "foo:\xff");
+    auto iterator = storage.CreateStorageIterator("foo:", "foo:\xff");
     ASSERT_FALSE(iterator->Done());
     EXPECT_EQ("foo:1", iterator->Key());
     EXPECT_EQ("one", antibytes(iterator->Value()));
@@ -72,7 +72,7 @@ TYPED_TEST(DataStorageTest, BoundedRangeIterator) {
     storage.Set("003", bytes("three"));
     storage.Set("004", bytes("four"));
     storage.Set("005", bytes("five"));
-    std::unique_ptr<typename TypeParam::StorageIterator> iterator = storage.CreateNewStorageIterator("002", "004");
+    typename TypeParam::StorageIterator iterator = storage.CreateStorageIterator("002", "004");
     ASSERT_FALSE(iterator->Done());
     EXPECT_EQ("002", iterator->Key());
     EXPECT_EQ("two", antibytes(iterator->Value()));
@@ -91,7 +91,7 @@ TYPED_TEST(DataStorageTest, SemiBoundedRangeIterator) {
     storage.Set("3", bytes("three"));
     storage.Set("4", bytes("four"));
     storage.Set("5", bytes("five"));
-    std::unique_ptr<typename TypeParam::StorageIterator> iterator = storage.CreateNewStorageIterator("3");
+    typename TypeParam::StorageIterator iterator = storage.CreateStorageIterator("3");
     ASSERT_FALSE(iterator->Done());
     EXPECT_EQ("3", iterator->Key());
     EXPECT_EQ("three", antibytes(iterator->Value()));
@@ -114,8 +114,8 @@ TYPED_TEST(DataStorageTest, BoundedIteratorOutOfBounds) {
     storage.Set("3", bytes("three"));
     storage.Set("4", bytes("four"));
     storage.Set("5", bytes("five"));
-    // Test `auto` with `storage.CreateNewStorageIterator()` as well.
-    auto iterator = storage.CreateNewStorageIterator("2", "4");
+    // Test `auto` with `storage.CreateStorageIterator()` as well.
+    auto iterator = storage.CreateStorageIterator("2", "4");
     ASSERT_FALSE(iterator->Done());
     EXPECT_EQ("2", iterator->Key());
     EXPECT_EQ("two", antibytes(iterator->Value()));
@@ -132,7 +132,7 @@ TYPED_TEST(DataStorageTest, UnboundedIteratorOutOfBounds) {
     TypeParam storage;
     storage.Set("1", bytes("one"));
     storage.Set("2", bytes("two"));
-    auto iterator = storage.CreateNewStorageIterator("", "2");
+    auto iterator = storage.CreateStorageIterator("", "2");
     ASSERT_FALSE(iterator->Done());
     EXPECT_EQ("1", iterator->Key());
     EXPECT_EQ("one", antibytes(iterator->Value()));

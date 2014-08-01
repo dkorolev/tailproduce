@@ -25,7 +25,7 @@
         using TSM = ::TailProduce::StreamManagerBase; \
         static_assert(std::is_base_of<TSM, BASE>::value, \
                       "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE should be derived from StreamManagerBase."); \
-        using TS = ::TailProduce::Storage; \
+        using TS = ::TailProduce::Storage::Internal::Interface; \
         static_assert(std::is_base_of<TS, storage_type>::value, \
                       "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE::storage_type should be derived from Storage."); \
         std::set<std::string> streams_declared_; \

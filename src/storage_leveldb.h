@@ -11,18 +11,19 @@
 #include "storage.h"
 #include "tp_exceptions.h"
 
+using ::TailProduce::Storage::KEY_TYPE;
+using ::TailProduce::Storage::VALUE_TYPE;
+
 namespace TailProduce {
-    class StorageLevelDB : ::TailProduce::Storage {
+    class StorageLevelDB : ::TailProduce::Storage::Impl<StorageLevelDB> {
       public:
-        class StorageIterator {
+        class StorageIteratorImpl {
           public:
-            StorageIterator(leveldb::DB* p_db,
-                            ::TailProduce::Storage::KEY_TYPE const& startKey,
-                            ::TailProduce::Storage::KEY_TYPE const& endKey);
-            StorageIterator(StorageIterator&&) = default;
+            StorageIteratorImpl(leveldb::DB* p_db, KEY_TYPE const& startKey, KEY_TYPE const& endKey);
+            StorageIteratorImpl(StorageIteratorImpl&&) = default;
             void Next();
-            ::TailProduce::Storage::KEY_TYPE Key() const;
-            ::TailProduce::Storage::VALUE_TYPE Value() const;
+            KEY_TYPE Key() const;
+            VALUE_TYPE Value() const;
             bool HasData() const;
             bool Done() const {
                 return !HasData();
@@ -33,34 +34,31 @@ namespace TailProduce {
             leveldb::DB* p_db_;
             std::unique_ptr<leveldb::Iterator> it_;
 
-            void DoNext();
-            ::TailProduce::Storage::KEY_TYPE endKey_;
+            KEY_TYPE endKey_;
 
-            StorageIterator() = delete;
-            StorageIterator(StorageIterator const&) = delete;
-            StorageIterator& operator=(StorageIterator const&) = delete;
+            StorageIteratorImpl() = delete;
+            StorageIteratorImpl(StorageIteratorImpl const&) = delete;
+            StorageIteratorImpl& operator=(StorageIteratorImpl const&) = delete;
         };
 
         StorageLevelDB(std::string const& dbname = "/tmp/tailproducedb");
-        ::TailProduce::Storage::VALUE_TYPE Get(::TailProduce::Storage::KEY_TYPE const& key);
-        void InternalSet(::TailProduce::Storage::KEY_TYPE const& key,
-                         ::TailProduce::Storage::VALUE_TYPE const& value,
-                         bool allow_overwrite);
+        VALUE_TYPE Get(KEY_TYPE const& key);
+        void InternalSet(KEY_TYPE const& key, VALUE_TYPE const& value, bool allow_overwrite);
         void Set(const KEY_TYPE& key, const VALUE_TYPE& value) {
             InternalSet(key, value, false);
         }
         void SetAllowingOverwrite(const KEY_TYPE& key, const VALUE_TYPE& value) {
             InternalSet(key, value, true);
         }
-        bool Has(::TailProduce::Storage::KEY_TYPE const& key);
+        bool Has(KEY_TYPE const& key);
 
-        // TODO(dkorolev): Add a generic test for DeleteRecord(). So far, removed it.
-        void UNUSED_Delete(::TailProduce::Storage::KEY_TYPE const& key);
+        // TODO(dkorolev): If needed, add Delete() to the interface and add a test for it. So far, removed it.
+        void UNUSED_Delete(KEY_TYPE const& key);
 
-        std::unique_ptr<StorageIterator> CreateNewStorageIterator(
-            ::TailProduce::Storage::KEY_TYPE const& startKey = ::TailProduce::Storage::KEY_TYPE(),
-            ::TailProduce::Storage::KEY_TYPE const& endKey = ::TailProduce::Storage::KEY_TYPE()) {
-            return std::unique_ptr<StorageIterator>(new StorageIterator(db_.get(), startKey, endKey));
+        typedef std::unique_ptr<StorageIteratorImpl> StorageIterator;
+        StorageIterator CreateStorageIterator(KEY_TYPE const& startKey = KEY_TYPE(),
+                                              KEY_TYPE const& endKey = KEY_TYPE()) {
+            return StorageIterator(new StorageIteratorImpl(db_.get(), startKey, endKey));
         }
 
       private:

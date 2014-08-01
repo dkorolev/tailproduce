@@ -74,15 +74,16 @@ void TailProduce::StorageLevelDB::UNUSED_Delete(::TailProduce::Storage::KEY_TYPE
     if (!s.ok()) throw std::domain_error(s.ToString());
 }
 
-TailProduce::StorageLevelDB::StorageIterator::StorageIterator(leveldb::DB* p_db,
-                                                              ::TailProduce::Storage::KEY_TYPE const& startKey,
-                                                              ::TailProduce::Storage::KEY_TYPE const& endKey)
+TailProduce::StorageLevelDB::StorageIteratorImpl::StorageIteratorImpl(
+    leveldb::DB* p_db,
+    ::TailProduce::Storage::KEY_TYPE const& startKey,
+    ::TailProduce::Storage::KEY_TYPE const& endKey)
     : p_db_(p_db), endKey_(endKey) {
     it_.reset(p_db_->NewIterator(leveldb::ReadOptions()));
     it_->Seek(startKey);
 }
 
-void TailProduce::StorageLevelDB::StorageIterator::Next() {
+void TailProduce::StorageLevelDB::StorageIteratorImpl::Next() {
     if (Done()) {
         VLOG(3) << "Attempted to Next() an iterator for which Done() is true.";
         VLOG(3) << "throw ::TailProduce::StorageIteratorOutOfBoundsException();";
@@ -91,12 +92,12 @@ void TailProduce::StorageLevelDB::StorageIterator::Next() {
     it_->Next();
 }
 
-::TailProduce::Storage::KEY_TYPE TailProduce::StorageLevelDB::StorageIterator::Key() const {
+::TailProduce::Storage::KEY_TYPE TailProduce::StorageLevelDB::StorageIteratorImpl::Key() const {
     if (it_->Valid()) return it_->key().ToString();
     throw std::out_of_range("Can not obtain a Key() from a non valid iterator.");
 }
 
-TailProduce::Storage::VALUE_TYPE TailProduce::StorageLevelDB::StorageIterator::Value() const {
+TailProduce::Storage::VALUE_TYPE TailProduce::StorageLevelDB::StorageIteratorImpl::Value() const {
     if (it_->Valid()) {
         ::TailProduce::Storage::VALUE_TYPE r_vec(it_->value().size());
         int elemSize = sizeof(decltype(*(it_->value().data())));
@@ -107,6 +108,6 @@ TailProduce::Storage::VALUE_TYPE TailProduce::StorageLevelDB::StorageIterator::V
     throw std::out_of_range("Can not obtain a Value() from a non valid iterator.");
 }
 
-bool TailProduce::StorageLevelDB::StorageIterator::HasData() const {
+bool TailProduce::StorageLevelDB::StorageIteratorImpl::HasData() const {
     return it_->Valid() && (endKey_.empty() || it_->key().ToString() < endKey_);
 }
