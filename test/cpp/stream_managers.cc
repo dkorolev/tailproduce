@@ -462,7 +462,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         using TSM = ::TailProduce::StreamManagerBase;
         static_assert(std::is_base_of<TSM, TypeParam>::value,
                       "StreamManagerImpl: TypeParam should be derived from StreamManagerBase.");
-        using TS = ::TailProduce::Storage;
+        using TS = ::TailProduce::Storage::Internal::Interface;
         static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value,
                       "StreamManagerImpl: TypeParam::storage_type should be derived from Storage.");
         std::set<std::string> streams_declared_;

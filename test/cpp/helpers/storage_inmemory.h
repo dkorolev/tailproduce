@@ -24,7 +24,10 @@
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
-class InMemoryTestStorage : ::TailProduce::Storage {
+using ::TailProduce::Storage::KEY_TYPE;
+using ::TailProduce::Storage::VALUE_TYPE;
+
+class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
   public:
     typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
 
@@ -85,13 +88,13 @@ class InMemoryTestStorage : ::TailProduce::Storage {
         }
     }
 
-    struct StorageIterator {
-        StorageIterator(InMemoryTestStorage& master,
-                        const KEY_TYPE& begin = KEY_TYPE(),
-                        const KEY_TYPE& end = KEY_TYPE())
+    struct StorageIteratorImpl {
+        StorageIteratorImpl(InMemoryTestStorage& master,
+                            const KEY_TYPE& begin = KEY_TYPE(),
+                            const KEY_TYPE& end = KEY_TYPE())
             : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
         }
-        StorageIterator(StorageIterator&&) = default;
+        StorageIteratorImpl(StorageIteratorImpl&&) = default;
 
         bool Valid() const {
             return cit_ != data_.end() && (end_.empty() || cit_->first < end_);
@@ -125,14 +128,15 @@ class InMemoryTestStorage : ::TailProduce::Storage {
         KEY_TYPE end_;
         typename MAP_TYPE::const_iterator cit_;
 
-        StorageIterator() = delete;
-        StorageIterator(const StorageIterator&) = delete;
-        void operator=(const StorageIterator&) = delete;
+        StorageIteratorImpl() = delete;
+        StorageIteratorImpl(const StorageIteratorImpl&) = delete;
+        void operator=(const StorageIteratorImpl&) = delete;
     };
 
-    std::unique_ptr<StorageIterator> CreateNewStorageIterator(const KEY_TYPE& begin = KEY_TYPE(),
-                                                              const KEY_TYPE& end = KEY_TYPE()) {
-        return std::unique_ptr<StorageIterator>(new StorageIterator(*this, begin, end));
+    typedef std::unique_ptr<StorageIteratorImpl> StorageIterator;
+
+    StorageIterator CreateStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
+        return StorageIterator(new StorageIteratorImpl(*this, begin, end));
     }
 
   private:
