@@ -11,8 +11,8 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
 sudo update-alternatives --config gcc
 sudo update-alternatives --config g++
-(cd /usr/src/gtest; sudo cmake . ; sudo make)
-git clone https://github.com/dkorolev/tailproduce.git
+(cd /usr/src/gtest; sudo cmake . && sudo make && cp libg* /usr/lib/)
+git clone https://github.com/Staance/tailproduce.git
 cd tailproduce
 make love
 ```
