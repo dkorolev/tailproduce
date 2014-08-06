@@ -2,29 +2,30 @@
 #define TAILPRODUCE_TEST_HELPERS_STORAGE_LEVELDB_H
 
 #include <string>
-
-#include <boost/filesystem.hpp>
+#include <sstream>
+#include <chrono>
 
 #include "../../src/tailproduce.h"
 #include "../../src/storage_leveldb.h"
 #include "../../src/bytes.h"
 
 typedef ::TailProduce::StorageLevelDB DB;
-const std::string LEVELDB_TEST_PATH = "../leveldbTest";
-
-struct DBBeforeTestDeleter {
-    explicit DBBeforeTestDeleter(const std::string& pathname) {
-        boost::filesystem::remove_all(pathname);
-    }
-};
 
 struct DBForTestCreator : DB {
     explicit DBForTestCreator(const std::string& pathname) : DB(pathname) {
     }
 };
 
-struct LevelDBTestStorage : DBBeforeTestDeleter, DBForTestCreator {
-    LevelDBTestStorage() : DBBeforeTestDeleter(LEVELDB_TEST_PATH), DBForTestCreator(LEVELDB_TEST_PATH) {
+struct LevelDBTestStorage : DB {
+    LevelDBTestStorage() : DB(GenerateDBName()) {
+    }
+    static std::string GenerateDBName() {
+        static int index = 0;
+        std::ostringstream os;
+        os << "../testdata-leveldb-"
+           << std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::system_clock::now().time_since_epoch()).count() << "-" << ++index << "/";
+        return os.str();
     }
 };
 

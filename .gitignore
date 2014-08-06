@@ -10,6 +10,6 @@ cereal/
 .exrc
 
 test/cpp/core
-test/leveldbTest/
+test/testdata*
 
 **/.*.swp
