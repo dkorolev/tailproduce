@@ -19,24 +19,6 @@
 // TODO(dkorolev): Rename INTERNAL_UnsafePublisher once the transition is completed.
 
 namespace TailProduce {
-    inline void EnsureThereAreNoStreamsWithoutPublishers(const std::set<std::string>& streams_declared,
-                                                         const std::set<std::string>& stream_publishers_declared) {
-        std::vector<std::string> diff;
-        std::set_difference(streams_declared.begin(),
-                            streams_declared.end(),
-                            stream_publishers_declared.begin(),
-                            stream_publishers_declared.end(),
-                            std::back_inserter(diff));
-        if (!diff.empty()) {
-            std::ostringstream os;
-            for (const auto cit : diff) {
-                os << ',' << cit;
-                VLOG(3) << "Stream '" << cit << "' has been declared but has no writer associated with it.";
-            }
-            throw ::TailProduce::StreamHasNoWriterDefinedException(os.str().substr(1));
-        }
-    }
-
     // INTERNAL_UnsafePublisher contains the logic of appending data to the streams
     // and updating their HEAD order keys.
     template <typename T> struct INTERNAL_UnsafePublisher {

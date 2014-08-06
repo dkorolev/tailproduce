@@ -435,6 +435,7 @@ TYPED_TEST_CASE(StreamManagerTest, TestStreamManagerImplementationsTypeList);
 TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerImpl, TypeParam);
     TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_BROADCAST_STREAM(test);
     TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
@@ -444,42 +445,25 @@ TYPED_TEST(StreamManagerTest, UserFriendlySyntaxCompiles) {
 // Runs the test against explicitly defined static framework.
 // Used as a reference point, as well as to ensure the macros do what they are designed for.
 TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
-    class StreamManagerImpl {
+    // TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerImpl, TypeParam);
+    class StreamManagerImpl : public ::TailProduce::StaticFramework<TypeParam> {
       public:
-        typedef typename TypeParam::storage_type storage_type;
-        storage_type& storage;
-        static storage_type& EnsureStreamsAreCreatedDuringInitialization(
-            storage_type& storage,
-            const ::TailProduce::StreamManagerParams& params) {
-            params.Apply(storage);
-            return storage;
-        }
+        typedef StreamManagerImpl framework_type;
+        typedef ::TailProduce::StaticFramework<TypeParam> base_type;
+        using storage_type = typename base_type::storage_type;
         StreamManagerImpl(storage_type& storage,
                           const ::TailProduce::StreamManagerParams& params =
                               ::TailProduce::StreamManagerParams::FromCommandLineFlags())
-            : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) {
-            ::TailProduce::EnsureThereAreNoStreamsWithoutPublishers(streams_declared_, stream_publishers_declared_);
+            : base_type(storage, params) {
         }
-        StreamManagerImpl(const StreamManagerImpl&) = delete;
-        StreamManagerImpl(StreamManagerImpl&&) = delete;
-        void operator=(const StreamManagerImpl&) = delete;
-
-      private:
-        using TSM = ::TailProduce::StreamManagerBase;
-        static_assert(std::is_base_of<TSM, TypeParam>::value,
-                      "StreamManagerImpl: TypeParam should be derived from StreamManagerBase.");
-        using TS = ::TailProduce::Storage::Internal::Interface;
-        static_assert(std::is_base_of<TS, typename TypeParam::storage_type>::value,
-                      "StreamManagerImpl: TypeParam::storage_type should be derived from Storage.");
-        std::set<std::string> streams_declared_;
-        std::set<std::string> stream_publishers_declared_;
 
       public:
+        // TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
         struct test_type {
             typedef SimpleEntry entry_type;
             typedef SimpleOrderKey order_key_type;
             typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type;
-            typedef typename TypeParam::storage_type storage_type;
+            typedef typename framework_type::storage_type storage_type;
             typedef ::TailProduce::INTERNAL_UnsafeListener<test_type> INTERNAL_unsafe_listener_type;
             typedef std::pair<order_key_type, uint32_t> head_pair_type;
             typedef ::TailProduce::StorageKeyBuilder<test_type> key_builder_type;
@@ -509,6 +493,18 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         test_type test = test_type(this, "test", "SimpleEntry", "SimpleOrderKey");
         ::TailProduce::AsyncListenersFactory<test_type> new_scoped_test_listener =
             ::TailProduce::AsyncListenersFactory<test_type>(test);
+
+        // TAILPRODUCE_BROADCAST_STREAM(test);
+        struct test_broadcaster_type {// : ::TailProduce::Broadcaster<test_type> {
+                                      //            typedef ::TailProduce::Broadcaster<test_type> base;
+            explicit test_broadcaster_type(StreamManagerImpl* manager) {  //: base(manager->test) {
+                std::cout << "BROADCASTING : test\n";
+                //                manager->EnableBroadcasting("test", manager->test);
+            }
+        };
+        test_broadcaster_type test_broadcaster = test_broadcaster_type(this);
+
+        // TAILPRODUCE_PUBLISHER(test);
         struct test_publisher_type : ::TailProduce::Publisher<test_type> {
             typedef ::TailProduce::Publisher<test_type> base;
             explicit test_publisher_type(StreamManagerImpl* manager) : base(manager->test) {
@@ -516,6 +512,8 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             }
         };
         test_publisher_type test_publisher = test_publisher_type(this);
+
+        // TAILPRODUCE_STATIC_FRAMEWORK_END();
     };
 
     RUN_TESTS<typename StreamManagerImpl::storage_type, StreamManagerImpl>();

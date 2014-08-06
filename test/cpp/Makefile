@@ -16,7 +16,7 @@ EXE_WITH_COVERAGE=build/run_all_tests_with_coverage
 
 TEST_EXE_FLAGS=--gtest_death_test_style=threadsafe --question="six by nine" --answer=42
 # Uncomment the below line and replace the test name to debug a specific test.
-# TEST_EXE_FLAGS+= --gtest_filter=StreamManagerTest/1.UserFriendlySyntaxCompiles --logtostderr -v 3
+# TEST_EXE_FLAGS+= --gtest_filter=StreamManagerTest/1.ExpandedMacroSyntaxCompiles --logtostderr -v 2
 
 .PHONY: all test clean
 
