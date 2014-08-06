@@ -5,7 +5,7 @@ CPP_FOR_COVERAGE=g++
 
 CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/
 CPPFLAGS_WITH_COVERAGE=${CPPFLAGS} -fprofile-arcs -ftest-coverage
-LDFLAGS=-pthread -lgflags -lglog -lboost_system -lboost_filesystem ../../leveldb/libleveldb.a -lsnappy
+LDFLAGS=-pthread -lgflags -lglog -lboost_system ../../leveldb/libleveldb.a -lsnappy # -lboost_filesystem
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=build/%.o)
@@ -60,4 +60,4 @@ ${EXE_WITH_COVERAGE}: build ${OBJ_WITH_COVERAGE}
 	${CPP_FOR_COVERAGE} ${CPPFLAGS_WITH_COVERAGE} -o $@ ${OBJ_WITH_COVERAGE} ${GTEST_OBJ} ../../lib/libtailproduce.a ${LDFLAGS} 
 
 clean:
-	rm -rf build ../leveldbTest
+	rm -rf build ../testdata*
