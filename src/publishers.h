@@ -1,3 +1,5 @@
+// TODO(dkorolev): Rethink which mutexes are necessary and which are not.
+
 #ifndef UNSAFEPUBLISHER_H
 #define UNSAFEPUBLISHER_H
 
@@ -7,6 +9,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <mutex>
 
 #include "tp_exceptions.h"
 #include "entry.h"
@@ -47,15 +50,16 @@ namespace TailProduce {
         }
 
         void Push(const typename T::entry_type& entry) {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type> impl;
-            PushHead(impl::ExtractOrderKey(entry));
+            GuardedPushHead(impl::ExtractOrderKey(entry));
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
             stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head),
                                         bytes(value_output_stream.str()));
         }
 
-        void PushHead(const typename T::order_key_type& order_key) {
+        void GuardedPushHead(const typename T::order_key_type& order_key) {
             typename T::head_pair_type new_head(order_key, 0);
             if (new_head.first < stream.head.first) {
                 // Order keys should only be increasing.
@@ -72,10 +76,15 @@ namespace TailProduce {
 
             stream.head = new_head;
         }
+        void PushHead(const typename T::order_key_type& order_key) {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+            GuardedPushHead(order_key);
+        }
 
         // TODO: PushSecondaryKey for merge usecases.
 
         const typename T::head_pair_type& GetHead() const {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             return stream.head;
         }
 

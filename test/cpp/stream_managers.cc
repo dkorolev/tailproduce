@@ -180,6 +180,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 EXPECT_EQ(1, head.first.ikey);
                 EXPECT_EQ(0, head.second);
                 EXPECT_EQ(bytes("0000000001:0000000000"), storage.Get("s:test"));
+                test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(1, seen);
                 EXPECT_EQ("1:foo", last_as_string);
 
@@ -191,6 +192,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 EXPECT_EQ(1, head.first.ikey);
                 EXPECT_EQ(1, head.second);
                 EXPECT_EQ(bytes("0000000001:0000000001"), storage.Get("s:test"));
+                test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(2, seen);
                 EXPECT_EQ("1:bar", last_as_string);
 
@@ -202,6 +204,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 EXPECT_EQ(2, head.first.ikey);
                 EXPECT_EQ(0, head.second);
                 EXPECT_EQ(bytes("0000000002:0000000000"), storage.Get("s:test"));
+                test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(2, seen);
                 EXPECT_EQ("1:bar", last_as_string);
 
@@ -213,13 +216,16 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 EXPECT_EQ(2, head.first.ikey);
                 EXPECT_EQ(1, head.second);
                 EXPECT_EQ(bytes("0000000002:0000000001"), storage.Get("s:test"));
+                test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(2, seen);
                 EXPECT_EQ("1:bar", last_as_string);
 
                 publisher.Push(SimpleEntry(100, "async"));
+                test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(3, seen);
                 EXPECT_EQ("100:async", last_as_string);
                 publisher.Push(SimpleEntry(101, "is ok"));
+                test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(4, seen);
                 EXPECT_EQ("101:is ok", last_as_string);
             }
