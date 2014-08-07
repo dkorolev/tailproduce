@@ -36,6 +36,25 @@ namespace TailProduce {
         }
     };
     struct UnrecognizedPolymorphicType : Exception {};
+    struct NetworkException : Exception {
+        explicit NetworkException(const std::string& name) : Exception("NetworkException: '" + name + "'.") {
+        }
+    };
+    struct TCPServerSpawnException : NetworkException {
+        explicit TCPServerSpawnException(const std::string& name)
+            : NetworkException("TCPServerSpawnException: '" + name + "'.") {
+        }
+    };
+    struct TCPServerRuntimeException : NetworkException {
+        explicit TCPServerRuntimeException(const std::string& name)
+            : NetworkException("TCPServerRuntimeException: '" + name + "'.") {
+        }
+    };
+    struct TCPServerLogicErrorException : NetworkException {
+        explicit TCPServerLogicErrorException(const std::string& name)
+            : NetworkException("TCPServerLogicErrorException: '" + name + "'.") {
+        }
+    };
 };
 
 #endif

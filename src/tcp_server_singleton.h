@@ -11,7 +11,7 @@
 // Usage:
 //
 // struct MyHandler {
-//     void HandleRequestSunc(std::unique_ptr<boost::asio::ip::tcp::socket>&& socket) {
+//     void HandleRequestSync(std::unique_ptr<boost::asio::ip::tcp::socket>&& socket) {
 //         // ...
 //     }
 // };
@@ -28,11 +28,19 @@
 //     TCPServer::ScopedHandlerRegisterer scope(8080, handler);
 //     std::this_thread::sleep_for(std::chrono::seconds(30));
 // }
+//
+// // Automated case with HTTP response, `curl`-able and openable by the browser.
+// {
+//     auto handler = ::TailProduce::HTTPResponseHandler([]() { return "Hello, World!\n"; });
+//     ::TailProduce::TCPServer::ScopedHandlerRegisterer scope(8080, handler);
+//     std::this_thread::sleep_for(std::chrono::seconds(30));
+// }
 
 #ifndef TCP_SERVER_H
 #define TCP_SERVER_H
 
 #include <memory>
+#include <mutex>
 #include <thread>
 
 #include <glog/logging.h>
@@ -64,6 +72,7 @@ namespace TailProduce {
             boost::asio::io_service io_service_;
             tcp::acceptor acceptor_;
             std::unique_ptr<Handler> handler_;
+            std::mutex handler_mutex_;
 
             PerPortConnectionAccepter(size_t port)
                 : io_service_(), acceptor_(io_service_, tcp::endpoint(tcp::v4(), port)) {
@@ -74,11 +83,14 @@ namespace TailProduce {
                     try {
                         std::unique_ptr<tcp::socket> socket(new tcp::socket(io_service_));
                         acceptor_.accept(*socket);
-                        if (handler_) {
-                            std::thread(&Handler::HandleRequest, handler_.get(), std::move(socket)).detach();
-                        } else {
-                            std::string message = "500\n";
-                            boost::asio::write(*socket, boost::asio::buffer(message), boost::asio::transfer_all());
+                        {
+                            std::lock_guard<std::mutex> guard(handler_mutex_);
+                            if (handler_) {
+                                std::thread(&Handler::HandleRequest, handler_.get(), std::move(socket)).detach();
+                            } else {
+                                std::string message = "500\n";
+                                boost::asio::write(*socket, boost::asio::buffer(message), boost::asio::transfer_all());
+                            }
                         }
                     } catch (std::exception& e) {
                         throw ::TailProduce::TCPServerRuntimeException(e.what());
@@ -87,6 +99,7 @@ namespace TailProduce {
             }
 
             template <typename T> void RegisterHandler(T& handler) {
+                std::lock_guard<std::mutex> guard(handler_mutex_);
                 if (!handler_) {
                     handler_.reset(new UserHandlerWrapper<T>(handler));
                 } else {
@@ -95,6 +108,7 @@ namespace TailProduce {
             }
 
             void UnregisterHandler() {
+                std::lock_guard<std::mutex> guard(handler_mutex_);
                 if (handler_) {
                     handler_.reset(nullptr);
                 } else {
@@ -108,8 +122,10 @@ namespace TailProduce {
         };
 
         std::map<size_t, std::unique_ptr<PerPortConnectionAccepter>> by_port_;
+        std::mutex by_port_mutex_;
 
         PerPortConnectionAccepter& operator[](size_t port) {
+            std::lock_guard<std::mutex> guard(by_port_mutex_);
             std::unique_ptr<PerPortConnectionAccepter>& ref = by_port_[port];
             if (!ref) {
                 try {
@@ -138,6 +154,34 @@ namespace TailProduce {
             }
         };
     };
+
+    struct HTTPResponseHandler {
+        std::function<std::string(void)> f_;
+        std::mutex mutex;
+        explicit HTTPResponseHandler(std::function<std::string(void)> f) : f_(f) {
+        }
+        HTTPResponseHandler(const HTTPResponseHandler& rhs) : f_(rhs.f_) {
+        }
+        void HandleRequestSync(std::unique_ptr<boost::asio::ip::tcp::socket>&& socket) {
+            const std::string response = ([=]() {
+                std::lock_guard<std::mutex> guard(mutex);
+                return f_();
+            })();
+
+            std::ostringstream os; 
+            os << "HTTP/1.1 200 OK\n";
+            os << "Content-type: text/html\n";
+            os << "Content-length: " << response.length() << "\n";
+            os << "\n";
+            os << response;
+
+            const std::string message = os.str();
+            boost::asio::write(*socket, boost::asio::buffer(message), boost::asio::transfer_all());
+        }   
+        HTTPResponseHandler() = delete;
+        void operator=(const HTTPResponseHandler&) = delete;
+    };
+
 };
 
 #endif
