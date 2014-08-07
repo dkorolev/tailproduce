@@ -426,6 +426,20 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // Listener test: appended on-the-fly, bounded, test that PushHead() makes ReachedEnd() return true.
         // TODO(dkorolev): Code it.
     }
+
+    {
+        // TCP endpoint test for the EXPORT-ed stream.
+        // TODO(dkorolev): Capture the output and test it from within this unit test, not just via curl/telnet.
+        STORAGE local_storage;
+        STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+
+        auto& publisher = streams_manager.test_publisher;
+
+        for (int i = 100; i <= 300; ++i) {
+            publisher.Push(SimpleEntry(i, "TCP Test"));
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    }
 }
 
 template <typename T> class StreamManagerTest : public ::testing::Test {};
@@ -494,15 +508,34 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         ::TailProduce::AsyncListenersFactory<test_type> new_scoped_test_listener =
             ::TailProduce::AsyncListenersFactory<test_type>(test);
 
-        // TAILPRODUCE_BROADCAST_STREAM(test);
-        struct test_broadcaster_type {// : ::TailProduce::Broadcaster<test_type> {
-                                      //            typedef ::TailProduce::Broadcaster<test_type> base;
-            explicit test_broadcaster_type(StreamManagerImpl* manager) {  //: base(manager->test) {
-                std::cout << "BROADCASTING : test\n";
-                //                manager->EnableBroadcasting("test", manager->test);
+        // TAILPRODUCE_EXPORT_STREAM(test);
+        struct test_exporter_type : ::TailProduce::StreamExporter {
+            // TODO(dkorolev): Shorten and clean up this code.
+            // TODO(dkorolev): Support the macro as well.
+            StreamManagerImpl* manager_;
+            explicit test_exporter_type(StreamManagerImpl* manager) : manager_(manager) {
+                manager_->AddExporter("/test", this);
+            }
+            ~test_exporter_type() {
+                manager_->RemoveExporter("/test", this);
+            }
+            void ListenAndStreamData(std::unique_ptr<boost::asio::ip::tcp::socket>&& socket) {
+                // TODO(dkorolev): Handle shutdown correctly.
+                while (true) {
+                    auto lambda = [&socket](const SimpleEntry& entry) {
+                        std::ostringstream os;
+                        os << entry.ikey << ' ' << entry.data << '\n';
+                        std::string message = os.str();
+                        boost::asio::write(*socket, boost::asio::buffer(message), boost::asio::transfer_all());
+                    };
+                    auto scope = manager_->new_scoped_test_listener(lambda);
+                    // TODO(dkorolev): Join threads or do something else clever.
+                    for (;;)
+                        ;
+                }
             }
         };
-        test_broadcaster_type test_broadcaster = test_broadcaster_type(this);
+        test_exporter_type test_exporter = test_exporter_type(this);
 
         // TAILPRODUCE_PUBLISHER(test);
         struct test_publisher_type : ::TailProduce::Publisher<test_type> {

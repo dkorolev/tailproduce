@@ -1,6 +1,10 @@
 #ifndef STREAMMANAGER_H
 #define STREAMMANAGER_H
 
+// TODO(dkorolev): Move these two headers to exporter.h
+#include <memory>
+#include <boost/asio.hpp>
+
 #include <glog/logging.h>
 
 #include "storage.h"
@@ -38,6 +42,11 @@ namespace TailProduce {
     template <typename T_STORAGE_MANAGER> struct StreamManager : StreamManagerBase {
         typedef T_STORAGE_MANAGER storage_type;
         T_STORAGE_MANAGER storage;
+    };
+
+    // TODO(dkorolev): Move to exporter.h
+    struct StreamExporter {
+        virtual void ListenAndStreamData(std::unique_ptr<boost::asio::ip::tcp::socket>&& socket) = 0;
     };
 };
 

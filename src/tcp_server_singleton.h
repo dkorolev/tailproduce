@@ -89,7 +89,8 @@ namespace TailProduce {
                                 std::thread(&Handler::HandleRequest, handler_.get(), std::move(socket)).detach();
                             } else {
                                 std::string message = "500\n";
-                                boost::asio::write(*socket, boost::asio::buffer(message), boost::asio::transfer_all());
+                                boost::asio::write(
+                                    *socket, boost::asio::buffer(message), boost::asio::transfer_all());
                             }
                         }
                     } catch (std::exception& e) {
@@ -168,7 +169,7 @@ namespace TailProduce {
                 return f_();
             })();
 
-            std::ostringstream os; 
+            std::ostringstream os;
             os << "HTTP/1.1 200 OK\n";
             os << "Content-type: text/html\n";
             os << "Content-length: " << response.length() << "\n";
@@ -177,11 +178,10 @@ namespace TailProduce {
 
             const std::string message = os.str();
             boost::asio::write(*socket, boost::asio::buffer(message), boost::asio::transfer_all());
-        }   
+        }
         HTTPResponseHandler() = delete;
         void operator=(const HTTPResponseHandler&) = delete;
     };
-
 };
 
 #endif
