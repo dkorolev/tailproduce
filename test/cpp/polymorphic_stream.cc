@@ -205,5 +205,6 @@ TYPED_TEST(PolymorphicStreamTest, DeSerializesEntriesWithTypes) {
     auto foo_listener_existence_scope = streams_manager.new_scoped_polymorphic_stream_listener(client);
     ASSERT_EQ("", client.os.str());
     PublishTestEntries(streams_manager.polymorphic_stream_publisher);
+    foo_listener_existence_scope->WaitUntilCurrent();
     EXPECT_EQ("BaseEntry(1)\nDerivedEntryA(2, 'A')\nDerivedEntryB(3, ''foo'')\n", client.os.str());
 }

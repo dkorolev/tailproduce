@@ -96,5 +96,6 @@ TYPED_TEST(BinaryStreamSerializationTest, DeSerializesEntriesWithTypes) {
     auto foo_listener_existence_scope = streams_manager.new_scoped_foo_listener(client);
     ASSERT_EQ("", client.os.str());
     PublishTestEntries(streams_manager.foo_publisher);
+    foo_listener_existence_scope->WaitUntilCurrent();
     EXPECT_EQ("SimpleBinaryEntry(42,Spock)\n", client.os.str());
 }

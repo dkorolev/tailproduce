@@ -2,43 +2,21 @@
 // Static framework is the one that lists all the streams in the source file,
 // thus allowing all C++ template and static typing powers to come into play.
 #define TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(NAME, BASE) \
-    class NAME { \
+    class NAME : public ::TailProduce::StaticFramework<BASE> { \
       public: \
         typedef NAME framework_type; \
-        typedef typename BASE::storage_type storage_type; \
-        storage_type& storage; \
-        static storage_type& EnsureStreamsAreCreatedDuringInitialization( \
-                storage_type& storage, \
-                const ::TailProduce::StreamManagerParams& params) { \
-            params.Apply(storage); \
-            return storage; \
-        } \
+        typedef ::TailProduce::StaticFramework<BASE> base_type; \
+        using storage_type = typename base_type::storage_type; \
         NAME(storage_type& storage, \
              const ::TailProduce::StreamManagerParams& params = ::TailProduce::StreamManagerParams::FromCommandLineFlags()) \
-          : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) { \
-            ::TailProduce::EnsureThereAreNoStreamsWithoutPublishers(streams_declared_, stream_publishers_declared_); \
-        } \
-        NAME(const NAME&) = delete; \
-        NAME(NAME&&) = delete; \
-        void operator=(const NAME&) = delete; \
-      private: \
-        using TSM = ::TailProduce::StreamManagerBase; \
-        static_assert(std::is_base_of<TSM, BASE>::value, \
-                      "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE should be derived from StreamManagerBase."); \
-        using TS = ::TailProduce::Storage::Internal::Interface; \
-        static_assert(std::is_base_of<TS, storage_type>::value, \
-                      "TAILPRODUCE_STATIC_FRAMEWORK_BEGIN: BASE::storage_type should be derived from Storage."); \
-        std::set<std::string> streams_declared_; \
-        std::set<std::string> stream_publishers_declared_; \
-      public: \
-        typedef BASE captured_base; \
+          : base_type(storage, params) {} \
 
 #define TAILPRODUCE_STREAM(NAME, ENTRY_TYPE, ORDER_KEY_TYPE) \
         struct NAME##_type { \
             typedef ENTRY_TYPE entry_type; \
             typedef ORDER_KEY_TYPE order_key_type; \
             typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type; \
-            typedef typename captured_base::storage_type storage_type; \
+            typedef typename framework_type::storage_type storage_type; \
             typedef ::TailProduce::INTERNAL_UnsafeListener<NAME##_type> INTERNAL_unsafe_listener_type; \
             typedef ::TailProduce::INTERNAL_UnsafePublisher<NAME##_type> INTERNAL_unsafe_publisher_type; \
             typedef ::TailProduce::Publisher<NAME##_type> publisher_type; \
@@ -66,6 +44,9 @@
         }; \
         NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE); \
         ::TailProduce::AsyncListenersFactory<NAME##_type> new_scoped_##NAME##_listener = ::TailProduce::AsyncListenersFactory<NAME##_type>(NAME)
+
+#define TAILPRODUCE_BROADCAST_STREAM(NAME) \
+        ;
 
 #define TAILPRODUCE_PUBLISHER(NAME) \
         struct NAME##_publisher_type : ::TailProduce::Publisher<NAME##_type> { \

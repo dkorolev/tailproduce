@@ -1,7 +1,11 @@
+// TODO(dkorolev): Rethink which mutexes are necessary and which are not.
+
 #ifndef UNSAFELISTENERS_H
 #define UNSAFELISTENERS_H
 
 #include <memory>
+#include <thread>
+#include <mutex>
 
 #include <glog/logging.h>
 
@@ -54,6 +58,7 @@ namespace TailProduce {
         }
 
         const typename T::head_pair_type& GetHead() const {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             return stream.head;
         }
 
@@ -63,7 +68,7 @@ namespace TailProduce {
 
         // HasData() returns true if more data is available.
         // Can change from false to true if/when new data is available.
-        bool HasData() const {
+        bool HasDataUnguarded() const {
             if (reached_end) {
                 VLOG(3) << this << " INTERNAL_UnsafeListener::HasData() = false, due to reached_end = true.";
                 return false;
@@ -94,6 +99,10 @@ namespace TailProduce {
                 }
             }
         }
+        bool HasData() const {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+            return HasDataUnguarded();
+        }
 
         // ReachedEnd() returns true if the end has been reached and no data may even be read from this iterator.
         // Can only happen if the iterator has a fixed `end`, it has been reached and the HEAD of this stream
@@ -105,21 +114,25 @@ namespace TailProduce {
 
         // ProcessEntrySync() deserealizes the entry and calls the supplied method of the respective type.
         template <typename T_PROCESSOR> void ProcessEntrySync(T_PROCESSOR& processor, bool require_data = true) {
-            if (!HasData()) {
-                if (require_data) {
-                    VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
-                    throw ::TailProduce::ListenerHasNoDataToRead();
-                } else {
-                    return;
+            std::string value_as_string;
+            {
+                std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+                if (!HasDataUnguarded()) {
+                    if (require_data) {
+                        VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
+                        throw ::TailProduce::ListenerHasNoDataToRead();
+                    } else {
+                        return;
+                    }
                 }
+                if (!iterator) {
+                    VLOG(3) << "throw ::TailProduce::InternalError();";
+                    throw ::TailProduce::InternalError();
+                }
+                // TODO(dkorolev): Make this proof-of-concept code efficient.
+                ::TailProduce::Storage::VALUE_TYPE const value = iterator->Value();
+                value_as_string = std::string(value.begin(), value.end());
             }
-            if (!iterator) {
-                VLOG(3) << "throw ::TailProduce::InternalError();";
-                throw ::TailProduce::InternalError();
-            }
-            // TODO(dkorolev): Make this proof-of-concept code efficient.
-            ::TailProduce::Storage::VALUE_TYPE const value = iterator->Value();
-            const std::string value_as_string(value.begin(), value.end());
             std::istringstream is(value_as_string);
             T::entry_type::DeSerializeAndProcessEntry(is, processor);
         }
@@ -127,7 +140,8 @@ namespace TailProduce {
         // AdvanceToNextEntry() advances the listener to the next available entry.
         // Will throw an exception if no further data is (yet) available.
         void AdvanceToNextEntry() {
-            if (!HasData()) {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+            if (!HasDataUnguarded()) {
                 VLOG(3) << "throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();";
                 throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();
             }
@@ -165,34 +179,68 @@ namespace TailProduce {
 
         template <typename T_PROCESSOR> struct AsyncListener : ::TailProduce::Subscriber {
             AsyncListener(const T& stream, T_PROCESSOR& processor)
-                : impl(stream), processor(processor), subscribe(this, stream.subscriptions) {
-                // TODO(dkorolev): Retire this, see the TODO(dkorolev) right above RunFakeEventLoop().
-                RunFakeEventLoop();
+                : stream(stream),
+                  processor(processor),
+                  subscribe(this, stream.subscriptions),
+                  worker_thread(&AsyncListener::ThreadFunction, this) {
             }
             virtual ~AsyncListener() {
+                VLOG(2) << this << " AsyncListener::~AsyncListener(): Waiting for the thread to terminate.";
+                terminating = true;
+                worker_thread.join();
+                VLOG(2) << this << " AsyncListener::~AsyncListener(): Thread terminated.";
+            }
+
+            void ThreadFunction() {
+                INTERNAL_UnsafeListener<T> impl(stream);
+                // TODO(dkorolev): This, of course, should not be based on this repeated check.
+                while (!terminating) {
+                    while (!terminating && !impl.ReachedEnd() && impl.HasData()) {
+                        impl.ProcessEntrySync(processor);
+                        impl.AdvanceToNextEntry();
+                    }
+                    {
+                        std::lock_guard<std::mutex> guard(mutex);
+                        ++cycles;
+                    }
+                }
+            }
+
+            // TODO(dkorolev): This, of course, should use std::condition_variable.
+            void WaitUntilCurrent() {
+                int safe_cycles;
+                {
+                    std::lock_guard<std::mutex> guard(mutex);
+                    safe_cycles = cycles;
+                }
+                while (true) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    {
+                        std::lock_guard<std::mutex> guard(mutex);
+                        if (cycles != safe_cycles) {
+                            return;
+                        }
+                    }
+                }
             }
 
             virtual void Poke() override {
                 // TODO(dkorolev): ALARM! This will fail miserably if a stream is appended to as a direct result
                 // of it just being appended to. Async implementation will take care of it.
-                RunFakeEventLoop();
+                // RunFakeEventLoop();
             }
 
           private:
-            // TODO(dkorolev): This should be run in a separate thread, C++ style.
-            // Not it effectively is implemented in node.js style, blocking single-threaded.
-            // User-facing coding semantics should not change though, at least for the cases
-            // as simple as the current set of tests.
-            void RunFakeEventLoop() {
-                while (!impl.ReachedEnd() && impl.HasData()) {
-                    impl.ProcessEntrySync(processor);
-                    impl.AdvanceToNextEntry();
-                }
-            }
+            const T& stream;
 
-            INTERNAL_UnsafeListener<T> impl;
             T_PROCESSOR& processor;
             ::TailProduce::SubscribeWhileInScope<::TailProduce::SubscriptionsManager> subscribe;
+
+            std::mutex mutex;
+            bool terminating = false;
+            size_t cycles = 0;
+
+            std::thread worker_thread;
 
             AsyncListener() = delete;
             AsyncListener(const AsyncListener&) = delete;
@@ -202,6 +250,7 @@ namespace TailProduce {
 
         template <typename T_PROCESSOR>
         std::unique_ptr<AsyncListener<T_PROCESSOR>> operator()(T_PROCESSOR& processor) {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             return std::unique_ptr<AsyncListener<T_PROCESSOR>>(new AsyncListener<T_PROCESSOR>(stream, processor));
         }
 

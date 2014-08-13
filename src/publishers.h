@@ -1,3 +1,5 @@
+// TODO(dkorolev): Rethink which mutexes are necessary and which are not.
+
 #ifndef UNSAFEPUBLISHER_H
 #define UNSAFEPUBLISHER_H
 
@@ -7,6 +9,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <mutex>
 
 #include "tp_exceptions.h"
 #include "entry.h"
@@ -16,24 +19,6 @@
 // TODO(dkorolev): Rename INTERNAL_UnsafePublisher once the transition is completed.
 
 namespace TailProduce {
-    inline void EnsureThereAreNoStreamsWithoutPublishers(const std::set<std::string>& streams_declared,
-                                                         const std::set<std::string>& stream_publishers_declared) {
-        std::vector<std::string> diff;
-        std::set_difference(streams_declared.begin(),
-                            streams_declared.end(),
-                            stream_publishers_declared.begin(),
-                            stream_publishers_declared.end(),
-                            std::back_inserter(diff));
-        if (!diff.empty()) {
-            std::ostringstream os;
-            for (const auto cit : diff) {
-                os << ',' << cit;
-                VLOG(3) << "Stream '" << cit << "' has been declared but has no writer associated with it.";
-            }
-            throw ::TailProduce::StreamHasNoWriterDefinedException(os.str().substr(1));
-        }
-    }
-
     // INTERNAL_UnsafePublisher contains the logic of appending data to the streams
     // and updating their HEAD order keys.
     template <typename T> struct INTERNAL_UnsafePublisher {
@@ -47,15 +32,16 @@ namespace TailProduce {
         }
 
         void Push(const typename T::entry_type& entry) {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type> impl;
-            PushHead(impl::ExtractOrderKey(entry));
+            PushHeadUnguarded(impl::ExtractOrderKey(entry));
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
             stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head),
                                         bytes(value_output_stream.str()));
         }
 
-        void PushHead(const typename T::order_key_type& order_key) {
+        void PushHeadUnguarded(const typename T::order_key_type& order_key) {
             typename T::head_pair_type new_head(order_key, 0);
             if (new_head.first < stream.head.first) {
                 // Order keys should only be increasing.
@@ -72,10 +58,15 @@ namespace TailProduce {
 
             stream.head = new_head;
         }
+        void PushHead(const typename T::order_key_type& order_key) {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+            PushHeadUnguarded(order_key);
+        }
 
         // TODO: PushSecondaryKey for merge usecases.
 
         const typename T::head_pair_type& GetHead() const {
+            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             return stream.head;
         }
 

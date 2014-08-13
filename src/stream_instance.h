@@ -3,6 +3,7 @@
 
 #include <string>
 #include <type_traits>
+#include <mutex>
 
 #include "entry.h"
 #include "order_key.h"

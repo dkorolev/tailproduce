@@ -1,6 +1,6 @@
 PWD=$(shell pwd)
 
-CPP=clang++
+CPP=g++
 CPP_FOR_COVERAGE=g++
 
 CPPFLAGS=-std=c++11 -g -I ../../ -I ../../leveldb/include/
@@ -16,7 +16,8 @@ EXE_WITH_COVERAGE=build/run_all_tests_with_coverage
 
 TEST_EXE_FLAGS=--gtest_death_test_style=threadsafe --question="six by nine" --answer=42
 # Uncomment the below line and replace the test name to debug a specific test.
-# TEST_EXE_FLAGS+= --gtest_filter=StreamManagerTest/1.UserFriendlySyntaxCompiles --logtostderr -v 3
+# NOTE: This is important to test telnet-based stream listening over TCP.
+# TEST_EXE_FLAGS+= --gtest_filter=StreamManagerTest/0.ExpandedMacroSyntaxCompiles --logtostderr -v 2
 
 .PHONY: all test clean
 

@@ -1,6 +1,9 @@
 // The smoke test to illustrate the functionality of the stream manager.
 // Please refer to stream_manager.cc for a more complete test.
 
+#include <string>
+#include <sstream>
+
 #include <gtest/gtest.h>
 
 #include "../../src/tailproduce.h"
@@ -177,6 +180,7 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
         ASSERT_FALSE(listener_from_three_to_five_not_inclusive.HasData());
         ASSERT_TRUE(listener_from_three_to_five_not_inclusive.ReachedEnd());
 
+        test_listener_existence_scope->WaitUntilCurrent();
         std::string golden =
             "[0]:{1,'one'},[1]:{2,'two'},[2]:{3,'three'},[3]:{4,'four'},[4]:{5,'five'},[5]:{6,'six'},[6]:{7,'seven'"
             "}";
@@ -206,7 +210,47 @@ TEST(StreamManagerSmokeTest, DataInjected) {
         StatsAggregator stats;
         EXPECT_EQ(0, stats.count);
         auto foo_listener_existence_scope = streams_manager.new_scoped_foo_listener(stats);
+        foo_listener_existence_scope->WaitUntilCurrent();
         EXPECT_EQ(1, stats.count);
         EXPECT_EQ("[0]:{42,'Yay!'}", stats.data);
     }
+}
+
+TEST(StreamManagerSmokeTest, ListenerRunsInSeparateThread) {
+    TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<InMemoryTestStorage>);
+    TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_PUBLISHER(test);
+    TAILPRODUCE_STATIC_FRAMEWORK_END();
+
+    InMemoryTestStorage storage;
+
+    // A variable to hold the lambda is required in order to pass a reference to ProcessEntrySync().
+    std::function<void(const SimpleEntry&)> lambda;
+
+    Impl streams_manager(storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+
+    SimpleEntry entry;
+
+    typename Impl::test_type::publisher_type publisher(streams_manager.test);
+
+    std::ostringstream os;
+
+    auto async_listener =
+        streams_manager.new_scoped_test_listener(lambda = [&os, &publisher](const SimpleEntry& entry) {
+            static int safely_avoid_infinite_loop = 0;
+            if (entry.data == "ping") {
+                ASSERT_EQ(0, safely_avoid_infinite_loop);
+                ++safely_avoid_infinite_loop;
+                publisher.Push(SimpleEntry(entry.ikey + 1000, "pong"));
+            }
+            os << entry.ikey << ' ' << entry.data << std::endl;
+        });
+
+    publisher.Push(SimpleEntry(1, "one"));
+    async_listener->WaitUntilCurrent();
+    EXPECT_EQ("1 one\n", os.str());
+
+    publisher.Push(SimpleEntry(2, "ping"));
+    async_listener->WaitUntilCurrent();
+    EXPECT_EQ("1 one\n2 ping\n1002 pong\n", os.str());
 }
