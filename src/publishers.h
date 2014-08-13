@@ -34,14 +34,14 @@ namespace TailProduce {
         void Push(const typename T::entry_type& entry) {
             std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type> impl;
-            GuardedPushHead(impl::ExtractOrderKey(entry));
+            PushHeadUnguarded(impl::ExtractOrderKey(entry));
             std::ostringstream value_output_stream;
             T::entry_type::SerializeEntry(value_output_stream, entry);
             stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head),
                                         bytes(value_output_stream.str()));
         }
 
-        void GuardedPushHead(const typename T::order_key_type& order_key) {
+        void PushHeadUnguarded(const typename T::order_key_type& order_key) {
             typename T::head_pair_type new_head(order_key, 0);
             if (new_head.first < stream.head.first) {
                 // Order keys should only be increasing.
@@ -60,7 +60,7 @@ namespace TailProduce {
         }
         void PushHead(const typename T::order_key_type& order_key) {
             std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
-            GuardedPushHead(order_key);
+            PushHeadUnguarded(order_key);
         }
 
         // TODO: PushSecondaryKey for merge usecases.

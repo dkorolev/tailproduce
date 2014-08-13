@@ -68,7 +68,7 @@ namespace TailProduce {
 
         // HasData() returns true if more data is available.
         // Can change from false to true if/when new data is available.
-        bool GuardedHasData() const {
+        bool HasDataUnguarded() const {
             if (reached_end) {
                 VLOG(3) << this << " INTERNAL_UnsafeListener::HasData() = false, due to reached_end = true.";
                 return false;
@@ -101,7 +101,7 @@ namespace TailProduce {
         }
         bool HasData() const {
             std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
-            return GuardedHasData();
+            return HasDataUnguarded();
         }
 
         // ReachedEnd() returns true if the end has been reached and no data may even be read from this iterator.
@@ -117,7 +117,7 @@ namespace TailProduce {
             std::string value_as_string;
             {
                 std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
-                if (!GuardedHasData()) {
+                if (!HasDataUnguarded()) {
                     if (require_data) {
                         VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
                         throw ::TailProduce::ListenerHasNoDataToRead();
@@ -141,7 +141,7 @@ namespace TailProduce {
         // Will throw an exception if no further data is (yet) available.
         void AdvanceToNextEntry() {
             std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
-            if (!GuardedHasData()) {
+            if (!HasDataUnguarded()) {
                 VLOG(3) << "throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();";
                 throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();
             }
