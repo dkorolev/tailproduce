@@ -87,7 +87,7 @@ namespace TailProduce {
         std::unique_ptr<::TailProduce::TCPServer::ScopedHandlerRegisterer> scoped_http_handler_registerer;
 
         void AddExporter(const std::string& endpoint, ::TailProduce::StreamExporter* handler) {
-            // TODO(dkorolev): Add more logic here. Add a scoped added.
+            // TODO(dkorolev): Add more logic here. Add a scoped adder.
             VLOG(2) << this << " StaticFramework::AddExporter(\"" << endpoint << "\")";
             exporters_[endpoint] = handler;
         }

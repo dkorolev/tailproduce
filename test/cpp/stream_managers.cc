@@ -435,10 +435,12 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
 
         auto& publisher = streams_manager.test_publisher;
 
+        VLOG(2) << "Starting the Magic.";
         for (int i = 100; i <= 300; ++i) {
             publisher.Push(SimpleEntry(i, "TCP Test"));
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
+        VLOG(2) << "Done with the Magic.";
     }
 }
 
