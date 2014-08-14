@@ -13,6 +13,6 @@ namespace TailProduce {
             return bytes("s\0" + stream);
         }
     };
-}  // namespace TailProduce
+}
 
 #endif  // TAILPRODUCE_KEY_SCHEMA_H

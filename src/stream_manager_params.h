@@ -22,9 +22,9 @@ namespace TailProduce {
         // TODO(dkorolev): Implement it.
         static StreamManagerParams FromCommandLineFlags();
 
-        template <typename T_ORDER_KEY>
+        template <typename ORDER_KEY>
         StreamManagerParams& CreateStream(const std::string& name,
-                                          const T_ORDER_KEY& key,
+                                          const ORDER_KEY& key,
                                           const uint32_t secondary_key = 0) {
             auto& placeholder = init[name];
             if (!placeholder.empty()) {
@@ -33,7 +33,7 @@ namespace TailProduce {
                 throw StreamAlreadyListedForCreationException();
             }
             ::TailProduce::Storage::KEY_TYPE kkey =
-                OrderKey::template StaticSerializeAsStorageKey<T_ORDER_KEY>(key, secondary_key);
+                OrderKey::template StaticSerializeAsStorageKey<ORDER_KEY>(key, secondary_key);
             std::copy(kkey.begin(), kkey.end(), std::back_inserter(placeholder));
             VLOG(3) << "Registering stream '" << name << "' as '" << kkey << "'.";
             return *this;

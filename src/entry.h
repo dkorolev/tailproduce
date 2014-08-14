@@ -1,6 +1,7 @@
 #ifndef ENTRY_H
 #define ENTRY_H
 
+/*
 namespace TailProduce {
     // A serializable entry.
     template <typename T1, typename T2> struct OrderKeyExtractorImpl {};
@@ -14,5 +15,6 @@ namespace TailProduce {
         // 3) Needs template<typename T> static void DeSerializeEntry(std::istream& is, T& entry);
     };
 };
+*/
 
 #endif

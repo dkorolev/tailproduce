@@ -18,14 +18,15 @@ namespace TailProduce {
     // TODO(dkorolev): Rename this class.
     // INTERNAL_UnsafeListener contains the logic of creating and re-creating storage-level read iterators,
     // presenting data in serialized format and keeping track of HEAD order keys.
-    template <typename T> struct INTERNAL_UnsafeListener {
+    template <typename STREAM> struct INTERNAL_UnsafeListener {
+        typedef STREAM T_STREAM;
         // Unbounded.
         ~INTERNAL_UnsafeListener() {
             VLOG(3) << this << ": INTERNAL_UnsafeListener::~INTERNAL_UnsafeListener();";
         }
 
-        INTERNAL_UnsafeListener(const T& stream,
-                                const typename T::head_pair_type& begin = typename T::head_pair_type())
+        INTERNAL_UnsafeListener(const T_STREAM& stream,
+                                const typename T_STREAM::head_pair_type& begin = typename T_STREAM::head_pair_type())
             : stream(stream),
               storage(stream.manager->storage),
               cursor_key(stream.key_builder.BuildStorageKey(begin)),
@@ -35,14 +36,14 @@ namespace TailProduce {
             VLOG(3) << this << ": INTERNAL_UnsafeListener::INTERNAL_UnsafeListener('" << stream.name << "', "
                     << "begin='" << cursor_key << "');";
         }
-        INTERNAL_UnsafeListener(const T& stream, const typename T::order_key_type& begin)
+        INTERNAL_UnsafeListener(const T_STREAM& stream, const typename T_STREAM::order_key_type& begin)
             : INTERNAL_UnsafeListener(stream, std::make_pair(begin, 0)) {
         }
 
         // Bounded.
-        INTERNAL_UnsafeListener(const T& stream,
-                                const typename T::head_pair_type& begin,
-                                const typename T::head_pair_type& end)
+        INTERNAL_UnsafeListener(const T_STREAM& stream,
+                                const typename T_STREAM::head_pair_type& begin,
+                                const typename T_STREAM::head_pair_type& end)
             : stream(stream),
               storage(stream.manager->storage),
               cursor_key(stream.key_builder.BuildStorageKey(begin)),
@@ -51,13 +52,13 @@ namespace TailProduce {
               end_key(stream.key_builder.BuildStorageKey(end)),
               reached_end(false) {
         }
-        INTERNAL_UnsafeListener(const T& stream,
-                                const typename T::order_key_type& begin,
-                                const typename T::order_key_type& end)
+        INTERNAL_UnsafeListener(const T_STREAM& stream,
+                                const typename T_STREAM::order_key_type& begin,
+                                const typename T_STREAM::order_key_type& end)
             : INTERNAL_UnsafeListener(stream, std::make_pair(begin, 0), std::make_pair(end, 0)) {
         }
 
-        const typename T::head_pair_type& GetHead() const {
+        const typename T_STREAM::head_pair_type& GetHead() const {
             std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
             return stream.head;
         }
@@ -113,7 +114,7 @@ namespace TailProduce {
         }
 
         // ProcessEntrySync() deserealizes the entry and calls the supplied method of the respective type.
-        template <typename T_PROCESSOR> void ProcessEntrySync(T_PROCESSOR& processor, bool require_data = true) {
+        template <typename PROCESSOR> void ProcessEntrySync(PROCESSOR& processor, bool require_data = true) {
             std::string value_as_string;
             {
                 std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
@@ -134,7 +135,7 @@ namespace TailProduce {
                 value_as_string = std::string(value.begin(), value.end());
             }
             std::istringstream is(value_as_string);
-            T::entry_type::DeSerializeAndProcessEntry(is, processor);
+            T_STREAM::entry_type::DeSerializeAndProcessEntry(is, processor);
         }
 
         // AdvanceToNextEntry() advances the listener to the next available entry.
@@ -155,9 +156,9 @@ namespace TailProduce {
         }
 
       private:
-        typedef typename T::storage_type storage_type;
-        typedef typename T::storage_type::StorageIterator iterator_type;
-        const T& stream;
+        typedef typename T_STREAM::storage_type storage_type;
+        typedef typename T_STREAM::storage_type::StorageIterator iterator_type;
+        const T_STREAM& stream;
         storage_type& storage;
         ::TailProduce::Storage::KEY_TYPE cursor_key;
         bool need_to_increment_cursor;
@@ -173,12 +174,13 @@ namespace TailProduce {
     };
 
     // TODO(dkorolev): Add support for other listener types, not just "all" range.
-    template <typename T> struct AsyncListenersFactory {
-        AsyncListenersFactory(const T& stream) : stream(stream) {
+    template <typename T_STREAM> struct AsyncListenersFactory {
+        AsyncListenersFactory(const T_STREAM& stream) : stream(stream) {
         }
 
-        template <typename T_PROCESSOR> struct AsyncListener : ::TailProduce::Subscriber {
-            AsyncListener(const T& stream, T_PROCESSOR& processor)
+        template <typename PROCESSOR> struct AsyncListener : ::TailProduce::Subscriber {
+            typedef PROCESSOR T_PROCESSOR;
+            AsyncListener(const T_STREAM& stream, T_PROCESSOR& processor)
                 : stream(stream),
                   processor(processor),
                   subscribe(this, stream.subscriptions),
@@ -192,7 +194,7 @@ namespace TailProduce {
             }
 
             void ThreadFunction() {
-                INTERNAL_UnsafeListener<T> impl(stream);
+                INTERNAL_UnsafeListener<T_STREAM> impl(stream);
                 // TODO(dkorolev): This, of course, should not be based on this repeated check.
                 while (!terminating) {
                     while (!terminating && !impl.ReachedEnd() && impl.HasData()) {
@@ -231,7 +233,7 @@ namespace TailProduce {
             }
 
           private:
-            const T& stream;
+            const T_STREAM& stream;
 
             T_PROCESSOR& processor;
             ::TailProduce::SubscribeWhileInScope<::TailProduce::SubscriptionsManager> subscribe;
@@ -248,14 +250,14 @@ namespace TailProduce {
             void operator=(const AsyncListener&) = delete;
         };
 
-        template <typename T_PROCESSOR>
-        std::unique_ptr<AsyncListener<T_PROCESSOR>> operator()(T_PROCESSOR& processor) {
+        template <typename PROCESSOR>
+        std::unique_ptr<AsyncListener<PROCESSOR>> operator()(PROCESSOR& processor) {
             std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
-            return std::unique_ptr<AsyncListener<T_PROCESSOR>>(new AsyncListener<T_PROCESSOR>(stream, processor));
+            return std::unique_ptr<AsyncListener<PROCESSOR>>(new AsyncListener<PROCESSOR>(stream, processor));
         }
 
       private:
-        const T& stream;
+        const T_STREAM& stream;
     };
 };
 
