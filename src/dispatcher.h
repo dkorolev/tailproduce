@@ -4,24 +4,26 @@
 #include "tp_exceptions.h"
 
 namespace TailProduce {
-    template <typename T_BASE, typename T_DERIVED, typename... T_TAIL> class RuntimeDispatcher {
-      public:
-        template <typename T_TYPE, typename T_CALLBACK> static void DispatchCall(const T_TYPE& x, T_CALLBACK c) {
-            if (const T_DERIVED* d = dynamic_cast<const T_DERIVED*>(&x)) {
+    template <typename BASE, typename DERIVED, typename... TAIL> struct RuntimeDispatcher {
+        typedef BASE T_BASE;
+        typedef DERIVED T_DERIVED;
+        template <typename TYPE, typename CALLBACK> static void DispatchCall(const TYPE& x, CALLBACK c) {
+            if (const DERIVED* d = dynamic_cast<const DERIVED*>(&x)) {
                 c(*d);
             } else {
-                RuntimeDispatcher<T_BASE, T_TAIL...>::DispatchCall(x, c);
+                RuntimeDispatcher<BASE, TAIL...>::DispatchCall(x, c);
             }
         }
     };
 
-    template <typename T_BASE, typename T_DERIVED> class RuntimeDispatcher<T_BASE, T_DERIVED> {
-      public:
-        template <typename T_TYPE, typename T_CALLBACK> static void DispatchCall(const T_TYPE& x, T_CALLBACK c) {
-            if (const T_DERIVED* d = dynamic_cast<const T_DERIVED*>(&x)) {
+    template <typename BASE, typename DERIVED> struct RuntimeDispatcher<BASE, DERIVED> {
+        typedef BASE T_BASE;
+        typedef DERIVED T_DERIVED;
+        template <typename TYPE, typename CALLBACK> static void DispatchCall(const TYPE& x, CALLBACK c) {
+            if (const DERIVED* d = dynamic_cast<const DERIVED*>(&x)) {
                 c(*d);
             } else {
-                const T_BASE* b = dynamic_cast<const T_BASE*>(&x);
+                const BASE* b = dynamic_cast<const BASE*>(&x);
                 if (b) {
                     c(*b);
                 } else {
