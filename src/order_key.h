@@ -14,15 +14,15 @@ namespace TailProduce {
         // Needs bool operator<(const T& rhs) const;
         // Needs void SerializeOrderKey(uint8_t* ptr) const;
         // Needs void DeSerializeOrderKey(const uint8_t* ptr);
-        template <typename T_ORDER_KEY>
-        static void StaticAppendAsStorageKey(const T_ORDER_KEY& primary_key,
+        template <typename ORDER_KEY>
+        static void StaticAppendAsStorageKey(const ORDER_KEY& primary_key,
                                              const uint32_t secondary_key,
                                              ::TailProduce::Storage::KEY_TYPE& output) {
             using TOK = ::TailProduce::OrderKey;
-            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value,
-                          "OrderKey::StaticAppendAsStorageKey::T_ORDER_KEY should be derived from OrderKey.");
-            static_assert(T_ORDER_KEY::size_in_bytes > 0,
-                          "OrderKey::StaticAppendAsStorageKey::T_ORDER_KEY::size_in_bytes should be positive.");
+            static_assert(std::is_base_of<TOK, ORDER_KEY>::value,
+                          "OrderKey::StaticAppendAsStorageKey::ORDER_KEY should be derived from OrderKey.");
+            static_assert(ORDER_KEY::size_in_bytes > 0,
+                          "OrderKey::StaticAppendAsStorageKey::ORDER_KEY::size_in_bytes should be positive.");
             // TODO(dkorolev): This secondary key implementation as fixed 10 bytes is not final.
             ::TailProduce::Storage::KEY_TYPE pkey;
             primary_key.SerializeOrderKey(pkey);
@@ -31,11 +31,11 @@ namespace TailProduce {
             output.append(os.str());
         }
 
-        template <typename T_ORDER_KEY>
-        static ::TailProduce::Storage::KEY_TYPE StaticSerializeAsStorageKey(const T_ORDER_KEY& primary_key,
+        template <typename ORDER_KEY>
+        static ::TailProduce::Storage::KEY_TYPE StaticSerializeAsStorageKey(const ORDER_KEY& primary_key,
                                                                             const uint32_t secondary_key) {
             ::TailProduce::Storage::KEY_TYPE output;
-            StaticAppendAsStorageKey<T_ORDER_KEY>(primary_key, secondary_key, output);
+            StaticAppendAsStorageKey<ORDER_KEY>(primary_key, secondary_key, output);
             return output;
         }
     };
