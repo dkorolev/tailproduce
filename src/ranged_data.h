@@ -9,37 +9,40 @@
 #include <chrono>
 #include <limits>
 
+/*
+TODO(dkorolev): Refactor this.
 namespace TailProduce {
     template <typename RANGE_TYPE> class RangedData : public std::enable_if<std::is_signed<RANGE_TYPE>::value> {
       public:
+        typdef RANGE_TYPE T_RANGE_TYPE;
         RangedData() = default;
-        RANGE_TYPE DefaultValue() {
+        T_RANGE_TYPE DefaultValue() {
             return DefaultValue();
         }
         std::string GetMin() {
-            return asString_(std::numeric_limits<RANGE_TYPE>::min());
+            return asString_(std::numeric_limits<T_RANGE_TYPE>::min());
         }
         std::string GetMax() {
-            return asString_(std::numeric_limits<RANGE_TYPE>::max());
+            return asString_(std::numeric_limits<T_RANGE_TYPE>::max());
         }
-        std::string GetValue(RANGE_TYPE val = 0) {
+        std::string GetValue(T_RANGE_TYPE val = 0) {
             return asString_(val);
         }
         uint NDigits() {  // Useful for reverseing the key from string to type.
-            return std::numeric_limits<RANGE_TYPE>::digits10 + 1;
+            return std::numeric_limits<T_RANGE_TYPE>::digits10 + 1;
         }
-        RANGE_TYPE Reverse(std::string const& component) {
+        T_RANGE_TYPE Reverse(std::string const& component) {
             int iter = 0;
             while (component[iter] == '0' && iter < component.length()) ++iter;  // Find first non zero value.
             if (iter >= component.size()) return 0;
             std::istringstream is(&(component.data()[iter]));
-            RANGE_TYPE val;
+            T_RANGE_TYPE val;
             is >> val;
             return val;
         }
 
       private:
-        std::string asString_(RANGE_TYPE value) {
+        std::string asString_(T_RANGE_TYPE value) {
             std::ostringstream os;
             os << std::setfill('0') << std::setw(NDigits()) << value;
             return os.str();
@@ -119,5 +122,6 @@ namespace TailProduce {
         RangedData<uint64_t> dr_;
     };
 };
+*/
 
 #endif

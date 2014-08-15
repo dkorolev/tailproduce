@@ -39,6 +39,7 @@ struct SimpleBinaryEntry : ::TailProduce::Entry, ::TailProduce::CerealBinarySeri
     }
 };
 
+/*
 namespace TailProduce {
     template <> struct OrderKeyExtractorImpl<SimpleOrderKey, SimpleBinaryEntry> {
         static SimpleOrderKey ExtractOrderKey(const SimpleBinaryEntry& entry) {
@@ -46,6 +47,7 @@ namespace TailProduce {
         }
     };
 };
+*/
 
 template <typename STREAM_MANAGER_TYPE> struct Setup {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerWithASingleBinaryStream, STREAM_MANAGER_TYPE);
@@ -53,7 +55,7 @@ template <typename STREAM_MANAGER_TYPE> struct Setup {
     TAILPRODUCE_PUBLISHER(foo);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    typedef typename STREAM_MANAGER_TYPE::storage_type Storage;
+    typedef typename STREAM_MANAGER_TYPE::T_STORAGE Storage;
 };
 
 template <typename STREAM_MANAGER_TYPE> class BinaryStreamSerializationTest : public ::testing::Test {};

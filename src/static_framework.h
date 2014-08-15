@@ -10,6 +10,7 @@
 
 #include "stream_manager.h"
 #include "stream_manager_params.h"
+#include "config_values.h"
 #include "tcp_server_singleton.h"
 
 namespace TailProduce {
@@ -33,8 +34,10 @@ namespace TailProduce {
 
     template <typename BASE> class StaticFramework {
       public:
-        typedef typename BASE::storage_type storage_type;
-        storage_type& storage;
+        typedef BASE T_BASE;
+        typedef typename T_BASE::T_STORAGE T_STORAGE;
+        T_STORAGE& storage;
+
         std::set<std::string> streams_declared_;
         std::set<std::string> stream_publishers_declared_;
 
@@ -97,18 +100,20 @@ namespace TailProduce {
             // TODO(dkorolev): Add more logic here.
         }
 
-        StaticFramework(storage_type& storage,
+        StaticFramework(T_STORAGE& storage,
+                        const ::TailProduce::ConfigValues& cv,
                         const ::TailProduce::StreamManagerParams& params =
                             ::TailProduce::StreamManagerParams::FromCommandLineFlags())
-            : storage(EnsureStreamsAreCreatedDuringInitialization(storage, params)) {
+            : storage(EnsureStreamsAreCreatedDuringInitialization(storage, cv, params)) {
             ::TailProduce::EnsureThereAreNoStreamsWithoutPublishers(streams_declared_, stream_publishers_declared_);
             scoped_http_handler_registerer.reset(new ::TailProduce::TCPServer::ScopedHandlerRegisterer(8080, *this));
         }
 
-        static storage_type& EnsureStreamsAreCreatedDuringInitialization(
-            storage_type& storage,
+        static T_STORAGE& EnsureStreamsAreCreatedDuringInitialization(
+            T_STORAGE& storage,
+            const ::TailProduce::ConfigValues& cv,
             const ::TailProduce::StreamManagerParams& params) {
-            params.Apply(storage);
+            params.Apply(storage, cv);
             return storage;
         }
 
@@ -117,11 +122,11 @@ namespace TailProduce {
         StaticFramework(StaticFramework&&) = delete;
         void operator=(const StaticFramework&) = delete;
         using TSM = ::TailProduce::StreamManagerBase;
-        static_assert(std::is_base_of<TSM, BASE>::value,
-                      "StaticFramework: BASE should be derived from StreamManagerBase.");
+        static_assert(std::is_base_of<TSM, T_BASE>::value,
+                      "StaticFramework: T_BASE should be derived from StreamManagerBase.");
         using TS = ::TailProduce::Storage::Internal::Interface;
-        static_assert(std::is_base_of<TS, storage_type>::value,
-                      "StaticFramework: BASE::storage_type should be derived from Storage.");
+        static_assert(std::is_base_of<TS, T_STORAGE>::value,
+                      "StaticFramework: T_BASE::T_STORAGE should be derived from Storage.");
     };
 };
 

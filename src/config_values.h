@@ -21,6 +21,8 @@ namespace TailProduce {
             return connector;
         }
 
+        /*
+        // TODO(dkorolev): Start uncommenting these one by one.
         std::string GetStreamsData(std::string const& streamId) const {
             return streamsDataPrefix + connector + streamId;
         }
@@ -32,6 +34,7 @@ namespace TailProduce {
         std::string GetStreamsLastKey(std::string const& streamId) const {
             return streamsAdminPrefix + connector + streamsLastKeyLocator + connector + streamId;
         }
+        */
 
       private:
         // these are private to prevent anyone from accidentally changing them once thay are set

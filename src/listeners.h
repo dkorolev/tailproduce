@@ -20,46 +20,55 @@ namespace TailProduce {
     // presenting data in serialized format and keeping track of HEAD order keys.
     template <typename STREAM> struct INTERNAL_UnsafeListener {
         typedef STREAM T_STREAM;
+
         // Unbounded.
         ~INTERNAL_UnsafeListener() {
             VLOG(3) << this << ": INTERNAL_UnsafeListener::~INTERNAL_UnsafeListener();";
         }
 
         INTERNAL_UnsafeListener(const T_STREAM& stream,
-                                const typename T_STREAM::head_pair_type& begin = typename T_STREAM::head_pair_type())
+                                const typename T_STREAM::T_ORDER_KEY& begin = typename T_STREAM::T_ORDER_KEY())
             : stream(stream),
               storage(stream.manager->storage),
-              cursor_key(stream.key_builder.BuildStorageKey(begin)),
+              storage_cursor_key(begin.ComposeStorageKey(stream.cv)),
               need_to_increment_cursor(false),
               has_end_key(false),
               reached_end(false) {
-            VLOG(3) << this << ": INTERNAL_UnsafeListener::INTERNAL_UnsafeListener('" << stream.name << "', "
-                    << "begin='" << cursor_key << "');";
+            VLOG(3) << this << ": INTERNAL_UnsafeListener::INTERNAL_UnsafeListener('" << stream.name() << "', "
+                    << "begin='" << storage_cursor_key << "');";
         }
-        INTERNAL_UnsafeListener(const T_STREAM& stream, const typename T_STREAM::order_key_type& begin)
-            : INTERNAL_UnsafeListener(stream, std::make_pair(begin, 0)) {
+        INTERNAL_UnsafeListener(const T_STREAM& stream,
+                                const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_begin)
+            : INTERNAL_UnsafeListener(stream, T_STREAM::T_ORDER_KEY(primary_begin)) {
         }
 
         // Bounded.
         INTERNAL_UnsafeListener(const T_STREAM& stream,
-                                const typename T_STREAM::head_pair_type& begin,
-                                const typename T_STREAM::head_pair_type& end)
+                                const typename T_STREAM::T_ORDER_KEY& begin,
+                                const typename T_STREAM::T_ORDER_KEY& end)
             : stream(stream),
               storage(stream.manager->storage),
-              cursor_key(stream.key_builder.BuildStorageKey(begin)),
+              storage_cursor_key(begin.ComposeStorageKey(stream.cv)),
               need_to_increment_cursor(false),
               has_end_key(true),
-              end_key(stream.key_builder.BuildStorageKey(end)),
+              storage_end_key(end.ComposeStorageKey(stream.cv)),
               reached_end(false) {
         }
         INTERNAL_UnsafeListener(const T_STREAM& stream,
-                                const typename T_STREAM::order_key_type& begin,
-                                const typename T_STREAM::order_key_type& end)
-            : INTERNAL_UnsafeListener(stream, std::make_pair(begin, 0), std::make_pair(end, 0)) {
+                                const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_begin,
+                                const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_end)
+            : INTERNAL_UnsafeListener(stream,
+                                      typename T_STREAM::T_ORDER_KEY(primary_begin),
+                                      typename T_STREAM::T_ORDER_KEY(primary_end)) {
         }
 
-        const typename T_STREAM::head_pair_type& GetHead() const {
-            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+        const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& GetHead() const {
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
+            return stream.head.primary;
+        }
+
+        const typename T_STREAM::T_ORDER_KEY& GetHeadPrimaryAndSecondary() const {
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
             return stream.head;
         }
 
@@ -75,8 +84,10 @@ namespace TailProduce {
                 return false;
             } else {
                 if (!iterator) {
-                    iterator =
-                        std::move(storage.CreateStorageIterator(cursor_key, stream.key_builder.end_stream_key));
+                    iterator = std::move(storage.CreateStorageIterator(
+                        storage_cursor_key,
+                        T_STREAM::T_ORDER_KEY::EndDataStorageKey(
+                            stream.manager->cv)));  // stream.key_builder.end_stream_key));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }
@@ -88,20 +99,20 @@ namespace TailProduce {
                     return false;
                 }
                 assert(iterator && !iterator->Done());
-                if (has_end_key && iterator->Key() >= end_key) {
+                if (has_end_key && iterator->Key() >= storage_end_key) {
                     VLOG(3) << this << " INTERNAL_UnsafeListener::HasData() = false, due to reaching the end.";
                     reached_end = true;
                     iterator.reset(nullptr);
                     return false;
                 } else {
-                    // TODO(dkorolev): Handle HEAD going beyond end_key resulting in ReachedEnd().
+                    // TODO(dkorolev): Handle HEAD going beyond storage_end_key resulting in ReachedEnd().
                     VLOG(3) << this << " INTERNAL_UnsafeListener::HasData() = true.";
                     return true;
                 }
             }
         }
         bool HasData() const {
-            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
             return HasDataUnguarded();
         }
 
@@ -117,7 +128,7 @@ namespace TailProduce {
         template <typename PROCESSOR> void ProcessEntrySync(PROCESSOR& processor, bool require_data = true) {
             std::string value_as_string;
             {
-                std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+                std::lock_guard<std::mutex> guard(stream.lock_mutex());
                 if (!HasDataUnguarded()) {
                     if (require_data) {
                         VLOG(3) << "throw ::TailProduce::ListenerHasNoDataToRead();";
@@ -131,17 +142,17 @@ namespace TailProduce {
                     throw ::TailProduce::InternalError();
                 }
                 // TODO(dkorolev): Make this proof-of-concept code efficient.
-                ::TailProduce::Storage::VALUE_TYPE const value = iterator->Value();
+                ::TailProduce::Storage::STORAGE_VALUE_TYPE const value = iterator->Value();
                 value_as_string = std::string(value.begin(), value.end());
             }
             std::istringstream is(value_as_string);
-            T_STREAM::entry_type::DeSerializeAndProcessEntry(is, processor);
+            T_STREAM::T_ENTRY::DeSerializeAndProcessEntry(is, processor);
         }
 
         // AdvanceToNextEntry() advances the listener to the next available entry.
         // Will throw an exception if no further data is (yet) available.
         void AdvanceToNextEntry() {
-            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
             if (!HasDataUnguarded()) {
                 VLOG(3) << "throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();";
                 throw ::TailProduce::AttemptedToAdvanceListenerWithNoDataAvailable();
@@ -150,22 +161,20 @@ namespace TailProduce {
                 VLOG(3) << "throw ::TailProduce::InternalError();";
                 throw ::TailProduce::InternalError();
             }
-            cursor_key = iterator->Key();
+            storage_cursor_key = iterator->Key();
             need_to_increment_cursor = true;
             iterator->Next();
         }
 
       private:
-        typedef typename T_STREAM::storage_type storage_type;
-        typedef typename T_STREAM::storage_type::StorageIterator iterator_type;
         const T_STREAM& stream;
-        storage_type& storage;
-        ::TailProduce::Storage::KEY_TYPE cursor_key;
+        typename T_STREAM::T_STORAGE& storage;
+        ::TailProduce::Storage::STORAGE_KEY_TYPE storage_cursor_key;
         bool need_to_increment_cursor;
         const bool has_end_key;
-        ::TailProduce::Storage::KEY_TYPE const end_key;
+        ::TailProduce::Storage::STORAGE_KEY_TYPE const storage_end_key;
         mutable bool reached_end;
-        mutable iterator_type iterator;
+        mutable typename T_STREAM::T_STORAGE::StorageIterator iterator;
 
         INTERNAL_UnsafeListener() = delete;
         INTERNAL_UnsafeListener(const INTERNAL_UnsafeListener&) = delete;
@@ -250,9 +259,8 @@ namespace TailProduce {
             void operator=(const AsyncListener&) = delete;
         };
 
-        template <typename PROCESSOR>
-        std::unique_ptr<AsyncListener<PROCESSOR>> operator()(PROCESSOR& processor) {
-            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+        template <typename PROCESSOR> std::unique_ptr<AsyncListener<PROCESSOR>> operator()(PROCESSOR& processor) {
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
             return std::unique_ptr<AsyncListener<PROCESSOR>>(new AsyncListener<PROCESSOR>(stream, processor));
         }
 

@@ -14,8 +14,18 @@
 
 namespace TailProduce {
     namespace Storage {
-        typedef std::string KEY_TYPE;
-        typedef std::vector<uint8_t> VALUE_TYPE;
+        typedef std::string STORAGE_KEY_TYPE;
+        typedef std::vector<uint8_t> STORAGE_VALUE_TYPE;
+
+        // TODO(dkorolev): Add tests for these two methods.
+        inline STORAGE_KEY_TYPE ValueToKey(const STORAGE_VALUE_TYPE& value) {
+            return antibytes(value);
+        }
+
+        inline STORAGE_VALUE_TYPE KeyToValue(const STORAGE_KEY_TYPE& key) {
+            return bytes(key);
+        }
+
         // TailProduce::Storage::Internal::Interface is used to static_assert the inheritance
         // at the moment of attemping to use the storage as part of the static framework.
         namespace Internal {
@@ -31,19 +41,26 @@ namespace TailProduce {
             static void EnsureTIsStorage() {
                 T storage;
                 // Set(), SetAllowingOverwrite(), Get(), Has().
-                storage.Set(KEY_TYPE("key"), VALUE_TYPE(bytes("value")));
-                storage.SetAllowingOverwrite(KEY_TYPE("key"), VALUE_TYPE(bytes("value")));
-                VALUE_TYPE v = storage.Get("key");
-                bool b = storage.Has(KEY_TYPE("key"));
+                storage.Set(STORAGE_KEY_TYPE("key"), STORAGE_VALUE_TYPE(bytes("value")));
+                storage.SetAllowingOverwrite(STORAGE_KEY_TYPE("key"), STORAGE_VALUE_TYPE(bytes("value")));
+                STORAGE_VALUE_TYPE v = storage.Get("key");
+                bool b = storage.Has(STORAGE_KEY_TYPE("key"));
+                // Get() and Has() should be const.
+                {
+                    const T& const_storage = storage;
+                    STORAGE_VALUE_TYPE v = storage.Get("key");
+                    bool b = storage.Has(STORAGE_KEY_TYPE("key"));
+                }
                 // Iterator type and its creation.
                 typename T::StorageIterator it1 = storage.CreateStorageIterator();
-                typename T::StorageIterator it2 = storage.CreateStorageIterator(KEY_TYPE("a"));
-                typename T::StorageIterator it3 = storage.CreateStorageIterator(KEY_TYPE("a"), KEY_TYPE("b"));
+                typename T::StorageIterator it2 = storage.CreateStorageIterator(STORAGE_KEY_TYPE("a"));
+                typename T::StorageIterator it3 =
+                    storage.CreateStorageIterator(STORAGE_KEY_TYPE("a"), STORAGE_KEY_TYPE("b"));
                 // Key(), Value(), Next(), Done() for the iterator.
                 bool b1 = it1->Done();
                 it2->Next();
-                KEY_TYPE k3 = it3->Key();
-                VALUE_TYPE v4 = it2->Value();
+                STORAGE_KEY_TYPE k3 = it3->Key();
+                STORAGE_VALUE_TYPE v4 = it2->Value();
                 // Iterator copy and assignment should support move semantics.
                 it2 = std::move(it1);
                 typename T::StorageIterator it4(std::move(it3));

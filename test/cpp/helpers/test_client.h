@@ -20,6 +20,7 @@
 
 #include "cereal/types/polymorphic.hpp"
 
+/*
 // Ordering key.
 struct SimpleOrderKey : ::TailProduce::OrderKey {
     SimpleOrderKey() = default;
@@ -35,16 +36,17 @@ struct SimpleOrderKey : ::TailProduce::OrderKey {
         return ikey < rhs.ikey;
     }
 
-    void SerializeOrderKey(::TailProduce::Storage::KEY_TYPE& ref) const {
+    void SerializeOrderKey(::TailProduce::Storage::STORAGE_KEY_TYPE& ref) const {
         char tmp[11];
         snprintf(tmp, sizeof(tmp), "%010u", ikey);
         ref = tmp;
     }
 
-    void DeSerializeOrderKey(::TailProduce::Storage::KEY_TYPE const& ref) {
+    void DeSerializeOrderKey(::TailProduce::Storage::STORAGE_KEY_TYPE const& ref) {
         ikey = atoi(ref.c_str());
     }
 };
+*/
 
 // The SimpleEntry keeps the key/value pairs to test on.
 // For this test they are { uint32, string } pairs.
@@ -53,8 +55,15 @@ struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable
     SimpleEntry(uint32_t key, std::string const& data) : ikey(key), data(data) {
     }
 
+    /*
     SimpleOrderKey ExtractSimpleOrderKey() const {
         return SimpleOrderKey(ikey);
+    }
+    */
+
+    // Keep return type as paramter for easer overloading / templated usage.
+    void GetOrderKey(uint32_t& output) const {
+        output = ikey;
     }
 
     // Used as order key, 1, 2, 3, etc.
@@ -69,6 +78,7 @@ struct SimpleEntry : ::TailProduce::Entry, ::TailProduce::CerealJSONSerializable
     }
 };
 
+/*
 namespace TailProduce {
     template <> struct OrderKeyExtractorImpl<SimpleOrderKey, SimpleEntry> {
         static SimpleOrderKey ExtractOrderKey(const SimpleEntry& entry) {
@@ -76,5 +86,6 @@ namespace TailProduce {
         }
     };
 };
+*/
 
 #endif  // TAILPRODUCE_MOCKS_TEST_CLIENT_H

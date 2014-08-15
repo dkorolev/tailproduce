@@ -5,39 +5,78 @@
 #include <memory>
 #include <mutex>
 
+#include <glog/logging.h>
+
 #include "config_values.h"
+#include "magic_order_key.h"
+#include "entry.h"
+#include "tp_exceptions.h"
 
 namespace TailProduce {
     // The stream base is only a syntatic convenience.
     struct StreamBase {
+        ConfigValues const& cv;
+        explicit StreamBase(ConfigValues const& cv) : cv(cv) {
+        }
+
+        /*
+        StreamBase() = delete;
+        StreamBase(const StreamBase&) = delete;
+        void operator=(const StreamBase&) = delete;
+        */
+
+        /*
         StreamBase(std::string const& streamName) : streamName_(streamName), lock_mutex_(new std::mutex()) {
         }
         std::string const& GetId() {
             return streamName_;
         }
+        */
         std::mutex& lock_mutex() const {
             return *lock_mutex_;
         }
 
       private:
-        std::string streamName_;
+        // std::string streamName_;
         mutable std::unique_ptr<std::mutex> lock_mutex_;
     };
 
-    template <typename ORDER_KEY> struct Stream : StreamBase {
-        Stream(ConfigValues const& cv,
-               std::string const& stream_name,
-               std::string const& entry_type_name,
-               std::string const& order_key_type_name)
-            : StreamBase(stream_name), orderKey_(stream_name, cv) {
+    template <typename TRAITS, typename ENTRY, typename ORDER_KEY> struct Stream : StreamBase, TRAITS {
+        typedef TRAITS T_TRAITS;
+        typedef ENTRY T_ENTRY;
+        typedef ORDER_KEY T_ORDER_KEY;
+
+        Stream(TailProduce::ConfigValues& cv, const typename T_TRAITS::T_STORAGE& storage)
+            : StreamBase(cv), TRAITS(cv) {
+            //                       const std::string& stream_name,
+            //                       const std::string& entry_type_name,
+            //                       const std::string& order_key_type_name)
+            //, stream_name, entry_type_name, order_key_type_name)
+            using TO = ::TailProduce::MagicGenericOrderKey;
+            static_assert(std::is_base_of<TO, T_ORDER_KEY>::value,
+                          "Stream::T_ORDER_KEY should be derived from MagicGenericOrderKey.");
+            using TE = ::TailProduce::Entry;
+            static_assert(std::is_base_of<TE, T_ENTRY>::value, "Stream::T_ENTRY should be derived from Entry.");
+
+            try {
+                // return STORAGE_KEY_BUILDER::ParseStorageKey(antibytes(storage.Get(key_builder.head_storage_key)));
+                ::TailProduce::Storage::STORAGE_VALUE_TYPE storage_value =
+                    storage.Get(T_ORDER_KEY::HeadStorageKey(cv));
+                head.DecomposeStorageKey(::TailProduce::Storage::ValueToKey(storage_value), cv);
+            } catch (const ::TailProduce::StorageException&) {
+                VLOG(3) << "throw StreamDoesNotExistException();";
+                throw StreamDoesNotExistException();
+            }
+            /*
+            using TOK = ::TailProduce::OrderKey;
+            static_assert(std::is_base_of<TOK, T_ORDER_KEY>::value,
+                          "Stream::T_ORDER_KEY should be derived from OrderKey.");
+            static_assert(T_ORDER_KEY::size_in_bytes > 0,
+                          "Stream::T_ORDER_KEY::size_in_bytes should be positive.");
+            */
         }
 
-        ORDER_KEY& GetOrderKey() {
-            return orderKey_;
-        }
-
-      private:
-        ORDER_KEY orderKey_;
+        T_ORDER_KEY head;
     };
 };
 

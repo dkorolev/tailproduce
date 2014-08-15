@@ -17,7 +17,6 @@
 #include "storage.h"
 #include "storage_key_builder.h"
 #include "stream.h"
-#include "stream_instance.h"
 #include "stream_manager.h"
 #include "stream_manager_params.h"
 #include "tp_exceptions.h"

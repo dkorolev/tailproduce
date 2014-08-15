@@ -1,6 +1,7 @@
 #ifndef ORDERKEY_H
 #define ORDERKEY_H
 
+/*
 #include <string>
 #include <type_traits>
 #include <sstream>
@@ -17,14 +18,14 @@ namespace TailProduce {
         template <typename ORDER_KEY>
         static void StaticAppendAsStorageKey(const ORDER_KEY& primary_key,
                                              const uint32_t secondary_key,
-                                             ::TailProduce::Storage::KEY_TYPE& output) {
+                                             ::TailProduce::Storage::STORAGE_KEY_TYPE& output) {
             using TOK = ::TailProduce::OrderKey;
             static_assert(std::is_base_of<TOK, ORDER_KEY>::value,
                           "OrderKey::StaticAppendAsStorageKey::ORDER_KEY should be derived from OrderKey.");
             static_assert(ORDER_KEY::size_in_bytes > 0,
                           "OrderKey::StaticAppendAsStorageKey::ORDER_KEY::size_in_bytes should be positive.");
             // TODO(dkorolev): This secondary key implementation as fixed 10 bytes is not final.
-            ::TailProduce::Storage::KEY_TYPE pkey;
+            ::TailProduce::Storage::STORAGE_KEY_TYPE pkey;
             primary_key.SerializeOrderKey(pkey);
             std::ostringstream os;
             os << pkey << ':' << std::setfill('0') << std::setw(10) << secondary_key;
@@ -32,13 +33,14 @@ namespace TailProduce {
         }
 
         template <typename ORDER_KEY>
-        static ::TailProduce::Storage::KEY_TYPE StaticSerializeAsStorageKey(const ORDER_KEY& primary_key,
-                                                                            const uint32_t secondary_key) {
-            ::TailProduce::Storage::KEY_TYPE output;
+        static ::TailProduce::Storage::STORAGE_KEY_TYPE StaticSerializeAsStorageKey(const ORDER_KEY& primary_key,
+                                                                                    const uint32_t secondary_key) {
+            ::TailProduce::Storage::STORAGE_KEY_TYPE output;
             StaticAppendAsStorageKey<ORDER_KEY>(primary_key, secondary_key, output);
             return output;
         }
     };
 };
+*/
 
 #endif

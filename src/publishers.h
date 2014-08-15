@@ -21,56 +21,76 @@
 namespace TailProduce {
     // INTERNAL_UnsafePublisher contains the logic of appending data to the streams
     // and updating their HEAD order keys.
-    template <typename T> struct INTERNAL_UnsafePublisher {
-        explicit INTERNAL_UnsafePublisher(T& stream) : stream(stream) {
+    template <typename STREAM> struct INTERNAL_UnsafePublisher {
+        typedef STREAM T_STREAM;
+        explicit INTERNAL_UnsafePublisher(T_STREAM& stream) : stream(stream) {
         }
 
         INTERNAL_UnsafePublisher(INTERNAL_UnsafePublisher&&) = default;
 
-        INTERNAL_UnsafePublisher(T& stream, const typename T::order_key_type& order_key) : stream(stream) {
+        INTERNAL_UnsafePublisher(T_STREAM& stream, const typename T_STREAM::T_ORDER_KEY& order_key)
+            : stream(stream) {
             PushHead(order_key);
         }
 
-        void Push(const typename T::entry_type& entry) {
-            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
-            typedef ::TailProduce::OrderKeyExtractorImpl<typename T::order_key_type, typename T::entry_type> impl;
+        void Push(const typename T_STREAM::T_ENTRY& entry) {
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
+            /*
+            typedef ::TailProduce::OrderKeyExtractorImpl<typename T_STREAM::T_ORDER_KEY,
+                                                         typename T_STREAM::T_ENTRY> impl;
             PushHeadUnguarded(impl::ExtractOrderKey(entry));
+            */
+            typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY primary_order_key;
+            entry.GetOrderKey(primary_order_key);
+            PushHeadUnguarded(primary_order_key);
             std::ostringstream value_output_stream;
-            T::entry_type::SerializeEntry(value_output_stream, entry);
-            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head),
-                                        bytes(value_output_stream.str()));
+            T_STREAM::T_ENTRY::SerializeEntry(value_output_stream, entry);
+            stream.manager->storage.Set(stream.head.ComposeStorageKey(stream.cv), bytes(value_output_stream.str()));
+            //            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head),
+            //                                        bytes(value_output_stream.str()));
         }
 
-        void PushHeadUnguarded(const typename T::order_key_type& order_key) {
-            typename T::head_pair_type new_head(order_key, 0);
-            if (new_head.first < stream.head.first) {
+        void PushHeadUnguarded(const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_order_key) {
+            // TODO(dkorolev): Move this logic to the new keys as well.
+            typename T_STREAM::T_ORDER_KEY new_head(primary_order_key, 0);
+            if (new_head.primary < stream.head.primary) {
                 // Order keys should only be increasing.
                 VLOG(3) << "throw ::TailProduce::OrderKeysGoBackwardsException();";
                 throw ::TailProduce::OrderKeysGoBackwardsException();
             }
-            if (!(stream.head.first < new_head.first)) {
-                new_head.second = stream.head.second + 1;
+            if (!(stream.head.primary < new_head.primary)) {
+                new_head.secondary = stream.head.secondary + 1;
             }
             // TODO(dkorolev): Perhaps more checks here?
-            auto v = OrderKey::template StaticSerializeAsStorageKey<typename T::order_key_type>(new_head.first,
-                                                                                                new_head.second);
-            stream.manager->storage.SetAllowingOverwrite(stream.key_builder.head_storage_key, bytes(v));
+            /*
+            auto v = OrderKey::template StaticSerializeAsStorageKey<typename T_STREAM::T_ORDER_KEY>(new_head.primary,
+                                                                                                    new_head.secondary);
+            */
+            auto v = new_head.ComposeStorageKey(stream.cv);
+            stream.manager->storage.SetAllowingOverwrite(T_STREAM::T_ORDER_KEY::HeadStorageKey(stream.manager->cv),
+                                                         bytes(v));
+            // stream.manager->storage.SetAllowingOverwrite(stream.key_builder.head_storage_key, bytes(v));
 
             stream.head = new_head;
         }
-        void PushHead(const typename T::order_key_type& order_key) {
-            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
-            PushHeadUnguarded(order_key);
+        void PushHead(const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_order_key) {
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
+            PushHeadUnguarded(primary_order_key);
         }
 
         // TODO: PushSecondaryKey for merge usecases.
 
-        const typename T::head_pair_type& GetHead() const {
-            std::lock_guard<std::mutex> guard(stream.stream.lock_mutex());
+        const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& GetHead() const {
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
+            return stream.head.primary;
+        }
+
+        const typename T_STREAM::T_ORDER_KEY& GetHeadPrimaryAndSecondary() const {
+            std::lock_guard<std::mutex> guard(stream.lock_mutex());
             return stream.head;
         }
 
-        T& stream;
+        T_STREAM& stream;
 
         INTERNAL_UnsafePublisher() = delete;
         INTERNAL_UnsafePublisher(const INTERNAL_UnsafePublisher&) = delete;
@@ -81,35 +101,49 @@ namespace TailProduce {
     // It also handles notifying all waiting listeners that new data is now available.
     // Each stream should have one and only one Publisher, regardless of whether it is appended to externally
     // or is being populated by a running TailProduce job.
-    template <typename T> struct Publisher {
-        explicit Publisher(T& stream) : impl(stream) {
+    template <typename STREAM> struct Publisher {
+        typedef STREAM T_STREAM;
+        explicit Publisher(T_STREAM& stream) : impl(stream) {
         }
         Publisher(Publisher&&) = default;
 
-        Publisher(T& stream, const typename T::order_key_type& order_key) : impl(stream, order_key) {
+        Publisher(T_STREAM& stream, const typename T_STREAM::T_ORDER_KEY& order_key) : impl(stream, order_key) {
         }
 
-        void Push(const typename T::entry_type& entry) {
+        Publisher(T_STREAM& stream, const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_order_key)
+            : impl(stream, T_STREAM::T_ORDER_KEY(primary_order_key)) {
+        }
+
+        void Push(const typename T_STREAM::T_ENTRY& entry) {
             impl.Push(entry);
             impl.stream.subscriptions.PokeAll();
         }
 
-        void PushHead(const typename T::order_key_type& order_key) {
+        void PushHead(const typename T_STREAM::T_ORDER_KEY& order_key) {
             impl.PushHead(order_key);
+            impl.stream.subscriptions.PokeAll();
+        }
+
+        void PushHead(const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_order_key) {
+            impl.PushHead(typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY(primary_order_key));
             impl.stream.subscriptions.PokeAll();
         }
 
         // TODO: PushSecondaryKey for merge usecases.
 
-        const typename T::head_pair_type& GetHead() const {
+        const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& GetHead() const {
             return impl.GetHead();
+        }
+
+        const typename T_STREAM::T_ORDER_KEY& GetHeadPrimaryAndSecondary() const {
+            return impl.GetHeadPrimaryAndSecondary();
         }
 
         Publisher() = delete;
         Publisher(const Publisher&) = delete;
         void operator=(const Publisher&) = delete;
 
-        INTERNAL_UnsafePublisher<T> impl;
+        INTERNAL_UnsafePublisher<T_STREAM> impl;
     };
 };
 
