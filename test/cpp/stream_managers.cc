@@ -69,7 +69,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         VLOG(2) << "Test that STREAM_MANAGER can be created once the storage is externally set to contain the "
                    "proper definition of the `test` stream.";
         STORAGE local_storage;
-        local_storage.Set("s:test", bytes("0000000000:0000000000"));
+        local_storage.Set("s:test", bytes("d:test:0000000000:0000000000"));
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams());
         VLOG(2) << "Done.";
     }
@@ -80,9 +80,10 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         STORAGE local_storage;
         ASSERT_FALSE(local_storage.Has("s:test"));
         // TODO(dkorolev): Change this logic to not require precise types from the caller.
-        STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0), uint32_t(0)));
+        STREAM_MANAGER streams_manager(local_storage,
+                                       StreamManagerParams().CreateStream("test", SimpleOrderKey(0), uint32_t(0)));
         ASSERT_TRUE(local_storage.Has("s:test"));
-        ASSERT_EQ("0000000000:0000000000", antibytes(local_storage.Get("s:test")));
+        ASSERT_EQ("d:test:0000000000:0000000000", antibytes(local_storage.Get("s:test")));
         VLOG(2) << "Done.";
     }
 
@@ -129,13 +130,14 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // but is *NOT* fine with LevelDB-based one.
 
         STORAGE storage;
-        storage.Set("s:test", bytes("0000000000:0000000000"));
+        storage.Set("s:test", bytes("d:test:0000000000:0000000000"));
 
         {
             VLOG(2) << "Test stream manager setup. The `test` stream should exist and be statically typed.";
             STREAM_MANAGER streams_manager(storage, StreamManagerParams());
             EXPECT_TRUE((std::is_same<SimpleEntry, typename STREAM_MANAGER::test_type::T_ENTRY>::value));
-            EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::T_ORDER_KEY>::value));
+            EXPECT_TRUE((std::is_same<SimpleOrderKey, typename STREAM_MANAGER::test_type::T_ORDER_KEY::T_PRIMARY_KEY>::value));
+            EXPECT_TRUE((std::is_same<uint32_t, typename STREAM_MANAGER::test_type::T_ORDER_KEY::T_SECONDARY_KEY>::value));
             VLOG(2) << "Done.";
         }
 
@@ -285,7 +287,9 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         VLOG(2) << "Test storage schema.";
 
         STORAGE local_storage;
-        STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+        // TODO(dkorolev): Fix this CreateStream().
+        STREAM_MANAGER streams_manager(local_storage,
+                                       StreamManagerParams().CreateStream("test", SimpleOrderKey(0), uint32_t(0)));
 
         auto& publisher = streams_manager.test_publisher;
         publisher.Push(SimpleEntry(1, "one"));
@@ -306,7 +310,9 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         VLOG(2) << "Listener test: bounded, pre-initialized with data.";
 
         STORAGE local_storage;
-        STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+        // TODO(dkorolev): Fix this CreateStream().
+        STREAM_MANAGER streams_manager(local_storage,
+                                       StreamManagerParams().CreateStream("test", SimpleOrderKey(0), uint32_t(0)));
 
         auto& publisher = streams_manager.test_publisher;
         publisher.Push(SimpleEntry(1, "one"));
@@ -343,7 +349,9 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         VLOG(2) << "Listener test: bounded, pre-initialized with data, involving secondary keys.";
 
         STORAGE local_storage;
-        STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+        // TODO(dkorolev): Fix this CreateStream().
+        STREAM_MANAGER streams_manager(local_storage,
+                                       StreamManagerParams().CreateStream("test", SimpleOrderKey(0), uint32_t(0)));
 
         auto& publisher = streams_manager.test_publisher;
         publisher.Push(SimpleEntry(42, "i0"));
@@ -390,7 +398,9 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
     {
         VLOG(2) << "Listener test: appended on-the-fly, bounded.";
         STORAGE local_storage;
-        STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+        // TODO(dkorolev): Fix this CreateStream().
+        STREAM_MANAGER streams_manager(local_storage,
+                                       StreamManagerParams().CreateStream("test", SimpleOrderKey(0), uint32_t(0)));
 
         SimpleEntry entry;
         auto& publisher = streams_manager.test_publisher;
@@ -441,7 +451,9 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // TCP endpoint test for the EXPORT-ed stream.
         // TODO(dkorolev): Capture the output and test it from within this unit test, not just via curl/telnet.
         STORAGE local_storage;
-        STREAM_MANAGER streams_manager(local_storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+        // TODO(dkorolev): Fix this CreateStream().
+        STREAM_MANAGER streams_manager(local_storage,
+                                       StreamManagerParams().CreateStream("test", SimpleOrderKey(0), uint32_t(0)));
 
         auto& publisher = streams_manager.test_publisher;
 
@@ -479,11 +491,10 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         typedef StreamManagerImpl T_THIS_FRAMEWORK_INSTANCE;
         typedef ::TailProduce::StaticFramework<TypeParam> T_FRAMEWORK;
         typedef typename T_FRAMEWORK::T_STORAGE T_STORAGE;
-        ::TailProduce::ConfigValues cv = ::TailProduce::ConfigValues("S", "D", "Register", "LastWrite", ':');
         StreamManagerImpl(T_STORAGE& storage,
                           const ::TailProduce::StreamManagerParams& params =
                               ::TailProduce::StreamManagerParams::FromCommandLineFlags())
-            : T_FRAMEWORK(storage, cv, params) {
+            : T_FRAMEWORK(storage, params) {
         }
 
       public:
@@ -491,19 +502,14 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         struct test_type_params {
             struct StreamTraits {
                 typedef typename T_FRAMEWORK::T_STORAGE T_STORAGE;
-                static std::string name() {
-                    return "test";
-                }
-                static size_t name_length() {
-                    return 4;
-                }
-                static std::string storage_key_prefix() {
-                    return "test";
-                }
-                static size_t storage_key_prefix_length() {
-                    return 4;
-                }
-                explicit StreamTraits(const ::TailProduce::ConfigValues& cv) {
+                const std::string name;
+                const std::string storage_key_meta_prefix;
+                const std::string storage_key_data_prefix;
+                const std::string starting_order_key_as_string;
+                explicit StreamTraits(const ::TailProduce::ConfigValues& cv)
+                    : name("test"),
+                      storage_key_meta_prefix(cv.GetStreamMetaPrefix(name)),
+                      storage_key_data_prefix(cv.GetStreamDataPrefix(name)) {
                 }
             };
             typedef ::TailProduce::MagicOrderKey<StreamTraits, uint32_t, uint32_t> T_ORDER_KEY;
@@ -517,51 +523,15 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
             typedef test_type T_STREAM;
             typedef SimpleEntry T_ENTRY;
             typedef typename test_type_params::T_ORDER_KEY T_ORDER_KEY;
-            /*
-            struct T_ORDER_KEY : ::TailProduce::MagicOrderKey<T_ORDER_KEY, SimpleOrderKey, uint32_t> {
-                static constexpr std::string name() {
-                    return "test";
-                }
-                // const char* INTERNAL_STREAM_NAME = "test";
-                // static constexpr const char* INTERNAL_STREAM_NAME_LENGTH = sizeof("test")-1;
-            };
-            */
-            //            typedef SimpleOrderKey T_ORDER_KEY;
-
-            /*
-            typedef ::TailProduce::Stream<T_ENTRY, T_ORDER_KEY> T_STREAM;
-            T_STREAM stream;
-            */
-
             typedef typename T_THIS_FRAMEWORK_INSTANCE::T_STORAGE T_STORAGE;
             typedef ::TailProduce::INTERNAL_UnsafeListener<test_type> INTERNAL_unsafe_listener_type;
-            //            typedef std::pair<T_ORDER_KEY, uint32_t> head_pair_type;
-            //            typedef ::TailProduce::StorageKeyBuilder<test_type> key_builder_type;
-            StreamManagerImpl* manager;
-            ///            const std::string name;
-            //            key_builder_type key_builder;
-            // head_pair_type head;
-            ///           T_ORDER_KEY head;
-            //            ::TailProduce::ConfigValues cv = ::TailProduce::ConfigValues("S", "D", "Register",
-            //            "LastWrite", ':');
+            T_THIS_FRAMEWORK_INSTANCE* manager;
             mutable ::TailProduce::SubscriptionsManager subscriptions;
-            test_type(StreamManagerImpl* input_manager,
+            test_type(T_THIS_FRAMEWORK_INSTANCE* input_manager,
                       const char* stream_name,
                       const char* entry_type_name,
                       const char* entry_order_key_name)
-                : T_STREAM_INSTANCE(input_manager->cv, input_manager->storage),
-                  manager(input_manager)
-            //                  stream(manager->cv, stream_name, entry_type_name, entry_order_key_name)
-            ///                  name(stream_name)
-            {
-                //                  key_builder(name)
-                //                  ,
-                //                  head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<T_ORDER_KEY,
-                //                                                                                 key_builder_type,
-                //                                                                                 T_STORAGE>(name,
-                //                                                                                            key_builder,
-                //                                                                                            manager->storage))
-                //                                                                                            {
+                : T_STREAM_INSTANCE(input_manager->cv, input_manager->storage), manager(input_manager) {
                 manager->streams_declared_.insert("test");
             }
         };
@@ -573,8 +543,8 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         struct test_exporter_type : ::TailProduce::StreamExporter {
             // TODO(dkorolev): Shorten and clean up this code.
             // TODO(dkorolev): Support the macro as well.
-            StreamManagerImpl* manager_;
-            explicit test_exporter_type(StreamManagerImpl* manager) : manager_(manager) {
+            T_THIS_FRAMEWORK_INSTANCE* manager_;
+            explicit test_exporter_type(T_THIS_FRAMEWORK_INSTANCE* manager) : manager_(manager) {
                 manager_->AddExporter("/test", this);
             }
             ~test_exporter_type() {
@@ -601,7 +571,7 @@ TYPED_TEST(StreamManagerTest, ExpandedMacroSyntaxCompiles) {
         // TAILPRODUCE_PUBLISHER(test);
         struct test_publisher_type : ::TailProduce::Publisher<test_type> {
             typedef ::TailProduce::Publisher<test_type> base;
-            explicit test_publisher_type(StreamManagerImpl* manager) : base(manager->test) {
+            explicit test_publisher_type(T_THIS_FRAMEWORK_INSTANCE* manager) : base(manager->test) {
                 manager->stream_publishers_declared_.insert("test");
             }
         };

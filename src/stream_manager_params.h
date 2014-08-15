@@ -13,6 +13,7 @@
 #include "bytes.h"
 #include "tp_exceptions.h"
 #include "config_values.h"
+#include "magic_order_key.h"
 
 namespace TailProduce {
     class StreamManagerParams {
@@ -21,15 +22,36 @@ namespace TailProduce {
         using STORAGE_VALUE_TYPE = ::TailProduce::Storage::STORAGE_VALUE_TYPE;
 
         struct HeadInitializer {
-            virtual STORAGE_KEY_TYPE ComposeStartingStorageKey(const ::TailProduce::ConfigValues& cv) = 0;
+            virtual STORAGE_KEY_TYPE ComposeStartingStorageKey(const std::string& name,
+                                                               const ::TailProduce::ConfigValues& cv) = 0;
         };
 
-        template <typename ORDER_KEY> struct TypedHeadInitializer : HeadInitializer {
-            ORDER_KEY key;
-            TypedHeadInitializer(ORDER_KEY key) : key(key) {
+        template <typename PRIMARY_ORDER_KEY, typename SECONDARY_ORDER_KEY>
+        struct TypedHeadInitializer : HeadInitializer {
+            PRIMARY_ORDER_KEY primary;
+            SECONDARY_ORDER_KEY secondary;
+            // TODO(dkorolev): This code should not be here. Especially the `0` part.
+            TypedHeadInitializer(PRIMARY_ORDER_KEY primary, SECONDARY_ORDER_KEY secondary = 0)
+                : primary(primary), secondary(secondary) {
             }
-            virtual STORAGE_KEY_TYPE ComposeStartingStorageKey(const ::TailProduce::ConfigValues& cv) {
-                return key.ComposeStorageKey(cv);
+            virtual STORAGE_KEY_TYPE ComposeStartingStorageKey(const std::string& name,
+                                                               const ::TailProduce::ConfigValues& cv) {
+                struct Traits {
+                    std::string storage_key_data_prefix;
+                    Traits(const ::TailProduce::ConfigValues& cv, const std::string& name)
+                        : storage_key_data_prefix(cv.GetStreamDataPrefix(name)) {
+                    }
+                };
+                VLOG(3) << "TypedHeadInitializer::ComposeStartingStorageKey(), CV = " << &cv;
+                VLOG(3) << "TypedHeadInitializer::ComposeStartingStorageKey(), CV2 = "
+                        << cv.GetStreamMetaPrefix("blah");
+                Traits traits(cv, name);
+                VLOG(3) << "TypedHeadInitializer::ComposeStartingStorageKey(): " << traits.storage_key_data_prefix;
+                ::TailProduce::MagicOrderKey<Traits, PRIMARY_ORDER_KEY, SECONDARY_ORDER_KEY> key;
+                key.primary = primary;
+                key.secondary = secondary;
+                VLOG(3) << "TypedHeadInitializer::ComposeStartingStorageKey(). 2.";
+                return key.ComposeStorageKey(traits, cv);
             }
         };
 
@@ -41,30 +63,19 @@ namespace TailProduce {
         // TODO(dkorolev): Implement it.
         static StreamManagerParams FromCommandLineFlags();
 
-        // TODO(dkorolev): Fix secondary key type and value here.
         // TODO(dkorolev): Important! Should not be able to CreateStream with wrong type!
-        template <typename ORDER_KEY>
-        StreamManagerParams& CreateStream(const std::string& name, const ORDER_KEY& key) {
-            auto& placeholder = streams_to_create[name];
-            if (placeholder) {
-                // TODO(dkorolev): Add a test for it.
-                VLOG(3) << "throw StreamAlreadyListedForCreationException();";
-                throw StreamAlreadyListedForCreationException();
-            }
-            placeholder = std::shared_ptr<HeadInitializer>(new TypedHeadInitializer<ORDER_KEY>(key));
-            VLOG(3) << "Registering stream '" << name << "'.";
-            return *this;
-        }
-
         template <typename PRIMARY_ORDER_KEY, typename SECONDARY_ORDER_KEY>
-        StreamManagerParams& CreateStream(const std::string& name, const PRIMARY_ORDER_KEY& primary_key, const SECONDARY_ORDER_KEY& secondary_key) {
+        StreamManagerParams& CreateStream(const std::string& name,
+                                          const PRIMARY_ORDER_KEY& primary_key,
+                                          const SECONDARY_ORDER_KEY& secondary_key) {
             auto& placeholder = streams_to_create[name];
             if (placeholder) {
                 // TODO(dkorolev): Add a test for it.
                 VLOG(3) << "throw StreamAlreadyListedForCreationException();";
                 throw StreamAlreadyListedForCreationException();
             }
-            placeholder = std::shared_ptr<HeadInitializer>(new TypedHeadInitializer<ORDER_KEY>(key));
+            placeholder = std::shared_ptr<HeadInitializer>(
+                new TypedHeadInitializer<PRIMARY_ORDER_KEY, SECONDARY_ORDER_KEY>(primary_key, secondary_key));
             VLOG(3) << "Registering stream '" << name << "'.";
             return *this;
         }
@@ -75,8 +86,9 @@ namespace TailProduce {
                 try {
                     // TODO(dkorolev): This logic should also go into ConfigValues.
                     // storage.Set("s:" + cit.first, cit.second);
-                    storage.Set(::TailProduce::Storage::STORAGE_KEY_TYPE("s:" + cit.first),
-                                ::TailProduce::Storage::KeyToValue(cit.second->ComposeStartingStorageKey(cv)));
+                    storage.Set(
+                        ::TailProduce::Storage::STORAGE_KEY_TYPE("s:" + cit.first),
+                        ::TailProduce::Storage::KeyToValue(cit.second->ComposeStartingStorageKey(cit.first, cv)));
                 } catch (const StorageOverwriteNotAllowedException&) {
                     VLOG(3) << "throw StreamAlreadyExistsException();";
                     throw StreamAlreadyExistsException();

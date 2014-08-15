@@ -45,7 +45,8 @@ namespace TailProduce {
             PushHeadUnguarded(primary_order_key);
             std::ostringstream value_output_stream;
             T_STREAM::T_ENTRY::SerializeEntry(value_output_stream, entry);
-            stream.manager->storage.Set(stream.head.ComposeStorageKey(stream.cv), bytes(value_output_stream.str()));
+            stream.manager->storage.Set(stream.head.ComposeStorageKey(stream, stream.cv),
+                                        bytes(value_output_stream.str()));
             //            stream.manager->storage.Set(stream.key_builder.BuildStorageKey(stream.head),
             //                                        bytes(value_output_stream.str()));
         }
@@ -66,9 +67,8 @@ namespace TailProduce {
             auto v = OrderKey::template StaticSerializeAsStorageKey<typename T_STREAM::T_ORDER_KEY>(new_head.primary,
                                                                                                     new_head.secondary);
             */
-            auto v = new_head.ComposeStorageKey(stream.cv);
-            stream.manager->storage.SetAllowingOverwrite(T_STREAM::T_ORDER_KEY::HeadStorageKey(stream.manager->cv),
-                                                         bytes(v));
+            auto v = new_head.ComposeStorageKey(stream, stream.cv);
+            stream.manager->storage.SetAllowingOverwrite(stream.manager->cv.HeadStorageKey(stream), bytes(v));
             // stream.manager->storage.SetAllowingOverwrite(stream.key_builder.head_storage_key, bytes(v));
 
             stream.head = new_head;

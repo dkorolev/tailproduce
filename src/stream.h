@@ -60,9 +60,13 @@ namespace TailProduce {
 
             try {
                 // return STORAGE_KEY_BUILDER::ParseStorageKey(antibytes(storage.Get(key_builder.head_storage_key)));
-                ::TailProduce::Storage::STORAGE_VALUE_TYPE storage_value =
-                    storage.Get(T_ORDER_KEY::HeadStorageKey(cv));
-                head.DecomposeStorageKey(::TailProduce::Storage::ValueToKey(storage_value), cv);
+                ::TailProduce::Storage::STORAGE_KEY_TYPE storage_key = cv.HeadStorageKey(*this);
+                ::TailProduce::Storage::STORAGE_VALUE_TYPE storage_value = storage.Get(storage_key);
+                VLOG(2) << "Stream::Stream('" << T_TRAITS::name << "'): '" << storage_key << "' == '"
+                        << antibytes(storage_value) << "'.";
+                head.DecomposeStorageKey(::TailProduce::Storage::ValueToKey(storage_value), *this, cv);
+                VLOG(2) << "Stream::Stream('" << T_TRAITS::name << "'): Decomposes to { " << head.primary << ", "
+                        << head.secondary << " }.";
             } catch (const ::TailProduce::StorageException&) {
                 VLOG(3) << "throw StreamDoesNotExistException();";
                 throw StreamDoesNotExistException();

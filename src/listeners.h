@@ -30,11 +30,11 @@ namespace TailProduce {
                                 const typename T_STREAM::T_ORDER_KEY& begin = typename T_STREAM::T_ORDER_KEY())
             : stream(stream),
               storage(stream.manager->storage),
-              storage_cursor_key(begin.ComposeStorageKey(stream.cv)),
+              storage_cursor_key(begin.ComposeStorageKey(stream, stream.cv)),
               need_to_increment_cursor(false),
               has_end_key(false),
               reached_end(false) {
-            VLOG(3) << this << ": INTERNAL_UnsafeListener::INTERNAL_UnsafeListener('" << stream.name() << "', "
+            VLOG(3) << this << ": INTERNAL_UnsafeListener::INTERNAL_UnsafeListener('" << stream.name << "', "
                     << "begin='" << storage_cursor_key << "');";
         }
         INTERNAL_UnsafeListener(const T_STREAM& stream,
@@ -48,10 +48,10 @@ namespace TailProduce {
                                 const typename T_STREAM::T_ORDER_KEY& end)
             : stream(stream),
               storage(stream.manager->storage),
-              storage_cursor_key(begin.ComposeStorageKey(stream.cv)),
+              storage_cursor_key(begin.ComposeStorageKey(stream, stream.cv)),
               need_to_increment_cursor(false),
               has_end_key(true),
-              storage_end_key(end.ComposeStorageKey(stream.cv)),
+              storage_end_key(end.ComposeStorageKey(stream, stream.cv)),
               reached_end(false) {
         }
         INTERNAL_UnsafeListener(const T_STREAM& stream,
@@ -86,8 +86,7 @@ namespace TailProduce {
                 if (!iterator) {
                     iterator = std::move(storage.CreateStorageIterator(
                         storage_cursor_key,
-                        T_STREAM::T_ORDER_KEY::EndDataStorageKey(
-                            stream.manager->cv)));  // stream.key_builder.end_stream_key));
+                        stream.manager->cv.template EndDataStorageKey<typename T_STREAM::T_ORDER_KEY>()));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }

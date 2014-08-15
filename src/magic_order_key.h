@@ -46,17 +46,19 @@ namespace TailProduce {
         MagicOrderKey(const T_PRIMARY_KEY& p, const T_SECONDARY_KEY& s) : primary(p), secondary(s) {
         }
 
-        ::TailProduce::Storage::STORAGE_KEY_TYPE ComposeStorageKey(const ::TailProduce::ConfigValues& cv) const {
-            return T_TRAITS::storage_key_prefix() +
+        ::TailProduce::Storage::STORAGE_KEY_TYPE ComposeStorageKey(const T_TRAITS& traits,
+                                                                   const ::TailProduce::ConfigValues& cv) const {
+            return traits.storage_key_data_prefix +
                    ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::PackToString(primary) + cv.GetConnector() +
                    ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::PackToString(secondary);
         }
 
         void DecomposeStorageKey(const ::TailProduce::Storage::STORAGE_KEY_TYPE storage_key,
+                                 const T_TRAITS& traits,
                                  const ::TailProduce::ConfigValues& cv) {
             // This code is platform-dependent.
             const std::string s = ::TailProduce::antibytes(storage_key);
-            const size_t expected_length = T_TRAITS::storage_key_prefix_length() +
+            const size_t expected_length = traits.storage_key_data_prefix.length() +
                                            ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes + 1 +
                                            ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::size_in_bytes;
             if (s.length() != expected_length) {
@@ -73,19 +75,17 @@ namespace TailProduce {
                     VLOG(3) << "throw MalformedStorageHeadException();";
                     throw ::TailProduce::MalformedStorageHeadException();
                 } else {
-                    primary = T_PRIMARY_KEY(42);
-                    secondary = T_SECONDARY_KEY(17);
+                    ::TailProduce::FixedSizeSerialization::UnpackFromString(
+                        s.substr(traits.storage_key_data_prefix.length(),
+                                 ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes),
+                        primary);
+                    ::TailProduce::FixedSizeSerialization::UnpackFromString(
+                        s.substr(traits.storage_key_data_prefix.length() + 1 +
+                                     ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes + 1,
+                                 ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::size_in_bytes),
+                        secondary);
                 }
             }
-        }
-
-        // TODO(dkorolev): These two methods should be part of the PrefixManager / ConfigValues.
-        static ::TailProduce::Storage::STORAGE_KEY_TYPE HeadStorageKey(const ::TailProduce::ConfigValues& cv) {
-            return "haha";
-        }
-
-        static ::TailProduce::Storage::STORAGE_KEY_TYPE EndDataStorageKey(const ::TailProduce::ConfigValues& cv) {
-            return "huhu";
         }
     };
 };

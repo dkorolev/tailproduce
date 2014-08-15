@@ -14,7 +14,7 @@ namespace TailProduce {
         typedef PRIMARY_KEY T_PRIMARY_KEY;
         typedef SECONDARY_KEY T_SECONDARY_KEY;
         GenericOrderKey(std::string const& streamId, ConfigValues const& cv) : config_(cv) {
-            prefix_ = config_.GetStreamsData(streamId) + config_.GetConnector();
+            prefix_ = config_.GetStreamDataPrefix(streamId) + config_.GetConnector();
         }
 
         Storage::T_KEY_TYPE CreateKey() {

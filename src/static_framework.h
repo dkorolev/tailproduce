@@ -36,6 +36,9 @@ namespace TailProduce {
       public:
         typedef BASE T_BASE;
         typedef typename T_BASE::T_STORAGE T_STORAGE;
+
+        ::TailProduce::ConfigValues cv;
+
         T_STORAGE& storage;
 
         std::set<std::string> streams_declared_;
@@ -101,10 +104,10 @@ namespace TailProduce {
         }
 
         StaticFramework(T_STORAGE& storage,
-                        const ::TailProduce::ConfigValues& cv,
                         const ::TailProduce::StreamManagerParams& params =
                             ::TailProduce::StreamManagerParams::FromCommandLineFlags())
-            : storage(EnsureStreamsAreCreatedDuringInitialization(storage, cv, params)) {
+            : cv("s", "d", "Register", "LastWrite", ':'),
+              storage(EnsureStreamsAreCreatedDuringInitialization(storage, cv, params)) {
             ::TailProduce::EnsureThereAreNoStreamsWithoutPublishers(streams_declared_, stream_publishers_declared_);
             scoped_http_handler_registerer.reset(new ::TailProduce::TCPServer::ScopedHandlerRegisterer(8080, *this));
         }

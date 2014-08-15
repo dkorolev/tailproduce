@@ -83,6 +83,7 @@ class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
                     << ::TailProduce::antibytes(cit->second) << "'.";
             return cit->second;
         } else {
+            VLOG(3) << "InMemoryTestStorage::Get('" << ::TailProduce::antibytes(key) << "): not found.";
             VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
