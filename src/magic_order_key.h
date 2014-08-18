@@ -52,7 +52,7 @@ namespace TailProduce {
                    ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::PackToString(secondary);
         }
 
-        void DecomposeStorageKey(const ::TailProduce::Storage::STORAGE_KEY_TYPE storage_key,
+        void DecomposeStorageKey(const ::TailProduce::Storage::STORAGE_KEY_TYPE& storage_key,
                                  const T_TRAITS& traits,
                                  const ::TailProduce::ConfigValues& cv) {
             // This code is platform-dependent.
