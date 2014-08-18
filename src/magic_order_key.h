@@ -48,7 +48,7 @@ namespace TailProduce {
         ::TailProduce::Storage::STORAGE_KEY_TYPE ComposeStorageKey(const T_TRAITS& traits,
                                                                    const ::TailProduce::ConfigValues& cv) const {
             return traits.storage_key_data_prefix +
-                   ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::PackToString(primary) + cv.GetDelimeter() +
+                   ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::PackToString(primary) + cv.GetDelimiter() +
                    ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::PackToString(secondary);
         }
 
@@ -66,11 +66,11 @@ namespace TailProduce {
                 VLOG(3) << "throw MalformedStorageHeadException();";
                 throw ::TailProduce::MalformedStorageHeadException();
             } else {
-                const char delimeter =
+                const char delimiter =
                     s[s.length() - 1 - ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::size_in_bytes];
-                if (delimeter != cv.GetDelimeter()) {
-                    VLOG(2) << "Malformed key: delimeter is '" << delimeter << "', while expected '"
-                            << cv.GetDelimeter() << "'.";
+                if (delimiter != cv.GetDelimiter()) {
+                    VLOG(2) << "Malformed key: delimiter is '" << delimiter << "', while expected '"
+                            << cv.GetDelimiter() << "'.";
                     VLOG(3) << "throw MalformedStorageHeadException();";
                     throw ::TailProduce::MalformedStorageHeadException();
                 } else {
