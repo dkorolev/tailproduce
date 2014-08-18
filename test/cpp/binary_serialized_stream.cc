@@ -20,13 +20,13 @@ using ::TailProduce::bytes;
 using ::TailProduce::antibytes;
 using ::TailProduce::StreamManagerParams;
 
-struct SimpleBinaryEntry : ::TailProduce::Entry, ::TailProduce::CerealBinarySerializable<SimpleBinaryEntry> {
+struct SimpleBinaryEntry : ::TailProduce::CerealBinarySerializable<SimpleBinaryEntry> {
     SimpleBinaryEntry() = default;
     SimpleBinaryEntry(uint32_t k, std::string const& v) : k(k), v(v) {
     }
 
-    SimpleOrderKey ExtractSimpleOrderKey() const {
-        return SimpleOrderKey(k);
+    void GetOrderKey(uint32_t& output) const {
+        output = k;
     }
 
     uint32_t k;
@@ -39,21 +39,13 @@ struct SimpleBinaryEntry : ::TailProduce::Entry, ::TailProduce::CerealBinarySeri
     }
 };
 
-namespace TailProduce {
-    template <> struct OrderKeyExtractorImpl<SimpleOrderKey, SimpleBinaryEntry> {
-        static SimpleOrderKey ExtractOrderKey(const SimpleBinaryEntry& entry) {
-            return entry.ExtractSimpleOrderKey();
-        }
-    };
-};
-
 template <typename STREAM_MANAGER_TYPE> struct Setup {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(StreamManagerWithASingleBinaryStream, STREAM_MANAGER_TYPE);
-    TAILPRODUCE_STREAM(foo, SimpleBinaryEntry, SimpleOrderKey);
+    TAILPRODUCE_STREAM(foo, SimpleBinaryEntry, uint32_t, uint32_t);
     TAILPRODUCE_PUBLISHER(foo);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    typedef typename STREAM_MANAGER_TYPE::storage_type Storage;
+    typedef typename STREAM_MANAGER_TYPE::T_STORAGE Storage;
 };
 
 template <typename STREAM_MANAGER_TYPE> class BinaryStreamSerializationTest : public ::testing::Test {};
@@ -63,9 +55,9 @@ TYPED_TEST(BinaryStreamSerializationTest, InitializesStream) {
     typename Setup<TypeParam>::Storage storage;
     ASSERT_FALSE(storage.Has("s:foo"));
     typename Setup<TypeParam>::StreamManagerWithASingleBinaryStream streams_manager(
-        storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(0)));
+        storage, StreamManagerParams().CreateStream("foo", uint32_t(0), uint32_t(0)));
     ASSERT_TRUE(storage.Has("s:foo"));
-    ASSERT_EQ("0000000000:0000000000", antibytes(storage.Get("s:foo")));
+    ASSERT_EQ("d:foo:0000000000:0000000000", antibytes(storage.Get("s:foo")));
 }
 
 template <typename T> void PublishTestEntries(T& publisher) {
@@ -75,7 +67,7 @@ template <typename T> void PublishTestEntries(T& publisher) {
 TYPED_TEST(BinaryStreamSerializationTest, SerializesEntriesWithTypes) {
     typename Setup<TypeParam>::Storage storage;
     typename Setup<TypeParam>::StreamManagerWithASingleBinaryStream streams_manager(
-        storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(0)));
+        storage, StreamManagerParams().CreateStream("foo", uint32_t(0), uint32_t(0)));
     PublishTestEntries(streams_manager.foo_publisher);
     const char golden[] = "*\0\0\0\x5\0\0\0\0\0\0\0Spock";
     ASSERT_EQ(std::string(golden, golden + sizeof(golden) - 1),
@@ -85,7 +77,7 @@ TYPED_TEST(BinaryStreamSerializationTest, SerializesEntriesWithTypes) {
 TYPED_TEST(BinaryStreamSerializationTest, DeSerializesEntriesWithTypes) {
     typename Setup<TypeParam>::Storage storage;
     typename Setup<TypeParam>::StreamManagerWithASingleBinaryStream streams_manager(
-        storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(0)));
+        storage, StreamManagerParams().CreateStream("foo", uint32_t(0), uint32_t(0)));
     struct Client {
         std::ostringstream os;
         void operator()(const SimpleBinaryEntry& entry) {

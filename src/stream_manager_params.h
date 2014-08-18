@@ -4,16 +4,52 @@
 #include <map>
 #include <vector>
 #include <utility>
+#include <memory>
 
 #include <glog/logging.h>
 
 #include "storage.h"
-#include "order_key.h"
 #include "bytes.h"
 #include "tp_exceptions.h"
+#include "config_values.h"
+#include "magic_order_key.h"
 
 namespace TailProduce {
     class StreamManagerParams {
+      private:
+        using STORAGE_KEY_TYPE = ::TailProduce::Storage::STORAGE_KEY_TYPE;
+        using STORAGE_VALUE_TYPE = ::TailProduce::Storage::STORAGE_VALUE_TYPE;
+
+        struct HeadInitializer {
+            virtual STORAGE_KEY_TYPE ComposeStartingStorageKey(const std::string& name,
+                                                               const ::TailProduce::ConfigValues& cv) = 0;
+        };
+
+        template <typename PRIMARY_ORDER_KEY, typename SECONDARY_ORDER_KEY>
+        struct TypedHeadInitializer : HeadInitializer {
+            PRIMARY_ORDER_KEY primary;
+            SECONDARY_ORDER_KEY secondary;
+            // TODO(dkorolev): This code should not be here. Especially the `0` part.
+            TypedHeadInitializer(PRIMARY_ORDER_KEY primary, SECONDARY_ORDER_KEY secondary = 0)
+                : primary(primary), secondary(secondary) {
+            }
+            virtual STORAGE_KEY_TYPE ComposeStartingStorageKey(const std::string& name,
+                                                               const ::TailProduce::ConfigValues& cv) {
+                struct Traits {
+                    std::string name;
+                    std::string storage_key_data_prefix;
+                    Traits(const ::TailProduce::ConfigValues& cv, const std::string& name)
+                        : name(name), storage_key_data_prefix(cv.GetStreamDataPrefix(*this)) {
+                    }
+                };
+                Traits traits(cv, name);
+                ::TailProduce::OrderKey<Traits, PRIMARY_ORDER_KEY, SECONDARY_ORDER_KEY> key;
+                key.primary = primary;
+                key.secondary = secondary;
+                return key.ComposeStorageKey(traits, cv);
+            }
+        };
+
       public:
         // Using default StreamManagerParams requires non-header-only usecase,
         // since command line flags must be defined in a single compile unit.
@@ -22,28 +58,31 @@ namespace TailProduce {
         // TODO(dkorolev): Implement it.
         static StreamManagerParams FromCommandLineFlags();
 
-        template <typename T_ORDER_KEY>
+        // TODO(dkorolev): Important! Should not be able to CreateStream with wrong type!
+        template <typename PRIMARY_ORDER_KEY, typename SECONDARY_ORDER_KEY>
         StreamManagerParams& CreateStream(const std::string& name,
-                                          const T_ORDER_KEY& key,
-                                          const uint32_t secondary_key = 0) {
-            auto& placeholder = init[name];
-            if (!placeholder.empty()) {
+                                          const PRIMARY_ORDER_KEY& primary_key,
+                                          const SECONDARY_ORDER_KEY& secondary_key) {
+            auto& placeholder = streams_to_create[name];
+            if (placeholder) {
                 // TODO(dkorolev): Add a test for it.
                 VLOG(3) << "throw StreamAlreadyListedForCreationException();";
                 throw StreamAlreadyListedForCreationException();
             }
-            ::TailProduce::Storage::KEY_TYPE kkey =
-                OrderKey::template StaticSerializeAsStorageKey<T_ORDER_KEY>(key, secondary_key);
-            std::copy(kkey.begin(), kkey.end(), std::back_inserter(placeholder));
-            VLOG(3) << "Registering stream '" << name << "' as '" << kkey << "'.";
+            placeholder = std::shared_ptr<HeadInitializer>(
+                new TypedHeadInitializer<PRIMARY_ORDER_KEY, SECONDARY_ORDER_KEY>(primary_key, secondary_key));
+            VLOG(3) << "Registering stream '" << name << "'.";
             return *this;
         }
 
-        template <typename T_STORAGE> void Apply(T_STORAGE& storage) const {
-            for (auto cit : init) {
+        template <typename T_STORAGE> void Apply(T_STORAGE& storage, const ::TailProduce::ConfigValues& cv) const {
+            for (auto cit : streams_to_create) {
                 VLOG(3) << "Populating stream '" << cit.first << "' to the storage.";
                 try {
-                    storage.Set("s:" + cit.first, cit.second);
+                    // TODO(dkorolev): Key generation logic should also go into ConfigValues.
+                    storage.Set(
+                        ::TailProduce::Storage::STORAGE_KEY_TYPE("s:" + cit.first),
+                        ::TailProduce::Storage::KeyToValue(cit.second->ComposeStartingStorageKey(cit.first, cv)));
                 } catch (const StorageOverwriteNotAllowedException&) {
                     VLOG(3) << "throw StreamAlreadyExistsException();";
                     throw StreamAlreadyExistsException();
@@ -52,8 +91,7 @@ namespace TailProduce {
         }
 
       private:
-        // TODO(dkorolev): Fix this hack.
-        std::map<::TailProduce::Storage::KEY_TYPE, ::TailProduce::Storage::VALUE_TYPE> init;
+        std::map<std::string, std::shared_ptr<HeadInitializer>> streams_to_create;
     };
 };
 

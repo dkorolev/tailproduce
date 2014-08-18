@@ -23,6 +23,8 @@ namespace TailProduce {
     struct StorageNoDataException : StorageException {};
     struct StorageOverwriteNotAllowedException : StorageException {};
     struct StorageIteratorOutOfBoundsException : StorageException {};
+    struct CerealException : Exception {};
+    struct CerealDeSerializeException : CerealException {};
     struct OrderKeysGoBackwardsException : Exception {};
     struct ListenerHasNoDataToRead : Exception {};
     struct AttemptedToAdvanceListenerWithNoDataAvailable : Exception {};

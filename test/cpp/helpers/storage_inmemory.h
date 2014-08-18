@@ -24,14 +24,14 @@
 // 3) Die on attempting to overwrite the value for an already existing key.
 //    Unless explicitly instructed to.
 
-using ::TailProduce::Storage::KEY_TYPE;
-using ::TailProduce::Storage::VALUE_TYPE;
+using ::TailProduce::Storage::STORAGE_KEY_TYPE;
+using ::TailProduce::Storage::STORAGE_VALUE_TYPE;
 
 class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
   public:
-    typedef std::map<KEY_TYPE, VALUE_TYPE> MAP_TYPE;
+    typedef std::map<STORAGE_KEY_TYPE, STORAGE_VALUE_TYPE> MAP_TYPE;
 
-    void Set(const KEY_TYPE& key, const VALUE_TYPE& value, bool allow_overwrite = false) {
+    void Set(const STORAGE_KEY_TYPE& key, const STORAGE_VALUE_TYPE& value, bool allow_overwrite = false) {
         VLOG(3) << "InMemoryTestStorage::Set('" << key << "', '" << ::TailProduce::antibytes(value)
                 << (allow_overwrite ? "');" : "', allow_overwrite=true);");
         if (key.empty()) {
@@ -57,11 +57,11 @@ class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
         placeholder = value;
     }
 
-    void SetAllowingOverwrite(const KEY_TYPE& key, const VALUE_TYPE& value) {
+    void SetAllowingOverwrite(const STORAGE_KEY_TYPE& key, const STORAGE_VALUE_TYPE& value) {
         Set(key, value, true);
     }
 
-    bool Has(const KEY_TYPE& key) const {
+    bool Has(const STORAGE_KEY_TYPE& key) const {
         if (key.empty()) {
             VLOG(3) << "Attempted to Has() with an empty key.";
             VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -71,7 +71,7 @@ class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
         return cit != data_.end();
     }
 
-    VALUE_TYPE Get(const KEY_TYPE& key) const {
+    STORAGE_VALUE_TYPE Get(const STORAGE_KEY_TYPE& key) const {
         if (key.empty()) {
             VLOG(3) << "Attempted to Get() an entry with an empty key.";
             VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -83,6 +83,7 @@ class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
                     << ::TailProduce::antibytes(cit->second) << "'.";
             return cit->second;
         } else {
+            VLOG(3) << "InMemoryTestStorage::Get('" << ::TailProduce::antibytes(key) << "): not found.";
             VLOG(3) << "throw ::TailProduce::StorageNoDataException();";
             throw ::TailProduce::StorageNoDataException();
         }
@@ -90,8 +91,8 @@ class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
 
     struct StorageIteratorImpl {
         StorageIteratorImpl(InMemoryTestStorage& master,
-                            const KEY_TYPE& begin = KEY_TYPE(),
-                            const KEY_TYPE& end = KEY_TYPE())
+                            const STORAGE_KEY_TYPE& begin = STORAGE_KEY_TYPE(),
+                            const STORAGE_KEY_TYPE& end = STORAGE_KEY_TYPE())
             : data_(master.data_), end_(end), cit_(data_.lower_bound(begin)) {
         }
         StorageIteratorImpl(StorageIteratorImpl&&) = default;
@@ -113,19 +114,19 @@ class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
             ++cit_;
         }
 
-        const KEY_TYPE& Key() const {
+        const STORAGE_KEY_TYPE& Key() const {
             EXPECT_FALSE(Done());
             return cit_->first;
         }
 
-        const VALUE_TYPE& Value() const {
+        const STORAGE_VALUE_TYPE& Value() const {
             EXPECT_FALSE(Done());
             return cit_->second;
         }
 
       private:
         const MAP_TYPE& data_;
-        KEY_TYPE end_;
+        STORAGE_KEY_TYPE end_;
         typename MAP_TYPE::const_iterator cit_;
 
         StorageIteratorImpl() = delete;
@@ -135,7 +136,8 @@ class InMemoryTestStorage : ::TailProduce::Storage::Impl<InMemoryTestStorage> {
 
     typedef std::unique_ptr<StorageIteratorImpl> StorageIterator;
 
-    StorageIterator CreateStorageIterator(const KEY_TYPE& begin = KEY_TYPE(), const KEY_TYPE& end = KEY_TYPE()) {
+    StorageIterator CreateStorageIterator(const STORAGE_KEY_TYPE& begin = STORAGE_KEY_TYPE(),
+                                          const STORAGE_KEY_TYPE& end = STORAGE_KEY_TYPE()) {
         return StorageIterator(new StorageIteratorImpl(*this, begin, end));
     }
 

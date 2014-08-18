@@ -31,9 +31,8 @@ build/individual_files_compile_ok: build cereal src/*.h src/*.cc
 	done
 	for i in build/individual_files/*.cc ; do \
 		echo -n $$(basename $$i)': ' ; \
-		${CPP} ${CPPFLAGS} -c $$i -o $$i.o || exit 1 ; \
-	 		echo 'OK' ; \
-	done && echo "OK" > $@
+		if [ ! -f $$i.o -o $$i -nt $$i.o ] ; then ${CPP} ${CPPFLAGS} -c $$i -o $$i.o || exit 1 ; echo 'OK' ; else echo 'Already OK' ; fi \
+	done && echo 'OK' > $@
 
 $(LIB): $(OBJ)
 	ar rcs $(LIB) $(OBJ)

@@ -30,7 +30,7 @@ struct StatsAggregator {
 
 TEST(StreamManagerSmokeTest, SmokeTest) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<InMemoryTestStorage>);
-    TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_STREAM(test, SimpleEntry, uint32_t, uint32_t);
     TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
@@ -41,7 +41,7 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
     {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
-        Impl streams_manager(storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+        Impl streams_manager(storage, StreamManagerParams().CreateStream("test", uint32_t(0), uint32_t(0)));
     }
 
     {
@@ -53,12 +53,12 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
         SimpleEntry entry;
 
-        typename Impl::test_type::publisher_type publisher(streams_manager.test);
+        typename Impl::test_publisher_type& publisher = streams_manager.test_publisher;
         typename Impl::test_type::INTERNAL_unsafe_listener_type listener_all(streams_manager.test);
         typename Impl::test_type::INTERNAL_unsafe_listener_type listener_from_three(streams_manager.test,
-                                                                                    SimpleOrderKey(3));
+                                                                                    uint32_t(3));
         typename Impl::test_type::INTERNAL_unsafe_listener_type listener_from_three_to_five_not_inclusive(
-            streams_manager.test, SimpleOrderKey(3), SimpleOrderKey(5));
+            streams_manager.test, uint32_t(3), uint32_t(5));
 
         ASSERT_FALSE(listener_all.HasData());
         ASSERT_FALSE(listener_all.ReachedEnd());
@@ -190,7 +190,7 @@ TEST(StreamManagerSmokeTest, SmokeTest) {
 
 TEST(StreamManagerSmokeTest, DataInjected) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<InMemoryTestStorage>);
-    TAILPRODUCE_STREAM(foo, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_STREAM(foo, SimpleEntry, uint32_t, uint32_t);
     TAILPRODUCE_PUBLISHER(foo);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
@@ -198,7 +198,7 @@ TEST(StreamManagerSmokeTest, DataInjected) {
 
     {
         // Mimic the 1st run with the command line flag set to initialize the stream in the storage.
-        Impl streams_manager(storage, StreamManagerParams().CreateStream("foo", SimpleOrderKey(100)));
+        Impl streams_manager(storage, StreamManagerParams().CreateStream("foo", uint32_t(100), uint32_t(0)));
     }
 
     // Add one data entry.
@@ -218,7 +218,7 @@ TEST(StreamManagerSmokeTest, DataInjected) {
 
 TEST(StreamManagerSmokeTest, ListenerRunsInSeparateThread) {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(Impl, ::TailProduce::StreamManager<InMemoryTestStorage>);
-    TAILPRODUCE_STREAM(test, SimpleEntry, SimpleOrderKey);
+    TAILPRODUCE_STREAM(test, SimpleEntry, uint32_t, uint32_t);
     TAILPRODUCE_PUBLISHER(test);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
@@ -227,11 +227,11 @@ TEST(StreamManagerSmokeTest, ListenerRunsInSeparateThread) {
     // A variable to hold the lambda is required in order to pass a reference to ProcessEntrySync().
     std::function<void(const SimpleEntry&)> lambda;
 
-    Impl streams_manager(storage, StreamManagerParams().CreateStream("test", SimpleOrderKey(0)));
+    Impl streams_manager(storage, StreamManagerParams().CreateStream("test", uint32_t(0), uint32_t(0)));
 
     SimpleEntry entry;
 
-    typename Impl::test_type::publisher_type publisher(streams_manager.test);
+    typename Impl::test_publisher_type& publisher = streams_manager.test_publisher;
 
     std::ostringstream os;
 

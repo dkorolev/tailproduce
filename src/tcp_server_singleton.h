@@ -57,9 +57,9 @@ namespace TailProduce {
             struct Handler {
                 virtual void HandleRequest(std::unique_ptr<tcp::socket>&& socket) = 0;
             };
-            template <typename T> struct UserHandlerWrapper : Handler {
-                T& user_handler;
-                explicit UserHandlerWrapper(T& user_handler) : user_handler(user_handler) {
+            template <typename HANDLER> struct UserHandlerWrapper : Handler {
+                HANDLER& user_handler;
+                explicit UserHandlerWrapper(HANDLER& user_handler) : user_handler(user_handler) {
                 }
                 virtual void HandleRequest(std::unique_ptr<tcp::socket>&& socket) {
                     user_handler.HandleRequestSync(std::move(socket));
@@ -99,10 +99,10 @@ namespace TailProduce {
                 }
             }
 
-            template <typename T> void RegisterHandler(T& handler) {
+            template <typename HANDLER> void RegisterHandler(HANDLER& handler) {
                 std::lock_guard<std::mutex> guard(handler_mutex_);
                 if (!handler_) {
-                    handler_.reset(new UserHandlerWrapper<T>(handler));
+                    handler_.reset(new UserHandlerWrapper<HANDLER>(handler));
                 } else {
                     throw ::TailProduce::TCPServerLogicErrorException("RegisterHandler() called twice.");
                 }
@@ -147,8 +147,8 @@ namespace TailProduce {
 
         struct ScopedHandlerRegisterer {
             size_t port;
-            template <typename T> ScopedHandlerRegisterer(size_t port, T& handler) : port(port) {
-                Instance()[port].RegisterHandler<T>(handler);
+            template <typename HANDLER> ScopedHandlerRegisterer(size_t port, HANDLER& handler) : port(port) {
+                Instance()[port].RegisterHandler<HANDLER>(handler);
             }
             ~ScopedHandlerRegisterer() {
                 Instance()[port].UnregisterHandler();
