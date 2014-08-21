@@ -116,8 +116,7 @@ namespace TailProduce {
         StaticFramework(T_STORAGE& storage,
                         const ::TailProduce::StreamManagerParams& params =
                             ::TailProduce::StreamManagerParams::FromCommandLineFlags())
-            : cv("s", "d", ':'),
-              storage(EnsureStreamsAreCreatedDuringInitialization(storage, cv, params)) {
+            : cv("s", "d", ':'), storage(EnsureStreamsAreCreatedDuringInitialization(storage, cv, params)) {
             ::TailProduce::EnsureThereAreNoStreamsWithoutPublishers(streams_declared_, stream_publishers_declared_);
             scoped_http_handler_registerer.reset(new ::TailProduce::TCPServer::ScopedHandlerRegisterer(8080, *this));
         }
