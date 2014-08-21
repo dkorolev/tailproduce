@@ -30,10 +30,11 @@ namespace TailProduce {
         }
     };
 
-    template <typename T> struct SubscribeWhileInScope {
+    template <typename EVENT> struct SubscribeWhileInScope {
+        typedef EVENT T_EVENT;
         Subscriber* s;
-        T& m;
-        SubscribeWhileInScope(Subscriber* s, T& m) : s(s), m(m) {
+        T_EVENT& m;
+        SubscribeWhileInScope(Subscriber* s, T_EVENT& m) : s(s), m(m) {
             m.RegisterSubscriber(s);
         }
         ~SubscribeWhileInScope() {

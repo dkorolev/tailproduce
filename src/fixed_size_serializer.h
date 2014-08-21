@@ -30,6 +30,17 @@ namespace TailProduce {
             return x;
         }
     };
+
+    // To save on type specializations wherever possible.
+    namespace FixedSizeSerialization {
+        template <typename T> inline std::string PackToString(T x) {
+            return FixedSizeSerializer<T>::PackToString(x);
+        }
+        template <typename T> inline const T& UnpackFromString(std::string const& s, T& x) {
+            x = FixedSizeSerializer<T>::UnpackFromString(s);
+            return x;
+        }
+    };
 };
 
 #endif

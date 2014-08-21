@@ -1,61 +1,90 @@
 // TailProduce static framework macros.
 // Static framework is the one that lists all the streams in the source file,
 // thus allowing all C++ template and static typing powers to come into play.
-#define TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(NAME, BASE) \
-    class NAME : public ::TailProduce::StaticFramework<BASE> { \
-      public: \
-        typedef NAME framework_type; \
-        typedef ::TailProduce::StaticFramework<BASE> base_type; \
-        using storage_type = typename base_type::storage_type; \
-        NAME(storage_type& storage, \
-             const ::TailProduce::StreamManagerParams& params = ::TailProduce::StreamManagerParams::FromCommandLineFlags()) \
-          : base_type(storage, params) {} \
 
-#define TAILPRODUCE_STREAM(NAME, ENTRY_TYPE, ORDER_KEY_TYPE) \
-        struct NAME##_type { \
-            typedef ENTRY_TYPE entry_type; \
-            typedef ORDER_KEY_TYPE order_key_type; \
-            typedef ::TailProduce::StreamInstance<entry_type, order_key_type> stream_type; \
-            typedef typename framework_type::storage_type storage_type; \
-            typedef ::TailProduce::INTERNAL_UnsafeListener<NAME##_type> INTERNAL_unsafe_listener_type; \
-            typedef ::TailProduce::INTERNAL_UnsafePublisher<NAME##_type> INTERNAL_unsafe_publisher_type; \
-            typedef ::TailProduce::Publisher<NAME##_type> publisher_type; \
-            typedef std::pair<order_key_type, uint32_t> head_pair_type; \
-            typedef ::TailProduce::StorageKeyBuilder<NAME##_type> key_builder_type; \
-            framework_type* manager; \
-            stream_type stream; \
+#define TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(NAME, BASE) \
+struct NAME : ::TailProduce::StaticFramework<BASE> { \
+    typedef NAME T_THIS_FRAMEWORK_INSTANCE; \
+    typedef ::TailProduce::StaticFramework<BASE> T_FRAMEWORK; \
+    typedef typename T_FRAMEWORK::T_STORAGE T_STORAGE; \
+    NAME(T_STORAGE& storage, \
+         const ::TailProduce::StreamManagerParams& params = \
+         ::TailProduce::StreamManagerParams::FromCommandLineFlags()) \
+        : T_FRAMEWORK(storage, params) { \
+    }
+
+#define TAILPRODUCE_STREAM(NAME, ENTRY_TYPE, PRIMARY_KEY_TYPE, SECONDARY_KEY_TYPE) \
+    struct NAME##_type_params { \
+        struct StreamTraits { \
+            typedef typename T_FRAMEWORK::T_STORAGE T_STORAGE; \
             const std::string name; \
-            key_builder_type key_builder; \
-            head_pair_type head; \
-            ::TailProduce::ConfigValues cv = ::TailProduce::ConfigValues("S", "D", "Register", "LastWrite", ':'); \
-            mutable ::TailProduce::SubscriptionsManager subscriptions; \
-            NAME##_type( \
-                framework_type* manager, \
-                const char* stream_name, \
-                const char* entry_type_name, \
-                const char* entry_order_key_name) \
-              : manager(manager), \
-                stream(cv, stream_name, entry_type_name, entry_order_key_name), \
-                name(stream_name), \
-                key_builder(name), \
-                head(::TailProduce::StreamManagerBase::template FetchHeadOrDie<order_key_type, key_builder_type, storage_type>(name, key_builder, manager->storage)) { \
-                manager->streams_declared_.insert(#NAME); \
+            const std::string storage_key_meta_prefix; \
+            const std::string storage_key_data_prefix; \
+            const std::string starting_order_key_as_string; \
+            explicit StreamTraits(const ::TailProduce::ConfigValues& cv) \
+                : name(#NAME), \
+                  storage_key_meta_prefix(cv.GetStreamMetaPrefix(*this)), \
+                  storage_key_data_prefix(cv.GetStreamDataPrefix(*this)) { \
             } \
         }; \
-        NAME##_type NAME = NAME##_type(this, #NAME, #ENTRY_TYPE, #ORDER_KEY_TYPE); \
-        ::TailProduce::AsyncListenersFactory<NAME##_type> new_scoped_##NAME##_listener = ::TailProduce::AsyncListenersFactory<NAME##_type>(NAME)
-
-#define TAILPRODUCE_BROADCAST_STREAM(NAME) \
-        ;
+        typedef ::TailProduce::OrderKey<StreamTraits, PRIMARY_KEY_TYPE, SECONDARY_KEY_TYPE> T_ORDER_KEY; \
+    }; \
+    struct NAME##_type : ::TailProduce::Stream<typename NAME##_type_params::StreamTraits, \
+                                               ENTRY_TYPE, \
+                                               typename NAME##_type_params::T_ORDER_KEY> { \
+        typedef ::TailProduce::Stream<typename NAME##_type_params::StreamTraits, \
+                                      ENTRY_TYPE, \
+                                      typename NAME##_type_params::T_ORDER_KEY> T_STREAM_INSTANCE; \
+        typedef NAME##_type T_STREAM; \
+        typedef ENTRY_TYPE T_ENTRY; \
+        typedef typename NAME##_type_params::T_ORDER_KEY T_ORDER_KEY; \
+        typedef typename T_THIS_FRAMEWORK_INSTANCE::T_STORAGE T_STORAGE; \
+        typedef ::TailProduce::INTERNAL_UnsafeListener<NAME##_type> INTERNAL_unsafe_listener_type; \
+        T_THIS_FRAMEWORK_INSTANCE* manager_; \
+        mutable ::TailProduce::SubscriptionsManager subscriptions_; \
+        NAME##_type(T_THIS_FRAMEWORK_INSTANCE* manager, \
+                    const char* stream_name, \
+                    const char* entry_type_name, \
+                    const char* entry_order_key_name) \
+            : T_STREAM_INSTANCE(manager->cv, manager->storage), manager_(manager) { \
+            manager_->streams_declared_.insert(#NAME); \
+        } \
+    }; \
+    NAME##_type NAME = NAME##_type(this, #NAME, #PRIMARY_KEY_TYPE, #SECONDARY_KEY_TYPE); \
+    ::TailProduce::AsyncListenersFactory<NAME##_type> new_scoped_##NAME##_listener = \
+        ::TailProduce::AsyncListenersFactory<NAME##_type>(NAME)
 
 #define TAILPRODUCE_PUBLISHER(NAME) \
-        struct NAME##_publisher_type : ::TailProduce::Publisher<NAME##_type> { \
-            typedef ::TailProduce::Publisher<NAME##_type> base; \
-            explicit NAME##_publisher_type(framework_type* manager) : base(manager->NAME) { \
-                manager->stream_publishers_declared_.insert(#NAME); \
+    struct NAME##_publisher_type : ::TailProduce::Publisher<NAME##_type> { \
+        typedef ::TailProduce::Publisher<NAME##_type> base; \
+        explicit NAME##_publisher_type(T_THIS_FRAMEWORK_INSTANCE* manager) : base(manager->NAME) { \
+            manager->stream_publishers_declared_.insert(#NAME); \
+        } \
+    }; \
+    NAME##_publisher_type NAME##_publisher = NAME##_publisher_type(this)
+
+#define TAILPRODUCE_EXPORT_STREAM(NAME) \
+    struct NAME##_exporter_type : ::TailProduce::StreamExporter { \
+        T_THIS_FRAMEWORK_INSTANCE* manager_; \
+        explicit NAME##_exporter_type(T_THIS_FRAMEWORK_INSTANCE* manager) : manager_(manager) { \
+            manager_->AddExporter("/" #NAME, this); \
+        } \
+        ~NAME##_exporter_type() { \
+            manager_->RemoveExporter("/" #NAME, this); \
+        } \
+        void ListenAndStreamData(std::unique_ptr<boost::asio::ip::tcp::socket>&& socket) { \
+            auto lambda = [&socket](const SimpleEntry& entry) { \
+                std::ostringstream os; \
+                os << entry.ikey << ' ' << entry.data << '\n'; \
+                std::string message = os.str(); \
+                boost::asio::write(*socket, boost::asio::buffer(message), boost::asio::transfer_all()); \
+            }; \
+            auto scope = manager_->new_scoped_##NAME##_listener(lambda); \
+            while (true) { \
             } \
-        }; \
-        NAME##_publisher_type NAME##_publisher = NAME##_publisher_type(this);
+        } \
+    }; \
+    NAME##_exporter_type NAME##_exporter = NAME##_exporter_type(this)
 
 #define TAILPRODUCE_STATIC_FRAMEWORK_END() \
-    }
+}

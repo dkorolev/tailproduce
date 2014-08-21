@@ -20,46 +20,20 @@ using ::TailProduce::bytes;
 using ::TailProduce::antibytes;
 using ::TailProduce::StreamManagerParams;
 
-struct IntOrderKey : ::TailProduce::OrderKey {
-    uint32_t k;
-    explicit IntOrderKey(uint32_t key = 0) : k(key) {
-    }
-    // TODO(dkorolev): Discuss this design with Brian. Perhaps it's better to keep OrderKey implemenations clean?
-    IntOrderKey(std::string const& streamId, TailProduce::ConfigValues const& cv) : k(0) {
-    }
-
-    enum { size_in_bytes = 3 };
-
-    bool operator<(const IntOrderKey& rhs) const {
-        return k < rhs.k;
-    }
-
-    void SerializeOrderKey(::TailProduce::Storage::KEY_TYPE& ref) const {
-        char tmp[size_in_bytes + 1];
-        snprintf(tmp, sizeof(tmp), "%03u", k);
-        ref = tmp;
-    }
-
-    void DeSerializeOrderKey(::TailProduce::Storage::KEY_TYPE const& ref) {
-        k = atoi(ref.c_str());
-    }
-};
-
 struct DerivedEntryA;
 struct DerivedEntryB;
-struct BaseEntry : ::TailProduce::Entry,
-                   ::TailProduce::PolymorphicCerealJSONSerializable<BaseEntry, DerivedEntryA, DerivedEntryB> {
+struct BaseEntry : ::TailProduce::PolymorphicCerealJSONSerializable<BaseEntry, DerivedEntryA, DerivedEntryB> {
     BaseEntry() = default;
     virtual ~BaseEntry() {
     }
-    BaseEntry(uint32_t key) : k(key) {
+    BaseEntry(uint16_t key) : k(key) {
     }
 
-    IntOrderKey ExtractSimpleOrderKey() const {
-        return IntOrderKey(k);
+    void GetOrderKey(uint16_t& output) const {
+        output = k;
     }
 
-    uint32_t k;
+    uint16_t k;
 
   protected:
     friend class cereal::access;
@@ -71,7 +45,7 @@ struct BaseEntry : ::TailProduce::Entry,
 struct DerivedEntryA : BaseEntry {
     char c;
     DerivedEntryA() = default;
-    DerivedEntryA(uint32_t k, char c) : BaseEntry(k), c(c) {
+    DerivedEntryA(uint16_t k, char c) : BaseEntry(k), c(c) {
     }
 
   private:
@@ -85,7 +59,7 @@ struct DerivedEntryA : BaseEntry {
 struct DerivedEntryB : BaseEntry {
     std::string s;
     DerivedEntryB() = default;
-    DerivedEntryB(uint32_t k, const std::string& s) : BaseEntry(k), s(s) {
+    DerivedEntryB(uint16_t k, const std::string& s) : BaseEntry(k), s(s) {
     }
 
   private:
@@ -100,33 +74,25 @@ CEREAL_REGISTER_TYPE(BaseEntry);
 CEREAL_REGISTER_TYPE(DerivedEntryA);
 CEREAL_REGISTER_TYPE(DerivedEntryB);
 
-namespace TailProduce {
-    template <> struct OrderKeyExtractorImpl<IntOrderKey, BaseEntry> {
-        static IntOrderKey ExtractOrderKey(const BaseEntry& entry) {
-            return entry.ExtractSimpleOrderKey();
-        }
-    };
-};
-
 template <typename STREAM_MANAGER_TYPE> struct Setup {
     TAILPRODUCE_STATIC_FRAMEWORK_BEGIN(PolymorphicStreamsManager, STREAM_MANAGER_TYPE);
-    TAILPRODUCE_STREAM(polymorphic_stream, BaseEntry, IntOrderKey);
+    TAILPRODUCE_STREAM(polymorphic_stream, BaseEntry, uint16_t, uint16_t);
     TAILPRODUCE_PUBLISHER(polymorphic_stream);
     TAILPRODUCE_STATIC_FRAMEWORK_END();
 
-    typedef typename STREAM_MANAGER_TYPE::storage_type Storage;
+    typedef typename STREAM_MANAGER_TYPE::T_STORAGE T_STORAGE;
 };
 
 template <typename STREAM_MANAGER_TYPE> class PolymorphicStreamTest : public ::testing::Test {};
 TYPED_TEST_CASE(PolymorphicStreamTest, TestStreamManagerImplementationsTypeList);
 
 TYPED_TEST(PolymorphicStreamTest, InitializesStream) {
-    typename Setup<TypeParam>::Storage storage;
+    typename Setup<TypeParam>::T_STORAGE storage;
     ASSERT_FALSE(storage.Has("s:polymorphic_stream"));
     typename Setup<TypeParam>::PolymorphicStreamsManager streams_manager(
-        storage, StreamManagerParams().CreateStream("polymorphic_stream", IntOrderKey(0)));
+        storage, StreamManagerParams().CreateStream("polymorphic_stream", uint16_t(0), uint16_t(0)));
     ASSERT_TRUE(storage.Has("s:polymorphic_stream"));
-    ASSERT_EQ("000:0000000000", antibytes(storage.Get("s:polymorphic_stream")));
+    ASSERT_EQ("d:polymorphic_stream:00000:00000", antibytes(storage.Get("s:polymorphic_stream")));
 }
 
 template <typename T> void PublishTestEntries(T& publisher) {
@@ -136,9 +102,9 @@ template <typename T> void PublishTestEntries(T& publisher) {
 }
 
 TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
-    typename Setup<TypeParam>::Storage storage;
+    typename Setup<TypeParam>::T_STORAGE storage;
     typename Setup<TypeParam>::PolymorphicStreamsManager streams_manager(
-        storage, StreamManagerParams().CreateStream("polymorphic_stream", IntOrderKey(0)));
+        storage, StreamManagerParams().CreateStream("polymorphic_stream", uint16_t(0), uint16_t(0)));
     PublishTestEntries(streams_manager.polymorphic_stream_publisher);
     ASSERT_EQ(
         "{\n"
@@ -152,7 +118,7 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        }\n"
         "    }\n"
         "}\n",
-        antibytes(storage.Get("d:polymorphic_stream:001:0000000000")));
+        antibytes(storage.Get("d:polymorphic_stream:00001:00000")));
     ASSERT_EQ(
         "{\n"
         "    \"value0\": {\n"
@@ -167,7 +133,7 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        }\n"
         "    }\n"
         "}\n",
-        antibytes(storage.Get("d:polymorphic_stream:002:0000000000")));
+        antibytes(storage.Get("d:polymorphic_stream:00002:00000")));
     ASSERT_EQ(
         "{\n"
         "    \"value0\": {\n"
@@ -182,13 +148,13 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        }\n"
         "    }\n"
         "}\n",
-        antibytes(storage.Get("d:polymorphic_stream:003:0000000000")));
+        antibytes(storage.Get("d:polymorphic_stream:00003:00000")));
 }
 
 TYPED_TEST(PolymorphicStreamTest, DeSerializesEntriesWithTypes) {
-    typename Setup<TypeParam>::Storage storage;
+    typename Setup<TypeParam>::T_STORAGE storage;
     typename Setup<TypeParam>::PolymorphicStreamsManager streams_manager(
-        storage, StreamManagerParams().CreateStream("polymorphic_stream", IntOrderKey(0)));
+        storage, StreamManagerParams().CreateStream("polymorphic_stream", uint16_t(0), uint16_t(0)));
     struct Client {
         std::ostringstream os;
         void operator()(const BaseEntry& entry) {

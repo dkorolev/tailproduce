@@ -4,8 +4,9 @@
 #include "tp_exceptions.h"
 
 namespace TailProduce {
-    template <typename BASE, typename DERIVED, typename... TAIL> class RuntimeDispatcher {
-      public:
+    template <typename BASE, typename DERIVED, typename... TAIL> struct RuntimeDispatcher {
+        typedef BASE T_BASE;
+        typedef DERIVED T_DERIVED;
         template <typename TYPE, typename CALLBACK> static void DispatchCall(const TYPE& x, CALLBACK c) {
             if (const DERIVED* d = dynamic_cast<const DERIVED*>(&x)) {
                 c(*d);
@@ -15,8 +16,9 @@ namespace TailProduce {
         }
     };
 
-    template <typename BASE, typename DERIVED> class RuntimeDispatcher<BASE, DERIVED> {
-      public:
+    template <typename BASE, typename DERIVED> struct RuntimeDispatcher<BASE, DERIVED> {
+        typedef BASE T_BASE;
+        typedef DERIVED T_DERIVED;
         template <typename TYPE, typename CALLBACK> static void DispatchCall(const TYPE& x, CALLBACK c) {
             if (const DERIVED* d = dynamic_cast<const DERIVED*>(&x)) {
                 c(*d);

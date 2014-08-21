@@ -15,7 +15,8 @@ TailProduce::StorageLevelDB::StorageLevelDB(std::string const& dbname) {
     db_.reset(db);
 }
 
-TailProduce::Storage::VALUE_TYPE TailProduce::StorageLevelDB::Get(::TailProduce::Storage::KEY_TYPE const& key) {
+TailProduce::Storage::STORAGE_VALUE_TYPE TailProduce::StorageLevelDB::Get(
+    ::TailProduce::Storage::STORAGE_KEY_TYPE const& key) const {
     if (key.empty()) {
         VLOG(3) << "Attempted to Get() an entry with an empty key.";
         VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -27,12 +28,12 @@ TailProduce::Storage::VALUE_TYPE TailProduce::StorageLevelDB::Get(::TailProduce:
         throw ::TailProduce::StorageNoDataException();
     } else {
         if (!s.ok()) throw std::domain_error(s.ToString());
-        ::TailProduce::Storage::VALUE_TYPE v_ret(v_get.begin(), v_get.end());
+        ::TailProduce::Storage::STORAGE_VALUE_TYPE v_ret(v_get.begin(), v_get.end());
         return v_ret;
     }
 }
 
-bool TailProduce::StorageLevelDB::Has(::TailProduce::Storage::KEY_TYPE const& key) {
+bool TailProduce::StorageLevelDB::Has(::TailProduce::Storage::STORAGE_KEY_TYPE const& key) const {
     if (key.empty()) {
         VLOG(3) << "Attempted to Has() with an empty key.";
         VLOG(3) << "throw ::TailProduce::StorageEmptyKeyException();";
@@ -43,8 +44,8 @@ bool TailProduce::StorageLevelDB::Has(::TailProduce::Storage::KEY_TYPE const& ke
     return !s.IsNotFound();
 }
 
-void TailProduce::StorageLevelDB::InternalSet(::TailProduce::Storage::KEY_TYPE const& key,
-                                              ::TailProduce::Storage::VALUE_TYPE const& value,
+void TailProduce::StorageLevelDB::InternalSet(::TailProduce::Storage::STORAGE_KEY_TYPE const& key,
+                                              ::TailProduce::Storage::STORAGE_VALUE_TYPE const& value,
                                               bool allow_overwrite) {
     if (key.empty()) {
         VLOG(3) << "Attempted to Set() an entry with an empty key.";
@@ -69,15 +70,15 @@ void TailProduce::StorageLevelDB::InternalSet(::TailProduce::Storage::KEY_TYPE c
     if (!s.ok()) throw std::domain_error(s.ToString());
 }
 
-void TailProduce::StorageLevelDB::UNUSED_Delete(::TailProduce::Storage::KEY_TYPE const& key) {
+void TailProduce::StorageLevelDB::UNUSED_Delete(::TailProduce::Storage::STORAGE_KEY_TYPE const& key) {
     leveldb::Status s = db_->Delete(leveldb::WriteOptions(), key);
     if (!s.ok()) throw std::domain_error(s.ToString());
 }
 
 TailProduce::StorageLevelDB::StorageIteratorImpl::StorageIteratorImpl(
     leveldb::DB* p_db,
-    ::TailProduce::Storage::KEY_TYPE const& startKey,
-    ::TailProduce::Storage::KEY_TYPE const& endKey)
+    ::TailProduce::Storage::STORAGE_KEY_TYPE const& startKey,
+    ::TailProduce::Storage::STORAGE_KEY_TYPE const& endKey)
     : p_db_(p_db), endKey_(endKey) {
     it_.reset(p_db_->NewIterator(leveldb::ReadOptions()));
     it_->Seek(startKey);
@@ -92,14 +93,14 @@ void TailProduce::StorageLevelDB::StorageIteratorImpl::Next() {
     it_->Next();
 }
 
-::TailProduce::Storage::KEY_TYPE TailProduce::StorageLevelDB::StorageIteratorImpl::Key() const {
+::TailProduce::Storage::STORAGE_KEY_TYPE TailProduce::StorageLevelDB::StorageIteratorImpl::Key() const {
     if (it_->Valid()) return it_->key().ToString();
     throw std::out_of_range("Can not obtain a Key() from a non valid iterator.");
 }
 
-TailProduce::Storage::VALUE_TYPE TailProduce::StorageLevelDB::StorageIteratorImpl::Value() const {
+TailProduce::Storage::STORAGE_VALUE_TYPE TailProduce::StorageLevelDB::StorageIteratorImpl::Value() const {
     if (it_->Valid()) {
-        ::TailProduce::Storage::VALUE_TYPE r_vec(it_->value().size());
+        ::TailProduce::Storage::STORAGE_VALUE_TYPE r_vec(it_->value().size());
         int elemSize = sizeof(decltype(*(it_->value().data())));
         memcpy(r_vec.data(), it_->value().data(), elemSize * it_->value().size());
         return r_vec;
