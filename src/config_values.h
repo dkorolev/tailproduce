@@ -14,9 +14,10 @@ namespace TailProduce {
               delimiter_(delimiter) {
         }
 
-        char GetDelimiter() const {
-            return delimiter_;
-        }
+        // TODO(dkorolev): We have removed the delimiter between primary and secondary key components. Retire this?
+        // char GetDelimiter() const {
+        //     return delimiter_;
+        // }
 
         template <typename STREAM_TRAITS>
         ::TailProduce::Storage::STORAGE_KEY_TYPE HeadStorageKey(const STREAM_TRAITS& traits) const {

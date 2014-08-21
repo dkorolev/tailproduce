@@ -30,7 +30,7 @@ namespace TailProduce {
                                 const typename T_STREAM::T_ORDER_KEY& begin = typename T_STREAM::T_ORDER_KEY())
             : stream(stream),
               storage(stream.manager_->storage),
-              storage_cursor_key(begin.ComposeStorageKey(stream, stream.cv)),
+              storage_cursor_key(begin.ComposeStorageKey(stream, stream.config_values())),
               need_to_increment_cursor(false),
               has_end_key(false),
               reached_end(false) {
@@ -48,10 +48,10 @@ namespace TailProduce {
                                 const typename T_STREAM::T_ORDER_KEY& end)
             : stream(stream),
               storage(stream.manager_->storage),
-              storage_cursor_key(begin.ComposeStorageKey(stream, stream.cv)),
+              storage_cursor_key(begin.ComposeStorageKey(stream, stream.config_values())),
               need_to_increment_cursor(false),
               has_end_key(true),
-              storage_end_key(end.ComposeStorageKey(stream, stream.cv)),
+              storage_end_key(end.ComposeStorageKey(stream, stream.config_values())),
               reached_end(false) {
             VLOG(3) << this << ": INTERNAL_UnsafeListener::INTERNAL_UnsafeListener('" << stream.name << "', "
                     << "begin='" << storage_cursor_key << "', end='" << storage_end_key << "');";
@@ -87,7 +87,7 @@ namespace TailProduce {
             } else {
                 if (!iterator) {
                     iterator = std::move(storage.CreateStorageIterator(
-                        storage_cursor_key, stream.manager_->cv.EndDataStorageKey(stream)));
+                        storage_cursor_key, stream.config_values().EndDataStorageKey(stream)));
                     if (need_to_increment_cursor && !iterator->Done()) {
                         iterator->Next();
                     }

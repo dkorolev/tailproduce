@@ -202,7 +202,7 @@ TEST(StreamManagerSmokeTest, DataInjected) {
     }
 
     // Add one data entry.
-    storage.Set("d:foo:0000000042:0000000000", bytes("{\"value0\":{\"ikey\":42,\"data\":\"Yay!\"}}"));
+    storage.Set("d:foo:00000000420000000000", bytes("{\"value0\":{\"ikey\":42,\"data\":\"Yay!\"}}"));
 
     {
         // Mimic the consecutive run(s) that rely on the fact that the stream exists.

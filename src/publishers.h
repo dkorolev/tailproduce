@@ -38,7 +38,7 @@ namespace TailProduce {
             PushHeadUnguarded(primary_order_key);
             std::ostringstream value_output_stream;
             T_STREAM::T_ENTRY::SerializeEntry(value_output_stream, entry);
-            stream.manager_->storage.Set(stream.head.ComposeStorageKey(stream, stream.cv),
+            stream.manager_->storage.Set(stream.head.ComposeStorageKey(stream, stream.config_values()),
                                          bytes(value_output_stream.str()));
         }
 
@@ -54,8 +54,8 @@ namespace TailProduce {
                 new_head.secondary = stream.head.secondary + 1;
             }
             // TODO(dkorolev): Perhaps more checks here?
-            auto v = new_head.ComposeStorageKey(stream, stream.cv);
-            stream.manager_->storage.SetAllowingOverwrite(stream.manager_->cv.HeadStorageKey(stream), bytes(v));
+            auto v = new_head.ComposeStorageKey(stream, stream.config_values());
+            stream.manager_->storage.SetAllowingOverwrite(stream.config_values().HeadStorageKey(stream), bytes(v));
             stream.head = new_head;
         }
         void PushHead(const typename T_STREAM::T_ORDER_KEY::T_PRIMARY_KEY& primary_order_key) {

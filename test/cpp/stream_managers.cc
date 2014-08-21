@@ -66,7 +66,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         VLOG(2) << "Test that STREAM_MANAGER can be created once the storage is externally set to contain the "
                    "proper definition of the `test` stream.";
         STORAGE local_storage;
-        local_storage.Set("s:test", bytes("d:test:0000000000:0000000000"));
+        local_storage.Set("s:test", bytes("d:test:00000000000000000000"));
         STREAM_MANAGER streams_manager(local_storage, StreamManagerParams());
         VLOG(2) << "Done.";
     }
@@ -80,7 +80,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         STREAM_MANAGER streams_manager(local_storage,
                                        StreamManagerParams().CreateStream("test", uint32_t(0), uint32_t(0)));
         ASSERT_TRUE(local_storage.Has("s:test"));
-        ASSERT_EQ("d:test:0000000000:0000000000", antibytes(local_storage.Get("s:test")));
+        ASSERT_EQ("d:test:00000000000000000000", antibytes(local_storage.Get("s:test")));
         VLOG(2) << "Done.";
     }
 
@@ -126,7 +126,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         // but is *NOT* fine with LevelDB-based one.
 
         STORAGE storage;
-        storage.Set("s:test", bytes("d:test:0000000000:0000000000"));
+        storage.Set("s:test", bytes("d:test:00000000000000000000"));
 
         {
             VLOG(2) << "Test stream manager setup. The `test` stream should exist and be statically typed.";
@@ -187,7 +187,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 head = listener.GetHeadPrimaryAndSecondary();
                 EXPECT_EQ(1, head.primary);
                 EXPECT_EQ(0, head.secondary);
-                EXPECT_EQ(bytes("d:test:0000000001:0000000000"), storage.Get("s:test"));
+                EXPECT_EQ(bytes("d:test:00000000010000000000"), storage.Get("s:test"));
                 test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(1, seen);
                 EXPECT_EQ("1:foo", last_as_string);
@@ -199,7 +199,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 head = listener.GetHeadPrimaryAndSecondary();
                 EXPECT_EQ(1, head.primary);
                 EXPECT_EQ(1, head.secondary);
-                EXPECT_EQ(bytes("d:test:0000000001:0000000001"), storage.Get("s:test"));
+                EXPECT_EQ(bytes("d:test:00000000010000000001"), storage.Get("s:test"));
                 test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(2, seen);
                 EXPECT_EQ("1:bar", last_as_string);
@@ -211,7 +211,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 head = listener.GetHeadPrimaryAndSecondary();
                 EXPECT_EQ(2, head.primary);
                 EXPECT_EQ(0, head.secondary);
-                EXPECT_EQ(bytes("d:test:0000000002:0000000000"), storage.Get("s:test"));
+                EXPECT_EQ(bytes("d:test:00000000020000000000"), storage.Get("s:test"));
                 test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(2, seen);
                 EXPECT_EQ("1:bar", last_as_string);
@@ -223,7 +223,7 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
                 head = listener.GetHeadPrimaryAndSecondary();
                 EXPECT_EQ(2, head.primary);
                 EXPECT_EQ(1, head.secondary);
-                EXPECT_EQ(bytes("d:test:0000000002:0000000001"), storage.Get("s:test"));
+                EXPECT_EQ(bytes("d:test:00000000020000000001"), storage.Get("s:test"));
                 test_listener_existence_scope->WaitUntilCurrent();
                 EXPECT_EQ(2, seen);
                 EXPECT_EQ("1:bar", last_as_string);
@@ -293,13 +293,13 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(2, "two"));
         publisher.Push(SimpleEntry(3, "three"));
 
-        EXPECT_EQ(bytes("d:test:0000000003:0000000000"), local_storage.Get("s:test"));
+        EXPECT_EQ(bytes("d:test:00000000030000000000"), local_storage.Get("s:test"));
         EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"ikey\": 1,\n        \"data\": \"one\"\n    }\n}\n"),
-                  local_storage.Get("d:test:0000000001:0000000000"));
+                  local_storage.Get("d:test:00000000010000000000"));
         EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"ikey\": 2,\n        \"data\": \"two\"\n    }\n}\n"),
-                  local_storage.Get("d:test:0000000002:0000000000"));
+                  local_storage.Get("d:test:00000000020000000000"));
         EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"ikey\": 3,\n        \"data\": \"three\"\n    }\n}\n"),
-                  local_storage.Get("d:test:0000000003:0000000000"));
+                  local_storage.Get("d:test:00000000030000000000"));
         VLOG(2) << "Done.";
     }
 

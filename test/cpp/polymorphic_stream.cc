@@ -92,7 +92,7 @@ TYPED_TEST(PolymorphicStreamTest, InitializesStream) {
     typename Setup<TypeParam>::PolymorphicStreamsManager streams_manager(
         storage, StreamManagerParams().CreateStream("polymorphic_stream", uint16_t(0), uint16_t(0)));
     ASSERT_TRUE(storage.Has("s:polymorphic_stream"));
-    ASSERT_EQ("d:polymorphic_stream:00000:00000", antibytes(storage.Get("s:polymorphic_stream")));
+    ASSERT_EQ("d:polymorphic_stream:0000000000", antibytes(storage.Get("s:polymorphic_stream")));
 }
 
 template <typename T> void PublishTestEntries(T& publisher) {
@@ -118,7 +118,7 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        }\n"
         "    }\n"
         "}\n",
-        antibytes(storage.Get("d:polymorphic_stream:00001:00000")));
+        antibytes(storage.Get("d:polymorphic_stream:0000100000")));
     ASSERT_EQ(
         "{\n"
         "    \"value0\": {\n"
@@ -133,7 +133,7 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        }\n"
         "    }\n"
         "}\n",
-        antibytes(storage.Get("d:polymorphic_stream:00002:00000")));
+        antibytes(storage.Get("d:polymorphic_stream:0000200000")));
     ASSERT_EQ(
         "{\n"
         "    \"value0\": {\n"
@@ -148,7 +148,7 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        }\n"
         "    }\n"
         "}\n",
-        antibytes(storage.Get("d:polymorphic_stream:00003:00000")));
+        antibytes(storage.Get("d:polymorphic_stream:0000300000")));
 }
 
 TYPED_TEST(PolymorphicStreamTest, DeSerializesEntriesWithTypes) {

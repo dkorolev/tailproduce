@@ -14,17 +14,24 @@
 namespace TailProduce {
     // The stream base is only a syntatic convenience.
     struct StreamBase {
-        ConfigValues const& cv;
-        explicit StreamBase(ConfigValues const& cv) : cv(cv), lock_mutex_(new std::mutex()) {
+        StreamBase() = delete;
+        explicit StreamBase(ConfigValues const& cv) : cv_(cv), lock_mutex_(new std::mutex()) {
+        }
+        StreamBase(StreamBase&&) = default;
+        StreamBase(const StreamBase&) = delete;
+        void operator=(const StreamBase&) = delete;
+        virtual ~StreamBase() = default;
+
+        const ConfigValues& config_values() const {
+            return cv_;
         }
 
         std::mutex& lock_mutex() const {
             return *lock_mutex_;
         }
 
-        virtual ~StreamBase() {}
-
       private:
+        ConfigValues const& cv_;
         // Stream name is part of the traits class now.
         // std::string streamName_;
         mutable std::unique_ptr<std::mutex> lock_mutex_;
@@ -37,7 +44,6 @@ namespace TailProduce {
 
         Stream(TailProduce::ConfigValues& cv, const typename T_TRAITS::T_STORAGE& storage)
             : StreamBase(cv), TRAITS(cv) {
-
             // TODO(dkorolev): Check with Brian that removing `Entry` is a good idea.
             // using TE = ::TailProduce::Entry;
             // static_assert(std::is_base_of<TE, T_ENTRY>::value, "Stream::T_ENTRY should be derived from Entry.");
