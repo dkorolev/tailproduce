@@ -35,9 +35,6 @@ namespace TailProduce {
 
         Stream(TailProduce::ConfigValues& cv, const typename T_TRAITS::T_STORAGE& storage)
             : StreamBase(cv), TRAITS(cv) {
-            using TO = ::TailProduce::GenericOrderKey;
-            static_assert(std::is_base_of<TO, T_ORDER_KEY>::value,
-                          "Stream::T_ORDER_KEY should be derived from GenericOrderKey.");
 
             // TODO(dkorolev): Check with Brian that removing `Entry` is a good idea.
             // using TE = ::TailProduce::Entry;

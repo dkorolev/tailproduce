@@ -28,9 +28,7 @@ namespace TailProduce {
     //
     // Note that 3) and 4)  would still need a const reference to ConfigValues -- D.K.
 
-    struct GenericOrderKey {};
-
-    template <typename TRAITS, typename PRIMARY_KEY, typename SECONDARY_KEY> struct OrderKey : GenericOrderKey {
+    template <typename TRAITS, typename PRIMARY_KEY, typename SECONDARY_KEY> struct OrderKey {
         typedef TRAITS T_TRAITS;
         typedef PRIMARY_KEY T_PRIMARY_KEY;
         typedef SECONDARY_KEY T_SECONDARY_KEY;
