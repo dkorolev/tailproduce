@@ -46,7 +46,7 @@ namespace TailProduce {
         ::TailProduce::Storage::STORAGE_KEY_TYPE ComposeStorageKey(const T_TRAITS& traits,
                                                                    const ::TailProduce::ConfigValues& cv) const {
             return traits.storage_key_data_prefix +
-                   ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::PackToString(primary) + cv.GetDelimiter() +
+                   ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::PackToString(primary) +
                    ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::PackToString(secondary);
         }
 
@@ -56,7 +56,7 @@ namespace TailProduce {
             // This code is platform-dependent.
             const std::string s = ::TailProduce::antibytes(storage_key);
             const size_t expected_length = traits.storage_key_data_prefix.length() +
-                                           ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes + 1 +
+                                           ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes +
                                            ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::size_in_bytes;
             if (s.length() != expected_length) {
                 VLOG(2) << "Malformed key: input length " << s.size() << ", expected length " << expected_length
@@ -64,24 +64,15 @@ namespace TailProduce {
                 VLOG(3) << "throw MalformedStorageHeadException();";
                 throw ::TailProduce::MalformedStorageHeadException();
             } else {
-                const char delimiter =
-                    s[s.length() - 1 - ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::size_in_bytes];
-                if (delimiter != cv.GetDelimiter()) {
-                    VLOG(2) << "Malformed key: delimiter is '" << delimiter << "', while expected '"
-                            << cv.GetDelimiter() << "'.";
-                    VLOG(3) << "throw MalformedStorageHeadException();";
-                    throw ::TailProduce::MalformedStorageHeadException();
-                } else {
-                    ::TailProduce::FixedSizeSerialization::UnpackFromString(
-                        s.substr(traits.storage_key_data_prefix.length(),
-                                 ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes),
-                        primary);
-                    ::TailProduce::FixedSizeSerialization::UnpackFromString(
-                        s.substr(traits.storage_key_data_prefix.length() + 1 +
-                                     ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes + 1,
-                                 ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::size_in_bytes),
-                        secondary);
-                }
+                ::TailProduce::FixedSizeSerialization::UnpackFromString(
+                    s.substr(traits.storage_key_data_prefix.length(),
+                             ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes),
+                    primary);
+                ::TailProduce::FixedSizeSerialization::UnpackFromString(
+                    s.substr(traits.storage_key_data_prefix.length() +
+                                 ::TailProduce::FixedSizeSerializer<T_PRIMARY_KEY>::size_in_bytes,
+                             ::TailProduce::FixedSizeSerializer<T_SECONDARY_KEY>::size_in_bytes),
+                    secondary);
             }
         }
     };

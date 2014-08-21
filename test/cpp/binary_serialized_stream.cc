@@ -57,7 +57,7 @@ TYPED_TEST(BinaryStreamSerializationTest, InitializesStream) {
     typename Setup<TypeParam>::StreamManagerWithASingleBinaryStream streams_manager(
         storage, StreamManagerParams().CreateStream("foo", uint32_t(0), uint32_t(0)));
     ASSERT_TRUE(storage.Has("s:foo"));
-    ASSERT_EQ("d:foo:0000000000:0000000000", antibytes(storage.Get("s:foo")));
+    ASSERT_EQ("d:foo:00000000000000000000", antibytes(storage.Get("s:foo")));
 }
 
 template <typename T> void PublishTestEntries(T& publisher) {
@@ -71,7 +71,7 @@ TYPED_TEST(BinaryStreamSerializationTest, SerializesEntriesWithTypes) {
     PublishTestEntries(streams_manager.foo_publisher);
     const char golden[] = "*\0\0\0\x5\0\0\0\0\0\0\0Spock";
     ASSERT_EQ(std::string(golden, golden + sizeof(golden) - 1),
-              antibytes(storage.Get("d:foo:0000000042:0000000000")));
+              antibytes(storage.Get("d:foo:00000000420000000000")));
 }
 
 TYPED_TEST(BinaryStreamSerializationTest, DeSerializesEntriesWithTypes) {
