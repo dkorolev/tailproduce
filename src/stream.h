@@ -22,6 +22,8 @@ namespace TailProduce {
             return *lock_mutex_;
         }
 
+        virtual ~StreamBase() {}
+
       private:
         // Stream name is part of the traits class now.
         // std::string streamName_;
