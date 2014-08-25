@@ -10,17 +10,16 @@ namespace TailProduce {
     // until all the clients registered with it have successfully terminated.
     //
     // This is accomplished by waiting for the clients to finish in the destructor of ClientThreadsRespecter.
-    // Effectively the destructor of ClientThreadsRespecter becomes a blocking call.
+    // Effectively, the destructor of ClientThreadsRespecter becomes a blocking call.
     //
     // There are two ways to run client jobs that will be waited for:
-    // 1) Use `auto client = respected_instance.RegisterScopedClient();`
-    // 2) Use `respected_instance.RunClientCode([](const ClientThreadsRespected::Client& client) { ... });`
+    // 1) Use `{ auto client = respected_instance.RegisterScopedClient(); ... }`.
+    // 2) Use `respected_instance.RunClientCode([](const ClientThreadsRespected::Client& client) { ... });`.
     //
     // In both cases the client code should use `if (!client) { ... }` to tell whether it is time to tear down.
     //
-    // Note that solution 1) may throw an exception when the instance of ClientThreadsRespecter is already being
-    // destroyed.
-    // (No new clients are allowed to spawn.)
+    // Note that solution 1) may throw an exception when the instance of ClientThreadsRespecter
+    // is already in the process of being destroyed (and no new clients are allowed to spawn).
     // Solution 2) will just return false w/o spawning the client.
     class ClientThreadsRespecter {
       public:
