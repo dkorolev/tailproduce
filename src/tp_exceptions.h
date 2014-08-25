@@ -57,6 +57,7 @@ namespace TailProduce {
             : NetworkException("TCPServerLogicErrorException: '" + name + "'.") {
         }
     };
+    struct AlreadyInTearDownModeException : Exception {};
 };
 
 #endif
