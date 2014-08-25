@@ -17,6 +17,8 @@ namespace TailProduce {
     // 2) Use `respected_instance.RunClientCode([](const ClientThreadsRespected::Client& client) { ... });`.
     //
     // In both cases the client code should use `if (!client) { ... }` to tell whether it is time to tear down.
+    // Once `if (client)` becomes false, no new clients should be attempted to be created,
+    // since the general instance of ClientThreadsRespected will be destroyed as the last alive client is done.
     //
     // Note that solution 1) may throw an exception when the instance of ClientThreadsRespecter
     // is already in the process of being destroyed (and no new clients are allowed to spawn).

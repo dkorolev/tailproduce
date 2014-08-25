@@ -18,6 +18,7 @@ TEST(ClientThreadsRespecter, Smoke) {
         CTR ctr;
 
         std::thread([&ctr, &x, &xb]() {
+                        auto top_level_client = ctr.RegisterScopedClient();
                         {
                             auto client = ctr.RegisterScopedClient();
                             while (client) {
@@ -37,6 +38,7 @@ TEST(ClientThreadsRespecter, Smoke) {
                     }).detach();
 
         std::thread([&ctr, &y, &yb]() {
+                        auto top_level_client = ctr.RegisterScopedClient();
                         std::function<void(const CTR::Client&)> lambda;
                         VLOG(2) << "Running the `++y` thread.";
                         EXPECT_TRUE(ctr.RunClientCode(lambda = [&y, &yb](const CTR::Client& client) {
