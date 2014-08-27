@@ -39,10 +39,17 @@ namespace TailProduce {
                 return false;
             }
         }
+    
+        inline ClientThreadsRespecter() : client_(this) {
+        }
 
         inline ~ClientThreadsRespecter() {
-            // Mark this object as the one being destructed. This would prevent any new clients from starting.
             {
+                // Release the instance of the client that used to boost the ref count base from 0 to 1.
+                Client delete_client = std::move(client_);
+            }
+            {
+                // Mark this object as the one being destructed. This would prevent any new clients from starting.
                 std::lock_guard<std::mutex> guard(access_mutex_);
                 destructing_ = true;
             }
@@ -90,6 +97,7 @@ namespace TailProduce {
         size_t ref_count_ = 0;
         bool destructing_ = false;
         std::mutex ref_count_is_zero_mutex_;
+        Client client_;
     };
 };  // namespace TailProduce
 
