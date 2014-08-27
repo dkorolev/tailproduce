@@ -1,6 +1,7 @@
 #ifndef CLIENT_THREADS_RESPECTER_H
 #define CLIENT_THREADS_RESPECTER_H
 
+#include <atomic>
 #include <mutex>
 
 #include "tp_exceptions.h"
@@ -40,7 +41,7 @@ namespace TailProduce {
             }
         }
     
-        inline ClientThreadsRespecter() : client_(this) {
+        inline ClientThreadsRespecter() : ref_count_(0), destructing_(false), client_(this) {
         }
 
         inline ~ClientThreadsRespecter() {
@@ -48,11 +49,8 @@ namespace TailProduce {
                 // Release the instance of the client that used to boost the ref count base from 0 to 1.
                 Client delete_client = std::move(client_);
             }
-            {
-                // Mark this object as the one being destructed. This would prevent any new clients from starting.
-                std::lock_guard<std::mutex> guard(access_mutex_);
-                destructing_ = true;
-            }
+            // Mark this object as the one being destructed. This would prevent any new clients from starting.
+            destructing_ = true;
             // Wait until all active instaces of ScopedUser are destructed.
             ref_count_is_zero_mutex_.lock();
         }
@@ -60,15 +58,12 @@ namespace TailProduce {
         class Client {
           public:
             inline operator bool() const {
-                std::lock_guard<std::mutex> guard(parent_->access_mutex_);
                 return !parent_->destructing_;
             }
             Client(Client&&) = default;
 
             inline ~Client() {
-                std::lock_guard<std::mutex> guard(parent_->access_mutex_);
-                --parent_->ref_count_;
-                if (!parent_->ref_count_) {
+                if (!--parent_->ref_count_) {
                     parent_->ref_count_is_zero_mutex_.unlock();
                 }
             }
@@ -76,14 +71,12 @@ namespace TailProduce {
           private:
             friend class ClientThreadsRespecter;
             inline explicit Client(ClientThreadsRespecter* parent) : parent_(parent) {
-                std::lock_guard<std::mutex> guard(parent_->access_mutex_);
                 if (parent_->destructing_) {
                     throw AlreadyInTearDownModeException();
                 }
-                if (!parent_->ref_count_) {
+                if (!parent_->ref_count_++) {
                     parent_->ref_count_is_zero_mutex_.lock();
                 }
-                ++parent_->ref_count_;
             }
 
             Client(const Client&) = delete;
@@ -93,9 +86,8 @@ namespace TailProduce {
         };
 
       private:
-        std::mutex access_mutex_;
-        size_t ref_count_ = 0;
-        bool destructing_ = false;
+        std::atomic_size_t ref_count_;
+        std::atomic_bool destructing_;
         std::mutex ref_count_is_zero_mutex_;
         Client client_;
     };
