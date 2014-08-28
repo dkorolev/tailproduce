@@ -142,8 +142,10 @@ namespace TailProduce {
                     VLOG(3) << "throw ::TailProduce::InternalError();";
                     throw ::TailProduce::InternalError();
                 }
+
                 // TODO(dkorolev): Make this proof-of-concept code efficient.
-                ::TailProduce::Storage::STORAGE_VALUE_TYPE const value = iterator->Value();
+                order_key_instance.DecomposeStorageKey(iterator->Key(), stream, stream.config_values());
+                const ::TailProduce::Storage::STORAGE_VALUE_TYPE& value = iterator->Value();
                 value_as_string = std::string(value.begin(), value.end());
 
                 // For logging purposes, should be removed in non-debug builds.
@@ -153,7 +155,7 @@ namespace TailProduce {
             VLOG(3) << this << " INTERNAL_UnsafeListener::ProcessEntrySync(): ['" << key_as_string << "'] = '"
                     << value_as_string << "'";
             std::istringstream is(value_as_string);
-            T_STREAM::T_ENTRY::DeSerializeAndProcessEntry(is, processor);
+            T_STREAM::T_ENTRY::DeSerializeAndProcessEntry(is, order_key_instance.primary, processor);
         }
 
         // AdvanceToNextEntry() advances the listener to the next available entry.
@@ -182,6 +184,7 @@ namespace TailProduce {
         ::TailProduce::Storage::STORAGE_KEY_TYPE const storage_end_key;
         mutable bool reached_end;
         mutable typename T_STREAM::T_STORAGE::StorageIterator iterator;
+        mutable typename T_STREAM::T_ORDER_KEY order_key_instance;
 
         INTERNAL_UnsafeListener() = delete;
         INTERNAL_UnsafeListener(const INTERNAL_UnsafeListener&) = delete;

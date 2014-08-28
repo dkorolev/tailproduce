@@ -27,7 +27,10 @@ struct SimpleEntry : ::TailProduce::CerealJSONSerializable<SimpleEntry> {
     SimpleEntry(uint32_t key, std::string const& data) : ikey(key), data(data) {
     }
 
-    // Keep return type as paramter for easer overloading / templated usage.
+    // Keep return type as parameter for easer overloading / templated usage.
+    void SetOrderKey(uint32_t input) {
+        ikey = input;
+    }
     void GetOrderKey(uint32_t& output) const {
         output = ikey;
     }
@@ -41,7 +44,7 @@ struct SimpleEntry : ::TailProduce::CerealJSONSerializable<SimpleEntry> {
   private:
     friend class cereal::access;
     template <class A> void serialize(A& ar) {
-        ar(CEREAL_NVP(ikey), CEREAL_NVP(data));
+        ar(CEREAL_NVP(data));
     }
 };
 

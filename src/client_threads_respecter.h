@@ -40,7 +40,7 @@ namespace TailProduce {
                 return false;
             }
         }
-    
+
         inline ClientThreadsRespecter() : ref_count_(0), destructing_(false), client_(this) {
         }
 

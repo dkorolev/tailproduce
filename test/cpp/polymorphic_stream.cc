@@ -29,6 +29,10 @@ struct BaseEntry : ::TailProduce::PolymorphicCerealJSONSerializable<BaseEntry, D
     BaseEntry(uint16_t key) : k(key) {
     }
 
+    void SetOrderKey(uint16_t input) {
+        k = input;
+    }
+
     void GetOrderKey(uint16_t& output) const {
         output = k;
     }
@@ -38,7 +42,6 @@ struct BaseEntry : ::TailProduce::PolymorphicCerealJSONSerializable<BaseEntry, D
   protected:
     friend class cereal::access;
     template <class A> void serialize(A& ar) {
-        ar(CEREAL_NVP(k));
     }
 };
 
@@ -112,9 +115,7 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        \"polymorphic_id\": 1073741824,\n"
         "        \"ptr_wrapper\": {\n"
         "            \"id\": 2147483649,\n"
-        "            \"data\": {\n"
-        "                \"k\": 1\n"
-        "            }\n"
+        "            \"data\": {}\n"
         "        }\n"
         "    }\n"
         "}\n",
@@ -127,7 +128,6 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        \"ptr_wrapper\": {\n"
         "            \"id\": 2147483649,\n"
         "            \"data\": {\n"
-        "                \"k\": 2,\n"
         "                \"c\": 65\n"
         "            }\n"
         "        }\n"
@@ -142,7 +142,6 @@ TYPED_TEST(PolymorphicStreamTest, SerializesEntriesWithTypes) {
         "        \"ptr_wrapper\": {\n"
         "            \"id\": 2147483649,\n"
         "            \"data\": {\n"
-        "                \"k\": 3,\n"
         "                \"s\": \"foo\"\n"
         "            }\n"
         "        }\n"
