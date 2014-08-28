@@ -90,14 +90,14 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         std::ostringstream os;
         SimpleEntry::SerializeEntry(os, entry);
         std::string s = os.str();
-        EXPECT_EQ("{\n    \"value0\": {\n        \"ikey\": 1,\n        \"data\": \"Test\"\n    }\n}\n", s);
+        EXPECT_EQ("{\n    \"value0\": {\n        \"data\": \"Test\"\n    }\n}\n", s);
         {
             auto lambda = [](const SimpleEntry& restored) {
                 EXPECT_EQ(1, restored.ikey);
                 EXPECT_EQ("Test", restored.data);
             };
             std::istringstream is(s);
-            SimpleEntry::DeSerializeAndProcessEntry(is, lambda);
+            SimpleEntry::DeSerializeAndProcessEntry(is, 1, lambda);
         }
         VLOG(2) << "Done.";
     }
@@ -294,11 +294,11 @@ template <typename STORAGE, typename STREAM_MANAGER> void RUN_TESTS() {
         publisher.Push(SimpleEntry(3, "three"));
 
         EXPECT_EQ(bytes("d:test:00000000030000000000"), local_storage.Get("s:test"));
-        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"ikey\": 1,\n        \"data\": \"one\"\n    }\n}\n"),
+        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"data\": \"one\"\n    }\n}\n"),
                   local_storage.Get("d:test:00000000010000000000"));
-        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"ikey\": 2,\n        \"data\": \"two\"\n    }\n}\n"),
+        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"data\": \"two\"\n    }\n}\n"),
                   local_storage.Get("d:test:00000000020000000000"));
-        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"ikey\": 3,\n        \"data\": \"three\"\n    }\n}\n"),
+        EXPECT_EQ(bytes("{\n    \"value0\": {\n        \"data\": \"three\"\n    }\n}\n"),
                   local_storage.Get("d:test:00000000030000000000"));
         VLOG(2) << "Done.";
     }

@@ -14,6 +14,13 @@ namespace TailProduce {
                 RuntimeDispatcher<BASE, TAIL...>::DispatchCall(x, c);
             }
         }
+        template <typename TYPE, typename CALLBACK> static void DispatchCall(TYPE& x, CALLBACK c) {
+            if (DERIVED* d = dynamic_cast<DERIVED*>(&x)) {
+                c(*d);
+            } else {
+                RuntimeDispatcher<BASE, TAIL...>::DispatchCall(x, c);
+            }
+        }
     };
 
     template <typename BASE, typename DERIVED> struct RuntimeDispatcher<BASE, DERIVED> {
@@ -24,6 +31,18 @@ namespace TailProduce {
                 c(*d);
             } else {
                 const BASE* b = dynamic_cast<const BASE*>(&x);
+                if (b) {
+                    c(*b);
+                } else {
+                    throw UnrecognizedPolymorphicType();
+                }
+            }
+        }
+        template <typename TYPE, typename CALLBACK> static void DispatchCall(TYPE& x, CALLBACK c) {
+            if (DERIVED* d = dynamic_cast<DERIVED*>(&x)) {
+                c(*d);
+            } else {
+                BASE* b = dynamic_cast<BASE*>(&x);
                 if (b) {
                     c(*b);
                 } else {

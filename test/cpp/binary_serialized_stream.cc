@@ -25,6 +25,10 @@ struct SimpleBinaryEntry : ::TailProduce::CerealBinarySerializable<SimpleBinaryE
     SimpleBinaryEntry(uint32_t k, std::string const& v) : k(k), v(v) {
     }
 
+    void SetOrderKey(uint32_t input) {
+        k = input;
+    }
+
     void GetOrderKey(uint32_t& output) const {
         output = k;
     }
