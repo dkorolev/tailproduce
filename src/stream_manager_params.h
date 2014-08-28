@@ -79,9 +79,11 @@ namespace TailProduce {
             for (auto cit : streams_to_create) {
                 VLOG(3) << "Populating stream '" << cit.first << "' to the storage.";
                 try {
-                    // TODO(dkorolev): Key generation logic should also go into ConfigValues.
+                    struct StreamTraitsWrapper {
+                        const std::string& name;
+                    };
                     storage.Set(
-                        ::TailProduce::Storage::STORAGE_KEY_TYPE("s:" + cit.first),
+                        cv.HeadStorageKey(StreamTraitsWrapper{cit.first}),
                         ::TailProduce::Storage::KeyToValue(cit.second->ComposeStartingStorageKey(cit.first, cv)));
                 } catch (const StorageOverwriteNotAllowedException&) {
                     VLOG(3) << "throw StreamAlreadyExistsException();";
