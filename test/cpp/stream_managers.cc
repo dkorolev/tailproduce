@@ -26,7 +26,7 @@
 #include <gtest/gtest.h>
 
 #include "../../src/tailproduce.h"
-#include "../../src/magic_order_key.h"
+#include "../../src/order_key.h"
 
 #include "helpers/storages.h"
 #include "helpers/test_client.h"

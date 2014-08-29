@@ -1,7 +1,7 @@
 // TODO(dkorolev): Keep the current pull request clean, rename this file in a separate pull request.
 
-#ifndef TAILPRODUCE_MAGIC_ORDER_KEY_H
-#define TAILPRODUCE_MAGIC_ORDER_KEY_H
+#ifndef TAILPRODUCE_ORDER_KEY_H
+#define TAILPRODUCE_ORDER_KEY_H
 
 #include <string>
 
@@ -78,4 +78,4 @@ namespace TailProduce {
     };
 };
 
-#endif  // TAILPRODUCE_MAGIC_ORDER_KEY_H
+#endif  // TAILPRODUCE_ORDER_KEY_H
