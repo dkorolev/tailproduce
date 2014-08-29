@@ -8,7 +8,7 @@
 #include <glog/logging.h>
 
 #include "config_values.h"
-#include "magic_order_key.h"
+#include "order_key.h"
 #include "tp_exceptions.h"
 
 namespace TailProduce {

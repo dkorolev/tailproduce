@@ -12,7 +12,7 @@
 #include "bytes.h"
 #include "tp_exceptions.h"
 #include "config_values.h"
-#include "magic_order_key.h"
+#include "order_key.h"
 
 namespace TailProduce {
     class StreamManagerParams {
