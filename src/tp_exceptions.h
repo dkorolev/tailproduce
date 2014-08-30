@@ -58,6 +58,7 @@ namespace TailProduce {
         }
     };
     struct AlreadyInTearDownModeException : Exception {};
+    struct AttemptedToCreateScopedClientForNullParent : Exception {};
 };
 
 #endif
