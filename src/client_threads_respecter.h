@@ -33,8 +33,7 @@ namespace TailProduce {
 
         template <typename F> inline bool RunClientCode(F& f) {
             try {
-                Client impl(this);
-                f(impl);
+                f(RegisterScopedClient());
                 return true;
             } catch (AlreadyInTearDownModeException& e) {
                 return false;
@@ -45,12 +44,12 @@ namespace TailProduce {
         }
 
         inline ~ClientThreadsRespecter() {
+            // Mark this object as the one being destructed. This would prevent any new clients from starting.
+            destructing_ = true;
             {
                 // Release the instance of the client that used to boost the ref count base from 0 to 1.
                 Client delete_client = std::move(client_);
             }
-            // Mark this object as the one being destructed. This would prevent any new clients from starting.
-            destructing_ = true;
             // Wait until all active instaces of ScopedUser are destructed.
             ref_count_is_zero_mutex_.lock();
         }
@@ -58,12 +57,20 @@ namespace TailProduce {
         class Client {
           public:
             inline operator bool() const {
-                return !parent_->destructing_;
+                return parent_ && !parent_->destructing_;
             }
-            Client(Client&&) = default;
+
+            Client(Client&& rhs) {
+                // Move constructor should be implemented manually to nullify `rhs.parent_`.
+                if (!rhs.parent_) {
+                    throw AttemptedToCreateScopedClientForNullParent();
+                }
+                parent_ = rhs.parent_;
+                rhs.parent_ = nullptr;
+            }
 
             inline ~Client() {
-                if (!--parent_->ref_count_) {
+                if (parent_ && !--parent_->ref_count_) {
                     parent_->ref_count_is_zero_mutex_.unlock();
                 }
             }
@@ -71,6 +78,9 @@ namespace TailProduce {
           private:
             friend class ClientThreadsRespecter;
             inline explicit Client(ClientThreadsRespecter* parent) : parent_(parent) {
+                if (!parent) {
+                    throw AttemptedToCreateScopedClientForNullParent();
+                }
                 if (parent_->destructing_) {
                     throw AlreadyInTearDownModeException();
                 }
